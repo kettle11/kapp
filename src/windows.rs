@@ -146,7 +146,7 @@ fn process_key_down(w_param: WPARAM, l_param: LPARAM) -> Event {
 
 fn process_key_up(w_param: WPARAM, l_param: LPARAM) -> Event {
     let (scancode, key) = process_key_event(w_param, l_param);
-    Event::KeyDown { key, scancode }
+    Event::KeyUp { key, scancode }
 }
 
 fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key) {
