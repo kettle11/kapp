@@ -13,8 +13,8 @@ That said, it has very few dependencies and builds extremely quickly.
 ## Example
 ```rust
 extern crate gl;
-extern crate windowing;
-use windowing::*;
+extern crate kettlewin;
+use kettlewin::*;
 
 fn main() {
     // Create a new window manager with default settings.
