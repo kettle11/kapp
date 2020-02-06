@@ -1,7 +1,7 @@
 [package]
 name = "kettlewin"
 version = "0.1.0"
-authors = ["Ian Kettlewell]
+authors = ["Ian Kettlewell"]
 edition = "2018"
 
 [dependencies]
