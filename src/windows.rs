@@ -39,6 +39,10 @@ pub enum Event {
         key: Key,
         scancode: u32,
     },
+    KeyUp {
+        key: Key,
+        scancode: u32,
+    },
     MinimizedWindow,
     MaximizedWindow,
     ResizedWindow {
@@ -69,7 +73,8 @@ unsafe extern "system" fn window_callback(
     l_param: LPARAM,
 ) -> LRESULT {
     match u_msg {
-        winuser::WM_KEYDOWN => produce_event(process_key_event(w_param, l_param)),
+        winuser::WM_KEYDOWN => produce_event(process_key_down(w_param, l_param)),
+        winuser::WM_KEYUP => produce_event(process_key_up(w_param, l_param)),
         winuser::WM_SIZE => {
             match w_param {
                 winuser::SIZE_MAXIMIZED => produce_event(Event::MaximizedWindow),
@@ -134,11 +139,21 @@ fn process_resize_event(l_param: LPARAM) -> Event {
     Event::ResizedWindow { width, height }
 }
 
-fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> Event {
+fn process_key_down(w_param: WPARAM, l_param: LPARAM) -> Event {
+    let (scancode, key) = process_key_event(w_param, l_param);
+    Event::KeyDown { key, scancode }
+}
+
+fn process_key_up(w_param: WPARAM, l_param: LPARAM) -> Event {
+    let (scancode, key) = process_key_event(w_param, l_param);
+    Event::KeyDown { key, scancode }
+}
+
+fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key) {
     let scancode = ((l_param >> 16) & 16) as UINT; // bits 16-23 represent the scancode
     let _extended = (l_param & (1 << 24)) != 0; // bit 24 represents if its an extended key
     let key = virtual_keycode_to_key(w_param as _);
-    Event::KeyDown { key, scancode }
+    (scancode, key)
 }
 
 fn win32_string(value: &str) -> Vec<u16> {
