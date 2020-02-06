@@ -1,6 +1,6 @@
 extern crate gl;
-extern crate windowing;
-use windowing::*;
+extern crate kettlewin;
+use kettlewin::*;
 
 fn draw_to_window(window_manager: &WindowManager, window: &Window, r: f32, g: f32, b: f32) {
     window_manager.make_current(window).unwrap();
