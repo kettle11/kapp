@@ -1,0 +1,9 @@
+[package]
+name = "kettlewin"
+version = "0.1.0"
+authors = ["Ian Kettlewell]
+edition = "2018"
+
+[dependencies]
+winapi = { version = "0.3.8", features = ["winuser", "libloaderapi", "windowsx"] }
+gl = {version = "0.14.0"}
