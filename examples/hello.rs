@@ -4,8 +4,10 @@ use kettlewin::*;
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut window_manager = WindowManager::new();
-    let window = window_manager.new_window("Window Title").unwrap();
+    let mut window_manager = WindowManager::new().unwrap();
+    let window = window_manager
+        .new_window("Hello Example", Some(600), Some(600))
+        .unwrap();
 
     // Run forever
     run(move |event| match event {

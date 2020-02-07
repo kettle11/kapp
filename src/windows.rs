@@ -2,24 +2,18 @@
 extern crate gl;
 extern crate winapi;
 
+use crate::gl_context_windows::*;
 use crate::keys_windows::virtual_keycode_to_key;
+use crate::utils_windows::*;
 use crate::Key;
-
-use std::ffi::OsStr;
 use std::io::Error;
-use std::iter::once;
-use std::os::windows::prelude::*;
 use std::ptr::null_mut;
 
 use winapi::shared::minwindef::{HINSTANCE, HIWORD, LOWORD, LPARAM, LRESULT, UINT, WPARAM};
-use winapi::shared::windef::{HDC, HGLRC, HWND};
+use winapi::shared::windef::{HDC, HWND};
 use winapi::shared::windowsx::{GET_X_LPARAM, GET_Y_LPARAM};
 use winapi::um::libloaderapi::{GetModuleHandleW, GetProcAddress, LoadLibraryA};
-use winapi::um::wingdi::{
-    wglCreateContext, wglGetProcAddress, wglMakeCurrent, ChoosePixelFormat, SetPixelFormat,
-    SwapBuffers, PFD_DOUBLEBUFFER, PFD_DRAW_TO_WINDOW, PFD_MAIN_PLANE, PFD_SUPPORT_OPENGL,
-    PFD_TYPE_RGBA, PIXELFORMATDESCRIPTOR,
-};
+use winapi::um::wingdi::{wglGetProcAddress, wglMakeCurrent, SetPixelFormat, SwapBuffers};
 use winapi::um::winuser;
 use winapi::um::winuser::{
     CreateWindowExW, DefWindowProcW, DispatchMessageW, GetDC, PeekMessageW, RegisterClassW,
@@ -60,7 +54,7 @@ pub enum Event {
         button: MouseButton,
     },
     #[doc(hidden)]
-    __Nonexhaustive, // More events will be added with time.
+    __Nonexhaustive, // More events will be added
 }
 
 type Callback = dyn 'static + FnMut(Event);
@@ -111,6 +105,7 @@ unsafe extern "system" fn window_callback(
         winuser::WM_MOUSEMOVE => produce_event(process_mouse_move_event(hwnd, l_param)),
         _ => {}
     }
+    // DefWindowProcW is the default Window event handler.
     DefWindowProcW(hwnd, u_msg, w_param, l_param)
 }
 
@@ -123,7 +118,7 @@ fn produce_event(event: Event) {
 }
 
 // https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-mousemove
-fn process_mouse_move_event(hwnd: HWND, l_param: LPARAM) -> Event {
+fn process_mouse_move_event(_hwnd: HWND, l_param: LPARAM) -> Event {
     let x = GET_X_LPARAM(l_param);
     let y = GET_Y_LPARAM(l_param);
 
@@ -156,10 +151,6 @@ fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key) {
     (scancode, key)
 }
 
-fn win32_string(value: &str) -> Vec<u16> {
-    OsStr::new(value).encode_wide().chain(once(0)).collect()
-}
-
 // This is a C extension function requested on load.
 #[allow(non_upper_case_globals)]
 static mut wglSwapIntervalEXT_ptr: *const std::ffi::c_void = std::ptr::null();
@@ -174,12 +165,9 @@ fn wglSwapIntervalEXT(i: std::os::raw::c_int) -> bool {
 }
 
 pub struct WindowManager {
-    device: Option<HDC>,
-    gl_device: Option<HGLRC>,
     class_name: Vec<u16>,
     h_instance: HINSTANCE,
-    pixel_format: Option<i32>,
-    pixel_format_desciptor: Option<PIXELFORMATDESCRIPTOR>,
+    opengl_context: OpenGLContext,
 }
 
 pub struct Window {
@@ -188,11 +176,11 @@ pub struct Window {
 }
 
 impl WindowManager {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, Error> {
         unsafe {
             // Register the window class.
             let class_name = win32_string("windowing_rust");
-            let h_instance = GetModuleHandleW(std::ptr::null_mut());
+            let h_instance = GetModuleHandleW(null_mut());
 
             let window_class = WNDCLASSW {
                 style: 0,
@@ -208,177 +196,117 @@ impl WindowManager {
             };
             RegisterClassW(&window_class);
 
-            Self {
-                device: None,
-                gl_device: None,
-                pixel_format: None,
+            let opengl_context =
+                new_opengl_context(h_instance, &class_name, 32, 8, 16, 0, 2, false)?;
+            Self::setup_gl()?;
+            Ok(Self {
                 class_name,
                 h_instance,
-                pixel_format_desciptor: None,
-            }
+                opengl_context,
+            })
         }
     }
 
-    fn setup_pixel_format(&mut self) -> Result<i32, Error> {
-        let pfd = PIXELFORMATDESCRIPTOR {
-            nSize: std::mem::size_of::<PIXELFORMATDESCRIPTOR>() as u16, // size of this pfd
-            nVersion: 1,                                                // version number
-            dwFlags: PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-            iPixelType: PFD_TYPE_RGBA, // RGBA type
-            cColorBits: 24,            // 24-bit color depth
-            cRedBits: 24,              // 24-bit color depth
-            cRedShift: 0,              // color bits ignored
-            cGreenBits: 0,
-            cGreenShift: 0,
-            cBlueBits: 0,
-            cBlueShift: 0,
-            cAlphaBits: 0,
-            cAlphaShift: 0,
-            cAccumBits: 0,
-            cAccumRedBits: 0,
-            cAccumGreenBits: 0,
-            cAccumBlueBits: 0,
-            cAccumAlphaBits: 0,
-            cDepthBits: 32,
-            cStencilBits: 0,
-            cAuxBuffers: 0,
-            iLayerType: PFD_MAIN_PLANE,
-            bReserved: 0,
-            dwLayerMask: 0,
-            dwVisibleMask: 0,
-            dwDamageMask: 0,
-        };
-        let device = self.device.unwrap();
-        // This will find the closest pixel format match.
-        let i_pixel_format = unsafe { ChoosePixelFormat(device, &pfd) };
-        if i_pixel_format == 0 {
-            return Err(Error::last_os_error());
-        } else {
-            self.pixel_format_desciptor = Some(pfd);
-            Ok(i_pixel_format)
-        }
-    }
-
-    fn setup_gl(&mut self) -> Result<(), Error> {
+    fn setup_gl() -> Result<(), Error> {
         unsafe {
-            let device = self.device.unwrap();
-
-            let gl_device = wglCreateContext(device);
-            if gl_device.is_null() {
-                Err(Error::last_os_error())
-            } else {
-                wglMakeCurrent(device, gl_device);
-
-                let opengl_module =
-                    LoadLibraryA(std::ffi::CString::new("opengl32.dll").unwrap().as_ptr());
-                gl::load_with(|s| {
-                    let name = std::ffi::CString::new(s).unwrap();
-                    let mut result =
-                        wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
-                    if result.is_null() {
-                        // Functions were part of OpenGL1 need to be loaded differently.
-                        result = GetProcAddress(opengl_module, name.as_ptr() as *const i8)
-                            as *const std::ffi::c_void;
-                    }
-                    /*
-                    if result.is_null() {
-                        println!("FAILED TO LOAD: {}", s);
-                    } else {
-                        println!("Loaded: {}", s);
-                    }
-                    */
-                    result
-                });
-
-                // Load swap interval for Vsync
-                let function_pointer = wglGetProcAddress(
-                    std::ffi::CString::new("wglSwapIntervalEXT")
-                        .unwrap()
-                        .as_ptr() as *const i8,
-                );
-
-                if function_pointer.is_null() {
-                    println!("Could not find wglSwapIntervalEXT");
-                    return Err(Error::last_os_error());
+            let opengl_module =
+                LoadLibraryA(std::ffi::CString::new("opengl32.dll").unwrap().as_ptr());
+            gl::load_with(|s| {
+                let name = std::ffi::CString::new(s).unwrap();
+                let mut result =
+                    wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
+                if result.is_null() {
+                    // Functions were part of OpenGL1 need to be loaded differently.
+                    result = GetProcAddress(opengl_module, name.as_ptr() as *const i8)
+                        as *const std::ffi::c_void;
+                }
+                /*
+                if result.is_null() {
+                    println!("FAILED TO LOAD: {}", s);
                 } else {
-                    wglSwapIntervalEXT_ptr = function_pointer as *const std::ffi::c_void;
+                    println!("Loaded: {}", s);
                 }
+                */
+                result
+            });
 
-                // Default to Vsync enabled
-                if !wglSwapIntervalEXT(1) {
-                    return Err(Error::last_os_error());
-                }
-                self.gl_device = Some(gl_device);
-                Ok(())
-            }
-        }
-    }
+            // Load swap interval for Vsync
+            let function_pointer = wglGetProcAddress(
+                std::ffi::CString::new("wglSwapIntervalEXT")
+                    .unwrap()
+                    .as_ptr() as *const i8,
+            );
 
-    fn new_device(&mut self, h_wnd: HWND) -> Result<HDC, Error> {
-        unsafe {
-            let device = GetDC(h_wnd);
-            if device.is_null() {
-                Err(Error::last_os_error())
+            if function_pointer.is_null() {
+                println!("Could not find wglSwapIntervalEXT");
+                return Err(Error::last_os_error());
             } else {
-                Ok(device)
+                wglSwapIntervalEXT_ptr = function_pointer as *const std::ffi::c_void;
+            }
+
+            // Default to Vsync enabled
+            if !wglSwapIntervalEXT(1) {
+                return Err(Error::last_os_error());
             }
         }
+        Ok(())
     }
 
-    pub fn new_window(&mut self, title: &str) -> Result<Window, Error> {
+    pub fn new_window(
+        &mut self,
+        title: &str,
+        width: Option<u32>,
+        height: Option<u32>,
+    ) -> Result<Window, Error> {
         unsafe {
             let title = win32_string(title);
 
-            let handle = CreateWindowExW(
+            let width = width.map(|w| w as i32).unwrap_or(CW_USEDEFAULT);
+            let height = height.map(|h| h as i32).unwrap_or(CW_USEDEFAULT);
+
+            let window_handle = CreateWindowExW(
                 WS_EX_APPWINDOW,
                 self.class_name.as_ptr(),
                 title.as_ptr(),
                 WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                 CW_USEDEFAULT,
                 CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
+                width,
+                height,
                 null_mut(),
                 null_mut(),
                 self.h_instance,
                 null_mut(),
             );
-            let device = self.new_device(handle)?;
-            if self.device.is_none() {
-                self.device = Some(device);
-            }
+            let window_device = GetDC(window_handle);
+            error_if_null(window_device, false)?;
 
-            if self.pixel_format.is_none() {
-                self.pixel_format = Some(self.setup_pixel_format()?);
-            }
             // make that match the device context's current pixel format
-            if SetPixelFormat(
-                device,
-                self.pixel_format.unwrap(),
-                self.pixel_format_desciptor.as_ref().unwrap(),
-            ) == 0
-            {
-                return Err(Error::last_os_error());
-            }
+            error_if_false(
+                SetPixelFormat(
+                    window_device,
+                    self.opengl_context.pixel_format_id,
+                    &self.opengl_context.pixel_format_descriptor,
+                ),
+                false,
+            )?;
 
-            if self.gl_device.is_none() {
-                self.setup_gl()?;
-            }
-            if handle.is_null() {
-                Err(Error::last_os_error())
-            } else {
-                Ok(Window { handle, device })
-            }
+            // When a window is constructed, make it current.
+            wglMakeCurrent(window_device, self.opengl_context.context_ptr);
+
+            Ok(Window {
+                handle: window_handle,
+                device: window_device,
+            })
         }
     }
 
     pub fn make_current(&self, window: &Window) -> Result<(), Error> {
         unsafe {
-            if wglMakeCurrent(window.device, self.gl_device.unwrap()) == 0 {
-                Err(Error::last_os_error())
-            } else {
-                Ok(())
-            }
+            error_if_false(
+                wglMakeCurrent(window.device, self.opengl_context.context_ptr),
+                false,
+            )
         }
     }
 

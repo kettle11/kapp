@@ -12,7 +12,7 @@ pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Key {
         VK_BACK => Backspace,
         VK_CLEAR => Clear,
         VK_RETURN => Return,
-        VK_SHIFT => Shift, // How should this be mapped?
+        VK_SHIFT => Shift,
         VK_CONTROL => Control,
         VK_MENU => Menu,
         VK_PAUSE => Pause,

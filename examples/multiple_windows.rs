@@ -14,9 +14,13 @@ fn draw_to_window(window_manager: &WindowManager, window: &Window, r: f32, g: f3
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut window_manager = WindowManager::new();
-    let window_red = window_manager.new_window("Window Red").unwrap();
-    let window_blue = window_manager.new_window("Window Blue").unwrap();
+    let mut window_manager = WindowManager::new().unwrap();
+    let window_red = window_manager
+        .new_window("Window Red", Some(600), Some(600))
+        .unwrap();
+    let window_blue = window_manager
+        .new_window("Window Blue", Some(600), Some(600))
+        .unwrap();
 
     // Run forever
     run(move |event| match event {

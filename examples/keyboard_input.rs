@@ -4,8 +4,10 @@ use kettlewin::*;
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut window_manager = WindowManager::new();
-    let window = window_manager.new_window("Keyboard Input Example").unwrap();
+    let mut window_manager = WindowManager::new().unwrap();
+    let window = window_manager
+        .new_window("Keyboard Input Example", Some(600), Some(600))
+        .unwrap();
     let mut color = (0.0, 0.0, 0.0, 1.0);
 
     run(move |event| unsafe {
