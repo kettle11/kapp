@@ -5,6 +5,8 @@ use kettlewin::*;
 fn main() {
     // Create a new window manager with default settings.
     let mut window_manager = WindowManager::new().unwrap();
+    gl::load_with(window_manager.gl_loader());
+
     let window = window_manager
         .new_window("Mouse Down Example", Some(600), Some(600))
         .unwrap();

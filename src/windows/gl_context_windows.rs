@@ -1,4 +1,4 @@
-use crate::utils_windows::*;
+use super::utils_windows::*;
 use std::io::Error;
 use std::mem::size_of;
 use std::os::raw::{c_float, c_int, c_uint, c_void};
@@ -35,8 +35,7 @@ pub fn new_opengl_context(
     // * Which is used to load OpenGL extensions ...
     // * Which are used to set more specific pixel formats and specify an OpenGL version ...
     // * Which is used to create another dummy window ...
-    // * Which is used to create the final OpenGL context
-    // * Then all of the intermediate resources are discarded and the OpenGL context is returned.
+    // * Which is used to create the final OpenGL context!
     unsafe {
         let dummy_window = create_dummy_window(h_instance, class_name);
         error_if_null(dummy_window, panic_if_fail)?;
@@ -68,6 +67,7 @@ pub fn new_opengl_context(
             panic_if_fail,
         )?;
 
+        // Create the dummy OpenGL context.
         let dummy_opengl_context = wingdi::wglCreateContext(dummy_window_dc);
         error_if_null(dummy_opengl_context, panic_if_fail)?;
         error_if_false(
@@ -78,9 +78,11 @@ pub fn new_opengl_context(
         // Load the function to choose a pixel format.
         wglChoosePixelFormatARB_ptr =
             wgl_get_proc_address("wglChoosePixelFormatARB", panic_if_fail)?;
+        // Load the function to create an OpenGL context with extra attributes.
         wglCreateContextAttribsARB_ptr =
             wgl_get_proc_address("wglCreateContextAttribsARB", panic_if_fail)?;
 
+        // Create the second dummy window.
         let dummy_window2 = create_dummy_window(h_instance, class_name);
         error_if_null(dummy_window2, panic_if_fail)?;
 
@@ -150,6 +152,7 @@ pub fn new_opengl_context(
         wingdi::SetPixelFormat(dummy_window_dc2, pixel_format_id, &pfd);
 
         // Finally we can create the OpenGL context!
+        // Need to allow for choosing major and minor version.
         let major_version_minimum = 4;
         let minor_version_minimum = 5;
         let context_attributes = [

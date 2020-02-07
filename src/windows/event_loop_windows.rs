@@ -1,10 +1,9 @@
 /// All windows share a pixel format and an OpenGlContext.
-extern crate gl;
 extern crate winapi;
-
-use crate::gl_context_windows::*;
-use crate::keys_windows::virtual_keycode_to_key;
-use crate::utils_windows::*;
+use super::gl_context_windows::*;
+use super::keys_windows::virtual_keycode_to_key;
+use super::utils_windows::*;
+use crate::events::*;
 use crate::Key;
 use std::io::Error;
 use std::ptr::null_mut;
@@ -21,44 +20,29 @@ use winapi::um::winuser::{
     WS_OVERLAPPEDWINDOW, WS_VISIBLE,
 };
 
-pub enum MouseButton {
-    Left,
-    Right,
-    Middle,
-}
-
-pub enum Event {
-    Draw,
-    KeyDown {
-        key: Key,
-        scancode: u32,
-    },
-    KeyUp {
-        key: Key,
-        scancode: u32,
-    },
-    MinimizedWindow,
-    MaximizedWindow,
-    ResizedWindow {
-        width: u32,
-        height: u32,
-    },
-    MouseMoved {
-        x: f32,
-        y: f32,
-    },
-    MouseDown {
-        button: MouseButton,
-    },
-    MouseUp {
-        button: MouseButton,
-    },
-    #[doc(hidden)]
-    __Nonexhaustive, // More events will be added
-}
-
 type Callback = dyn 'static + FnMut(Event);
 static mut PROGRAM_CALLBACK: Option<Box<Callback>> = None;
+
+pub fn run<T>(callback: T)
+where
+    T: 'static + FnMut(Event),
+{
+    unsafe {
+        PROGRAM_CALLBACK = Some(Box::new(callback));
+
+        let mut message: MSG = std::mem::zeroed();
+        while message.message != WM_QUIT {
+            while PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
+                TranslateMessage(&message as *const MSG);
+                DispatchMessageW(&message as *const MSG);
+            }
+
+            if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
+                program_callback(Event::Draw);
+            }
+        }
+    }
+}
 
 unsafe extern "system" fn window_callback(
     hwnd: HWND,
@@ -151,19 +135,6 @@ fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key) {
     (scancode, key)
 }
 
-// This is a C extension function requested on load.
-#[allow(non_upper_case_globals)]
-static mut wglSwapIntervalEXT_ptr: *const std::ffi::c_void = std::ptr::null();
-#[allow(non_upper_case_globals)]
-#[allow(non_snake_case)]
-fn wglSwapIntervalEXT(i: std::os::raw::c_int) -> bool {
-    unsafe {
-        std::mem::transmute::<_, extern "system" fn(std::os::raw::c_int) -> bool>(
-            wglSwapIntervalEXT_ptr,
-        )(i)
-    }
-}
-
 pub struct WindowManager {
     class_name: Vec<u16>,
     h_instance: HINSTANCE,
@@ -171,6 +142,7 @@ pub struct WindowManager {
 }
 
 pub struct Window {
+    #[allow(dead_code)]
     handle: HWND,
     device: HDC,
 }
@@ -209,27 +181,6 @@ impl WindowManager {
 
     fn setup_gl() -> Result<(), Error> {
         unsafe {
-            let opengl_module =
-                LoadLibraryA(std::ffi::CString::new("opengl32.dll").unwrap().as_ptr());
-            gl::load_with(|s| {
-                let name = std::ffi::CString::new(s).unwrap();
-                let mut result =
-                    wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
-                if result.is_null() {
-                    // Functions were part of OpenGL1 need to be loaded differently.
-                    result = GetProcAddress(opengl_module, name.as_ptr() as *const i8)
-                        as *const std::ffi::c_void;
-                }
-                /*
-                if result.is_null() {
-                    println!("FAILED TO LOAD: {}", s);
-                } else {
-                    println!("Loaded: {}", s);
-                }
-                */
-                result
-            });
-
             // Load swap interval for Vsync
             let function_pointer = wglGetProcAddress(
                 std::ffi::CString::new("wglSwapIntervalEXT")
@@ -315,25 +266,44 @@ impl WindowManager {
             SwapBuffers(window.device);
         }
     }
+
+    // This belongs to the window builder because the OpenGL context must be constructed first
+    // and the window builder creates the context.
+    pub fn gl_loader(&self) -> Box<dyn FnMut(&'static str) -> *const std::ffi::c_void> {
+        unsafe {
+            let opengl_module =
+                LoadLibraryA(std::ffi::CString::new("opengl32.dll").unwrap().as_ptr());
+            Box::new(move |s| {
+                let name = std::ffi::CString::new(s).unwrap();
+                let mut result =
+                    wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
+                if result.is_null() {
+                    // Functions were part of OpenGL1 need to be loaded differently.
+                    result = GetProcAddress(opengl_module, name.as_ptr() as *const i8)
+                        as *const std::ffi::c_void;
+                }
+                /*
+                if result.is_null() {
+                    println!("FAILED TO LOAD: {}", s);
+                } else {
+                    println!("Loaded: {}", s);
+                }
+                */
+                result
+            })
+        }
+    }
 }
 
-pub fn run<T>(callback: T)
-where
-    T: 'static + FnMut(Event),
-{
+// This is a C extension function requested on load.
+#[allow(non_upper_case_globals)]
+static mut wglSwapIntervalEXT_ptr: *const std::ffi::c_void = std::ptr::null();
+#[allow(non_upper_case_globals)]
+#[allow(non_snake_case)]
+fn wglSwapIntervalEXT(i: std::os::raw::c_int) -> bool {
     unsafe {
-        PROGRAM_CALLBACK = Some(Box::new(callback));
-
-        let mut message: MSG = std::mem::zeroed();
-        while message.message != WM_QUIT {
-            while PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
-                TranslateMessage(&message as *const MSG);
-                DispatchMessageW(&message as *const MSG);
-            }
-
-            if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
-                program_callback(Event::Draw);
-            }
-        }
+        std::mem::transmute::<_, extern "system" fn(std::os::raw::c_int) -> bool>(
+            wglSwapIntervalEXT_ptr,
+        )(i)
     }
 }

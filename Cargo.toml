@@ -6,4 +6,6 @@ edition = "2018"
 
 [dependencies]
 winapi = { version = "0.3.8", features = ["winuser", "libloaderapi", "windowsx"] }
+
+[dev-dependencies]
 gl = {version = "0.14.0"}
