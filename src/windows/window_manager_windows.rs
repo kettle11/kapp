@@ -99,14 +99,60 @@ impl<'a> WindowBuilder<'a> {
     }
 }
 
-pub struct WindowManager {
-    class_name: Vec<u16>,
-    h_instance: minwindef::HINSTANCE,
-    opengl_context: OpenGLContext,
+pub struct WindowManagerBuilder {
+    color_bits: u8,
+    alpha_bits: u8,
+    depth_bits: u8,
+    stencil_bits: u8,
+    msaa_samples: u8,
+    srgb: bool,
 }
 
-impl WindowManager {
-    pub fn new() -> Result<Self, Error> {
+impl WindowManagerBuilder {
+    pub fn bits(
+        &mut self,
+        color_bits: u8,
+        alpha_bits: u8,
+        depth_bits: u8,
+        stencil_bits: u8,
+    ) -> &mut Self {
+        self.color_bits = color_bits;
+        self.alpha_bits = alpha_bits;
+        self.depth_bits = depth_bits;
+        self.stencil_bits = stencil_bits;
+        self
+    }
+    pub fn color_bits(&mut self, bits: u8) -> &mut Self {
+        self.color_bits = bits;
+        self
+    }
+
+    pub fn alpha_bits(&mut self, bits: u8) -> &mut Self {
+        self.alpha_bits = bits;
+        self
+    }
+
+    pub fn depth_bits(&mut self, bits: u8) -> &mut Self {
+        self.depth_bits = bits;
+        self
+    }
+
+    pub fn stencil_bits(&mut self, bits: u8) -> &mut Self {
+        self.stencil_bits = bits;
+        self
+    }
+
+    pub fn msaa_samples(&mut self, samples: u8) -> &mut Self {
+        self.msaa_samples = samples;
+        self
+    }
+
+    pub fn srgb(&mut self, srgb: bool) -> &mut Self {
+        self.srgb = srgb;
+        self
+    }
+
+    pub fn build(&self) -> Result<WindowManager, Error> {
         unsafe {
             // Register the window class.
             let class_name = win32_string("windowing_rust");
@@ -126,14 +172,40 @@ impl WindowManager {
             };
             winuser::RegisterClassW(&window_class);
 
-            let opengl_context =
-                new_opengl_context(h_instance, &class_name, 32, 8, 16, 0, 2, false)?;
-            Self::setup_gl()?;
-            Ok(Self {
+            let opengl_context = new_opengl_context(
+                h_instance,
+                &class_name,
+                self.color_bits,
+                self.alpha_bits,
+                self.depth_bits,
+                self.stencil_bits,
+                self.msaa_samples,
+                false,
+            )?;
+            WindowManager::setup_gl()?;
+            Ok(WindowManager {
                 class_name,
                 h_instance,
                 opengl_context,
             })
+        }
+    }
+}
+pub struct WindowManager {
+    class_name: Vec<u16>,
+    h_instance: minwindef::HINSTANCE,
+    opengl_context: OpenGLContext,
+}
+
+impl WindowManager {
+    pub fn new() -> WindowManagerBuilder {
+        WindowManagerBuilder {
+            color_bits: 32,
+            alpha_bits: 8,
+            depth_bits: 16,
+            stencil_bits: 0,
+            msaa_samples: 1,
+            srgb: true,
         }
     }
 
