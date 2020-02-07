@@ -8,7 +8,9 @@ fn main() {
     gl::load_with(window_manager.gl_loader());
 
     let window = window_manager
-        .new_window("Keyboard Input Example", Some(600), Some(600))
+        .new_window()
+        .title("Keyboard Input Example")
+        .build()
         .unwrap();
     let mut color = (0.0, 0.0, 0.0, 1.0);
 

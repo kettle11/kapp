@@ -8,7 +8,9 @@ fn main() {
     gl::load_with(window_manager.gl_loader());
 
     let window = window_manager
-        .new_window("Mouse Down Example", Some(600), Some(600))
+        .new_window()
+        .title("Mouse Down Example")
+        .build()
         .unwrap();
 
     // There's not yet a way to query for the window size,

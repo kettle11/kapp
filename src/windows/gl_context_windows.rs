@@ -8,6 +8,7 @@ use winapi::shared::windef;
 use winapi::um::wingdi;
 use winapi::um::winuser;
 
+#[derive(Clone)]
 pub struct OpenGLContext {
     pub context_ptr: windef::HGLRC,
     pub pixel_format_id: i32,

@@ -6,13 +6,13 @@ fn main() {
     // Create a new window manager with default settings.
     let mut window_manager = WindowManager::new().unwrap();
     gl::load_with(window_manager.gl_loader());
-
     let window = window_manager
-        .new_window("Mouse Move Example", Some(600), Some(600))
+        .new_window()
+        .title("Mouse Move")
+        .dimensions(500, 500)
+        .build()
         .unwrap();
 
-    // There's not yet a way to query for the window size,
-    // so falsely assume an initial value of 500.
     let mut window_width = 500.0;
     let mut window_height = 500.0;
     let mut color = (0.0, 0.0, 0.0, 1.0);

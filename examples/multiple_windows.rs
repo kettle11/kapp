@@ -8,10 +8,14 @@ fn main() {
     gl::load_with(window_manager.gl_loader());
 
     let window_red = window_manager
-        .new_window("Window Red", Some(600), Some(600))
+        .new_window()
+        .title("Window Red")
+        .build()
         .unwrap();
     let window_blue = window_manager
-        .new_window("Window Blue", Some(600), Some(600))
+        .new_window()
+        .title("Window Blue")
+        .build()
         .unwrap();
 
     // Run forever
@@ -25,11 +29,13 @@ fn main() {
 }
 
 fn draw_to_window(window_manager: &WindowManager, window: &Window, r: f32, g: f32, b: f32) {
-    window_manager.make_current(window).unwrap();
-    unsafe {
-        gl::ClearColor(r, g, b, 1.0);
-        gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+    // If make_current fails the window may no longer be open.
+    if window_manager.make_current(window).is_ok() {
+        unsafe {
+            gl::ClearColor(r, g, b, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
+        // When we're done rendering swap the window buffers to display to the screen.
+        window_manager.swap_buffers(window);
     }
-    // When we're done rendering swap the window buffers to display to the screen.
-    window_manager.swap_buffers(window);
 }

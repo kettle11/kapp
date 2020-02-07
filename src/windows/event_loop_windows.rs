@@ -135,16 +135,92 @@ fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key) {
     (scancode, key)
 }
 
-pub struct WindowManager {
-    class_name: Vec<u16>,
-    h_instance: HINSTANCE,
-    opengl_context: OpenGLContext,
-}
-
 pub struct Window {
     #[allow(dead_code)]
     handle: HWND,
     device: HDC,
+}
+
+pub struct WindowBuilder<'a> {
+    class_name: Vec<u16>,
+    h_instance: HINSTANCE,
+    opengl_context: OpenGLContext,
+    x: Option<u32>,
+    y: Option<u32>,
+    width: Option<u32>,
+    height: Option<u32>,
+    resizable: bool,
+    title: Option<&'a str>,
+}
+
+impl<'a> WindowBuilder<'a> {
+    pub fn title(&mut self, title: &'a str) -> &mut Self {
+        self.title = Some(title);
+        self
+    }
+
+    pub fn position(&mut self, x: u32, y: u32) -> &mut Self {
+        self.x = Some(x);
+        self.y = Some(y);
+        self
+    }
+    pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
+        self.width = Some(width);
+        self.height = Some(height);
+        self
+    }
+
+    pub fn build(&self) -> Result<Window, Error> {
+        unsafe {
+            let title = win32_string(self.title.unwrap_or("Untitled"));
+
+            let x = self.x.map(|x| x as i32).unwrap_or(CW_USEDEFAULT);
+            let y = self.y.map(|y| y as i32).unwrap_or(CW_USEDEFAULT);
+            let width = self.width.map(|w| w as i32).unwrap_or(CW_USEDEFAULT);
+            let height = self.height.map(|h| h as i32).unwrap_or(CW_USEDEFAULT);
+
+            let window_handle = CreateWindowExW(
+                WS_EX_APPWINDOW,
+                self.class_name.as_ptr(),
+                title.as_ptr(),
+                WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                x,
+                y,
+                width,
+                height,
+                null_mut(),
+                null_mut(),
+                self.h_instance,
+                null_mut(),
+            );
+            let window_device = GetDC(window_handle);
+            error_if_null(window_device, false)?;
+
+            // make that match the device context's current pixel format
+            error_if_false(
+                SetPixelFormat(
+                    window_device,
+                    self.opengl_context.pixel_format_id,
+                    &self.opengl_context.pixel_format_descriptor,
+                ),
+                false,
+            )?;
+
+            // When a window is constructed, make it current.
+            wglMakeCurrent(window_device, self.opengl_context.context_ptr);
+
+            Ok(Window {
+                handle: window_handle,
+                device: window_device,
+            })
+        }
+    }
+}
+
+pub struct WindowManager {
+    class_name: Vec<u16>,
+    h_instance: HINSTANCE,
+    opengl_context: OpenGLContext,
 }
 
 impl WindowManager {
@@ -203,52 +279,17 @@ impl WindowManager {
         Ok(())
     }
 
-    pub fn new_window(
-        &mut self,
-        title: &str,
-        width: Option<u32>,
-        height: Option<u32>,
-    ) -> Result<Window, Error> {
-        unsafe {
-            let title = win32_string(title);
-
-            let width = width.map(|w| w as i32).unwrap_or(CW_USEDEFAULT);
-            let height = height.map(|h| h as i32).unwrap_or(CW_USEDEFAULT);
-
-            let window_handle = CreateWindowExW(
-                WS_EX_APPWINDOW,
-                self.class_name.as_ptr(),
-                title.as_ptr(),
-                WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                width,
-                height,
-                null_mut(),
-                null_mut(),
-                self.h_instance,
-                null_mut(),
-            );
-            let window_device = GetDC(window_handle);
-            error_if_null(window_device, false)?;
-
-            // make that match the device context's current pixel format
-            error_if_false(
-                SetPixelFormat(
-                    window_device,
-                    self.opengl_context.pixel_format_id,
-                    &self.opengl_context.pixel_format_descriptor,
-                ),
-                false,
-            )?;
-
-            // When a window is constructed, make it current.
-            wglMakeCurrent(window_device, self.opengl_context.context_ptr);
-
-            Ok(Window {
-                handle: window_handle,
-                device: window_device,
-            })
+    pub fn new_window<'a>(&mut self) -> WindowBuilder<'a> {
+        WindowBuilder {
+            class_name: self.class_name.clone(),
+            h_instance: self.h_instance,
+            opengl_context: self.opengl_context.clone(),
+            x: None,
+            y: None,
+            width: None,
+            height: None,
+            resizable: true,
+            title: None,
         }
     }
 
