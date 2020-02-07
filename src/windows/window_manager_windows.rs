@@ -104,7 +104,7 @@ pub struct WindowManagerBuilder {
     alpha_bits: u8,
     depth_bits: u8,
     stencil_bits: u8,
-    msaa_samples: u8,
+    samples: u8,
     srgb: bool,
 }
 
@@ -142,11 +142,17 @@ impl WindowManagerBuilder {
         self
     }
 
-    pub fn msaa_samples(&mut self, samples: u8) -> &mut Self {
-        self.msaa_samples = samples;
+    /// Sets the MSAA samples.
+    /// Set this to a power of 2.
+    /// With an Nvidia card on Windows I was unable to set this below 2.
+    pub fn samples(&mut self, samples: u8) -> &mut Self {
+        self.samples = samples;
         self
     }
 
+    /// This sets if the backbuffer for the windows will be in sRGB color space... or it would if drivers respected it.
+    /// Unfortunately this flag does nothing as tested on Windows with an Nvidia GPU.
+    /// In that case backbuffer was set to sRGB colorspace.
     pub fn srgb(&mut self, srgb: bool) -> &mut Self {
         self.srgb = srgb;
         self
@@ -179,7 +185,8 @@ impl WindowManagerBuilder {
                 self.alpha_bits,
                 self.depth_bits,
                 self.stencil_bits,
-                self.msaa_samples,
+                self.samples,
+                self.srgb,
                 false,
             )?;
             WindowManager::setup_gl()?;
@@ -204,7 +211,7 @@ impl WindowManager {
             alpha_bits: 8,
             depth_bits: 16,
             stencil_bits: 0,
-            msaa_samples: 1,
+            samples: 1,
             srgb: true,
         }
     }

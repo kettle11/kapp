@@ -3,7 +3,7 @@ use std::io::Error;
 use std::mem::size_of;
 use std::os::raw::{c_float, c_int, c_uint, c_void};
 use std::ptr::null_mut;
-use winapi::shared::minwindef::{HINSTANCE, TRUE};
+use winapi::shared::minwindef::{FALSE, HINSTANCE, TRUE};
 use winapi::shared::windef;
 use winapi::um::wingdi;
 use winapi::um::winuser;
@@ -28,6 +28,7 @@ pub fn new_opengl_context(
     depth_bits: u8,
     stencil_bits: u8,
     msaa_samples: u8,
+    srgb: bool,
     panic_if_fail: bool,
 ) -> Result<OpenGLContext, Error> {
     // This function performs the following steps:
@@ -95,7 +96,7 @@ pub fn new_opengl_context(
         // Later this is where we'll specify pixel format parameters.
         // Documentation about these flags here:
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/WGL_ARB_pixel_format.txt
-        let mut pixel_attributes = vec![
+        let pixel_attributes = vec![
             WGL_DRAW_TO_WINDOW_ARB,
             TRUE,
             WGL_SUPPORT_OPENGL_ARB,
@@ -118,10 +119,15 @@ pub fn new_opengl_context(
             1,
             WGL_SAMPLES_ARB,
             msaa_samples as i32,
+            WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB,
+            if srgb {
+                TRUE
+            } else {
+                println!("DISABLING SRGB");
+                FALSE
+            },
             0,
         ];
-
-        pixel_attributes.push(WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB);
 
         let mut pixel_format_id = 0;
         let mut number_of_formats = 0;
