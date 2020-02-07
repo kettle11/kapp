@@ -1,24 +1,13 @@
 /// All windows share a pixel format and an OpenGlContext.
-extern crate winapi;
-use super::gl_context_windows::*;
 use super::keys_windows::virtual_keycode_to_key;
-use super::utils_windows::*;
 use crate::events::*;
 use crate::Key;
-use std::io::Error;
 use std::ptr::null_mut;
-
-use winapi::shared::minwindef::{HINSTANCE, HIWORD, LOWORD, LPARAM, LRESULT, UINT, WPARAM};
-use winapi::shared::windef::{HDC, HWND};
+use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LRESULT, UINT, WPARAM};
+use winapi::shared::windef::HWND;
 use winapi::shared::windowsx::{GET_X_LPARAM, GET_Y_LPARAM};
-use winapi::um::libloaderapi::{GetModuleHandleW, GetProcAddress, LoadLibraryA};
-use winapi::um::wingdi::{wglGetProcAddress, wglMakeCurrent, SetPixelFormat, SwapBuffers};
 use winapi::um::winuser;
-use winapi::um::winuser::{
-    CreateWindowExW, DefWindowProcW, DispatchMessageW, GetDC, PeekMessageW, RegisterClassW,
-    TranslateMessage, CW_USEDEFAULT, MSG, PM_REMOVE, WM_QUIT, WNDCLASSW, WS_EX_APPWINDOW,
-    WS_OVERLAPPEDWINDOW, WS_VISIBLE,
-};
+use winapi::um::winuser::{MSG, PM_REMOVE, WM_QUIT};
 
 type Callback = dyn 'static + FnMut(Event);
 static mut PROGRAM_CALLBACK: Option<Box<Callback>> = None;
@@ -32,9 +21,9 @@ where
 
         let mut message: MSG = std::mem::zeroed();
         while message.message != WM_QUIT {
-            while PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
-                TranslateMessage(&message as *const MSG);
-                DispatchMessageW(&message as *const MSG);
+            while winuser::PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
+                winuser::TranslateMessage(&message as *const MSG);
+                winuser::DispatchMessageW(&message as *const MSG);
             }
 
             if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
@@ -44,7 +33,7 @@ where
     }
 }
 
-unsafe extern "system" fn window_callback(
+pub unsafe extern "system" fn window_callback(
     hwnd: HWND,
     u_msg: UINT,
     w_param: WPARAM,
@@ -90,7 +79,7 @@ unsafe extern "system" fn window_callback(
         _ => {}
     }
     // DefWindowProcW is the default Window event handler.
-    DefWindowProcW(hwnd, u_msg, w_param, l_param)
+    winuser::DefWindowProcW(hwnd, u_msg, w_param, l_param)
 }
 
 fn produce_event(event: Event) {
@@ -133,218 +122,4 @@ fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key) {
     let _extended = (l_param & (1 << 24)) != 0; // bit 24 represents if its an extended key
     let key = virtual_keycode_to_key(w_param as _);
     (scancode, key)
-}
-
-pub struct Window {
-    #[allow(dead_code)]
-    handle: HWND,
-    device: HDC,
-}
-
-pub struct WindowBuilder<'a> {
-    class_name: Vec<u16>,
-    h_instance: HINSTANCE,
-    opengl_context: OpenGLContext,
-    x: Option<u32>,
-    y: Option<u32>,
-    width: Option<u32>,
-    height: Option<u32>,
-    resizable: bool,
-    title: Option<&'a str>,
-}
-
-impl<'a> WindowBuilder<'a> {
-    pub fn title(&mut self, title: &'a str) -> &mut Self {
-        self.title = Some(title);
-        self
-    }
-
-    pub fn position(&mut self, x: u32, y: u32) -> &mut Self {
-        self.x = Some(x);
-        self.y = Some(y);
-        self
-    }
-    pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
-        self.width = Some(width);
-        self.height = Some(height);
-        self
-    }
-
-    pub fn build(&self) -> Result<Window, Error> {
-        unsafe {
-            let title = win32_string(self.title.unwrap_or("Untitled"));
-
-            let x = self.x.map(|x| x as i32).unwrap_or(CW_USEDEFAULT);
-            let y = self.y.map(|y| y as i32).unwrap_or(CW_USEDEFAULT);
-            let width = self.width.map(|w| w as i32).unwrap_or(CW_USEDEFAULT);
-            let height = self.height.map(|h| h as i32).unwrap_or(CW_USEDEFAULT);
-
-            let window_handle = CreateWindowExW(
-                WS_EX_APPWINDOW,
-                self.class_name.as_ptr(),
-                title.as_ptr(),
-                WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                x,
-                y,
-                width,
-                height,
-                null_mut(),
-                null_mut(),
-                self.h_instance,
-                null_mut(),
-            );
-            let window_device = GetDC(window_handle);
-            error_if_null(window_device, false)?;
-
-            // make that match the device context's current pixel format
-            error_if_false(
-                SetPixelFormat(
-                    window_device,
-                    self.opengl_context.pixel_format_id,
-                    &self.opengl_context.pixel_format_descriptor,
-                ),
-                false,
-            )?;
-
-            // When a window is constructed, make it current.
-            wglMakeCurrent(window_device, self.opengl_context.context_ptr);
-
-            Ok(Window {
-                handle: window_handle,
-                device: window_device,
-            })
-        }
-    }
-}
-
-pub struct WindowManager {
-    class_name: Vec<u16>,
-    h_instance: HINSTANCE,
-    opengl_context: OpenGLContext,
-}
-
-impl WindowManager {
-    pub fn new() -> Result<Self, Error> {
-        unsafe {
-            // Register the window class.
-            let class_name = win32_string("windowing_rust");
-            let h_instance = GetModuleHandleW(null_mut());
-
-            let window_class = WNDCLASSW {
-                style: 0,
-                lpfnWndProc: Some(window_callback),
-                cbClsExtra: 0,
-                cbWndExtra: 0,
-                hInstance: h_instance,
-                hIcon: null_mut(),
-                hCursor: null_mut(),
-                hbrBackground: null_mut(),
-                lpszMenuName: null_mut(),
-                lpszClassName: class_name.as_ptr(),
-            };
-            RegisterClassW(&window_class);
-
-            let opengl_context =
-                new_opengl_context(h_instance, &class_name, 32, 8, 16, 0, 2, false)?;
-            Self::setup_gl()?;
-            Ok(Self {
-                class_name,
-                h_instance,
-                opengl_context,
-            })
-        }
-    }
-
-    fn setup_gl() -> Result<(), Error> {
-        unsafe {
-            // Load swap interval for Vsync
-            let function_pointer = wglGetProcAddress(
-                std::ffi::CString::new("wglSwapIntervalEXT")
-                    .unwrap()
-                    .as_ptr() as *const i8,
-            );
-
-            if function_pointer.is_null() {
-                println!("Could not find wglSwapIntervalEXT");
-                return Err(Error::last_os_error());
-            } else {
-                wglSwapIntervalEXT_ptr = function_pointer as *const std::ffi::c_void;
-            }
-
-            // Default to Vsync enabled
-            if !wglSwapIntervalEXT(1) {
-                return Err(Error::last_os_error());
-            }
-        }
-        Ok(())
-    }
-
-    pub fn new_window<'a>(&mut self) -> WindowBuilder<'a> {
-        WindowBuilder {
-            class_name: self.class_name.clone(),
-            h_instance: self.h_instance,
-            opengl_context: self.opengl_context.clone(),
-            x: None,
-            y: None,
-            width: None,
-            height: None,
-            resizable: true,
-            title: None,
-        }
-    }
-
-    pub fn make_current(&self, window: &Window) -> Result<(), Error> {
-        unsafe {
-            error_if_false(
-                wglMakeCurrent(window.device, self.opengl_context.context_ptr),
-                false,
-            )
-        }
-    }
-
-    pub fn swap_buffers(&self, window: &Window) {
-        unsafe {
-            SwapBuffers(window.device);
-        }
-    }
-
-    // This belongs to the window builder because the OpenGL context must be constructed first
-    // and the window builder creates the context.
-    pub fn gl_loader(&self) -> Box<dyn FnMut(&'static str) -> *const std::ffi::c_void> {
-        unsafe {
-            let opengl_module =
-                LoadLibraryA(std::ffi::CString::new("opengl32.dll").unwrap().as_ptr());
-            Box::new(move |s| {
-                let name = std::ffi::CString::new(s).unwrap();
-                let mut result =
-                    wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
-                if result.is_null() {
-                    // Functions were part of OpenGL1 need to be loaded differently.
-                    result = GetProcAddress(opengl_module, name.as_ptr() as *const i8)
-                        as *const std::ffi::c_void;
-                }
-                /*
-                if result.is_null() {
-                    println!("FAILED TO LOAD: {}", s);
-                } else {
-                    println!("Loaded: {}", s);
-                }
-                */
-                result
-            })
-        }
-    }
-}
-
-// This is a C extension function requested on load.
-#[allow(non_upper_case_globals)]
-static mut wglSwapIntervalEXT_ptr: *const std::ffi::c_void = std::ptr::null();
-#[allow(non_upper_case_globals)]
-#[allow(non_snake_case)]
-fn wglSwapIntervalEXT(i: std::os::raw::c_int) -> bool {
-    unsafe {
-        std::mem::transmute::<_, extern "system" fn(std::os::raw::c_int) -> bool>(
-            wglSwapIntervalEXT_ptr,
-        )(i)
-    }
 }
