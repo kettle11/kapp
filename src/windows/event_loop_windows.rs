@@ -43,13 +43,17 @@ pub unsafe extern "system" fn window_callback(
         winuser::WM_KEYDOWN => produce_event(process_key_down(w_param, l_param)),
         winuser::WM_KEYUP => produce_event(process_key_up(w_param, l_param)),
         winuser::WM_SIZE => {
+            let (width, height) = get_width_height(l_param);
+            // First send the resize event
+            produce_event(Event::ResizedWindow { width, height });
+
+            // Then send more specific events.
             match w_param {
                 winuser::SIZE_MAXIMIZED => produce_event(Event::MaximizedWindow),
                 winuser::SIZE_MINIMIZED => produce_event(Event::MinimizedWindow),
                 winuser::SIZE_RESTORED => {
                     /* Quote from the docs: "The window has been resized, but
                     neither the SIZE_MINIMIZED nor SIZE_MAXIMIZED value applies" */
-                    produce_event(process_resize_event(l_param));
                     // While resizing the OS directly calls window_callback and does not call the typical event loop.
                     // To redraw the window smoothly Event::Draw is passed in here.
                     produce_event(Event::Draw);
@@ -101,10 +105,10 @@ fn process_mouse_move_event(_hwnd: HWND, l_param: LPARAM) -> Event {
     }
 }
 // https://docs.microsoft.com/en-us/windows/win32/winmsg/wm-size
-fn process_resize_event(l_param: LPARAM) -> Event {
+fn get_width_height(l_param: LPARAM) -> (u32, u32) {
     let width = LOWORD(l_param as u32) as u32;
     let height = HIWORD(l_param as u32) as u32;
-    Event::ResizedWindow { width, height }
+    (width, height)
 }
 
 fn process_key_down(w_param: WPARAM, l_param: LPARAM) -> Event {

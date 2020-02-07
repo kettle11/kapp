@@ -7,7 +7,7 @@ pub enum MouseButton {
 }
 
 pub enum Event {
-    Draw,
+    Draw, // The 'Draw' event can be seen as a recommendation of when to draw. It is not an actual system event.
     KeyDown {
         key: Key,
         scancode: u32,
