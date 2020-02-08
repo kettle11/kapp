@@ -15,6 +15,7 @@ pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Button {
         VK_XBUTTON1 => ExtraMouse1,
         VK_XBUTTON2 => ExtraMouse2,
         VK_BACK => Backspace,
+        VK_TAB => Tab,
         VK_CLEAR => Clear,
         VK_RETURN => Return,
         VK_SHIFT => Shift,

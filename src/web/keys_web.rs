@@ -6,6 +6,7 @@ pub fn virtual_keycode_to_key(key_in: &str) -> Button {
     match key_in {
         "Cancel" => Cancel,
         "Backspace" => Backspace,
+        "Tab" => Tab,
         "Clear" => Clear,
         "Return" => Return,
         "Shift" => Shift,

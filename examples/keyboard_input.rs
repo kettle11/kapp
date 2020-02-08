@@ -19,12 +19,15 @@ fn main() {
             Event::ButtonDown {
                 button,
                 scancode: _,
-            } => match button {
-                Button::R => color = (1.0, 0.0, 0.0, 1.0),
-                Button::G => color = (0.0, 1.0, 0.0, 1.0),
-                Button::B => color = (0.0, 0.0, 1.0, 1.0),
-                _ => {}
-            },
+            } => {
+                match button {
+                    Button::R => color = (1.0, 0.0, 0.0, 1.0),
+                    Button::G => color = (0.0, 1.0, 0.0, 1.0),
+                    Button::B => color = (0.0, 0.0, 1.0, 1.0),
+                    _ => {}
+                }
+                println!("Button pressed: {:?}", button)
+            }
             Event::Draw => {
                 gl.clear_color(color.0, color.1, color.2, color.3);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
