@@ -9,5 +9,18 @@ default = ["opengl_glow"]
 opengl_glow = ["glow"]
 
 [dependencies]
-winapi = { version = "0.3.8", features = ["winuser", "libloaderapi", "windowsx"] }
 glow = {version = "0.4.0", optional = true}
+
+[target.'cfg(target_os="windows")'.dependencies]
+winapi = { version = "0.3.8", features = ["winuser", "libloaderapi", "windowsx"] }
+
+[target.'cfg(target_arch="wasm32")'.dependencies]
+wasm-bindgen = "0.2.58"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+version = "0.3.35"
+features = [
+    "console",
+    "HtmlElement",
+    "MouseEvent"
+]
