@@ -189,7 +189,7 @@ impl WindowManagerBuilder {
                 self.srgb,
                 false,
             )?;
-            WindowManager::setup_gl()?;
+            WindowManager::setup_opengl()?;
             Ok(WindowManager {
                 class_name,
                 h_instance,
@@ -216,7 +216,7 @@ impl WindowManager {
         }
     }
 
-    fn setup_gl() -> Result<(), Error> {
+    fn setup_opengl() -> Result<(), Error> {
         unsafe {
             // Load swap interval for Vsync
             let function_pointer = wingdi::wglGetProcAddress(
@@ -292,6 +292,26 @@ impl WindowManager {
                     println!("Loaded: {}", s);
                 }
                 */
+                result
+            })
+        }
+    }
+
+    #[cfg(feature = "opengl_glow")]
+    pub fn gl_context(&self) -> glow::Context {
+        unsafe {
+            let opengl_module = libloaderapi::LoadLibraryA(
+                std::ffi::CString::new("opengl32.dll").unwrap().as_ptr(),
+            );
+            glow::Context::from_loader_function(|s| {
+                let name = std::ffi::CString::new(s).unwrap();
+                let mut result = wingdi::wglGetProcAddress(name.as_ptr() as *const i8)
+                    as *const std::ffi::c_void;
+                if result.is_null() {
+                    // Functions were part of OpenGL1 need to be loaded differently.
+                    result = libloaderapi::GetProcAddress(opengl_module, name.as_ptr() as *const i8)
+                        as *const std::ffi::c_void;
+                }
                 result
             })
         }

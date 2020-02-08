@@ -1,11 +1,11 @@
-extern crate gl;
 extern crate kettlewin;
+use kettlewin::glow::*;
 use kettlewin::*;
 
 fn main() {
     // Create a new window manager with default settings.
     let mut window_manager = WindowManager::new().build().unwrap();
-    gl::load_with(window_manager.gl_loader());
+    let gl = window_manager.gl_context();
 
     let window = window_manager
         .new_window()
@@ -38,8 +38,8 @@ fn main() {
                 }
             },
             Event::Draw => {
-                gl::ClearColor(color.0, color.1, color.2, color.3);
-                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+                gl.clear_color(color.0, color.1, color.2, color.3);
+                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                 window_manager.swap_buffers(&window);
             }
             _ => {}

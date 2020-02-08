@@ -12,27 +12,6 @@ use winapi::um::winuser::{MSG, PM_REMOVE, WM_QUIT};
 type Callback = dyn 'static + FnMut(Event);
 static mut PROGRAM_CALLBACK: Option<Box<Callback>> = None;
 
-pub fn run<T>(callback: T)
-where
-    T: 'static + FnMut(Event),
-{
-    unsafe {
-        PROGRAM_CALLBACK = Some(Box::new(callback));
-
-        let mut message: MSG = std::mem::zeroed();
-        while message.message != WM_QUIT {
-            while winuser::PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
-                winuser::TranslateMessage(&message as *const MSG);
-                winuser::DispatchMessageW(&message as *const MSG);
-            }
-
-            if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
-                program_callback(Event::Draw);
-            }
-        }
-    }
-}
-
 pub unsafe extern "system" fn window_callback(
     hwnd: HWND,
     u_msg: UINT,
@@ -126,4 +105,26 @@ fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key) {
     let _extended = (l_param & (1 << 24)) != 0; // bit 24 represents if its an extended key
     let key = virtual_keycode_to_key(w_param as _);
     (scancode, key)
+}
+
+pub fn run<T>(callback: T)
+where
+    T: 'static + FnMut(Event),
+{
+    unsafe {
+        PROGRAM_CALLBACK = Some(Box::new(callback));
+
+        let mut message: MSG = std::mem::zeroed();
+        while message.message != WM_QUIT {
+            while winuser::PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
+                winuser::TranslateMessage(&message as *const MSG);
+                winuser::DispatchMessageW(&message as *const MSG);
+            }
+
+            // Issue a draw command after all other events are parsed.
+            if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
+                program_callback(Event::Draw);
+            }
+        }
+    }
 }
