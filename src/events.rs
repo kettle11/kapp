@@ -4,6 +4,8 @@ pub enum MouseButton {
     Left,
     Right,
     Middle,
+    Unknown,
+    __Nonexhaustive, // More buttons may be added.
 }
 
 pub enum Event {

@@ -43,10 +43,23 @@ where
                 x: event.client_x() as f32,
                 y: event.client_y() as f32,
             });
-            request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap())
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_onmousemove(Some(mouse_move.as_ref().unchecked_ref()));
         mouse_move.forget();
+
+        let mouse_down = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+            (CALLBACK.as_mut().unwrap())(Event::MouseDown {
+                button: match event.button() {
+                    0 => MouseButton::Left,
+                    1 => MouseButton::Middle,
+                    2 => MouseButton::Right,
+                    _ => MouseButton::Unknown,
+                },
+            });
+        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+        canvas.set_onmousedown(Some(mouse_down.as_ref().unchecked_ref()));
+        mouse_down.forget();
+
         request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap());
     }
 }
