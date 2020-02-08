@@ -16,10 +16,13 @@ fn main() {
 
     run(move |event| unsafe {
         match event {
-            Event::KeyDown { key, scancode: _ } => match key {
-                Key::R => color = (1.0, 0.0, 0.0, 1.0),
-                Key::G => color = (0.0, 1.0, 0.0, 1.0),
-                Key::B => color = (0.0, 0.0, 1.0, 1.0),
+            Event::ButtonDown {
+                button,
+                scancode: _,
+            } => match button {
+                Button::R => color = (1.0, 0.0, 0.0, 1.0),
+                Button::G => color = (0.0, 1.0, 0.0, 1.0),
+                Button::B => color = (0.0, 0.0, 1.0, 1.0),
                 _ => {}
             },
             Event::Draw => {

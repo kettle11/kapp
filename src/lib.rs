@@ -1,7 +1,7 @@
+mod buttons;
 mod events;
-mod keys;
+pub use buttons::Button;
 pub use events::*;
-pub use keys::Key;
 
 #[cfg(all(target_os = "windows"))]
 mod windows;

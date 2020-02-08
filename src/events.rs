@@ -1,4 +1,4 @@
-use crate::keys::Key;
+use crate::buttons::Button;
 
 pub enum MouseButton {
     Left,
@@ -10,12 +10,12 @@ pub enum MouseButton {
 
 pub enum Event {
     Draw, // The 'Draw' event can be seen as a recommendation of when to draw. It is not an actual system event.
-    KeyDown {
-        key: Key,
+    ButtonDown {
+        button: Button,
         scancode: u32,
     },
-    KeyUp {
-        key: Key,
+    ButtonUp {
+        button: Button,
         scancode: u32,
     },
     MinimizedWindow,
@@ -27,12 +27,6 @@ pub enum Event {
     MouseMoved {
         x: f32,
         y: f32,
-    },
-    MouseDown {
-        button: MouseButton,
-    },
-    MouseUp {
-        button: MouseButton,
     },
     #[doc(hidden)]
     __Nonexhaustive, // More events will be added

@@ -1,4 +1,4 @@
-use crate::keys::{Key, Key::*};
+use crate::buttons::{Button, Button::*};
 use winapi::um::winuser::*;
 
 // Hand transcribed from here:
@@ -6,9 +6,14 @@ use winapi::um::winuser::*;
 // https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 // Also useful: 
 // https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
-pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Key {
+pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Button {
     match key_in {
+        VK_LBUTTON => LeftMouse,
+        VK_RBUTTON => RightMouse,
         VK_CANCEL => Cancel,
+        VK_MBUTTON => MiddleMouse,
+        VK_XBUTTON1 => ExtraMouse1,
+        VK_XBUTTON2 => ExtraMouse2,
         VK_BACK => Backspace,
         VK_CLEAR => Clear,
         VK_RETURN => Return,
@@ -147,18 +152,18 @@ pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Key {
         VK_LAUNCH_MEDIA_SELECT => LaunchMediaPlayer,
         VK_LAUNCH_APP1 => LaunchApp1,
         VK_LAUNCH_APP2 => LaunchApp2,
-        VK_OEM_1 => OEM1,
-        VK_OEM_PLUS => Plus,
+        VK_OEM_1 => Semicolon,
+        VK_OEM_PLUS => Equal, // This looks weird, but for +/= equal the convetion we're using is the default character.
         VK_OEM_COMMA => Comma,
         VK_OEM_MINUS => Minus,
         VK_OEM_PERIOD => Period,
-        VK_OEM_2 => Oem2,
-        VK_OEM_3 => Oem3,
-        VK_OEM_4 => Oem4,
-        VK_OEM_5 => Oem5,
-        VK_OEM_6 => Oem6,
-        VK_OEM_7 => Oem7,
-        VK_OEM_8 => Oem8,
+        VK_OEM_2 => Slash,
+        VK_OEM_3 => Backquote,
+        VK_OEM_4 => BracketLeft,
+        VK_OEM_5 => Backslash,
+        VK_OEM_6 => BracketRight,
+        VK_OEM_7 => Quote,
+        VK_OEM_8 => Oem8, // What is this?
         VK_OEM_102 => Oem102,
         VK_PROCESSKEY => Process,
         VK_ATTN => KanaHangul, /* Is this correct? */

@@ -1,10 +1,15 @@
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
-// Not all of these are used, some cleaning up could be done here.
-pub enum Key {
+pub enum Button {
     #[doc(hidden)]
     __Nonexhaustive, // More keys may be added.
 
     Unknown,
+    //----------- Mouse buttons
+    LeftMouse,
+    RightMouse,
+    MiddleMouse,
+    ExtraMouse1,
+    ExtraMouse2,
     // --------- International and IME (Input method editor) keys --------------
     KanaHangul,
     HanjaKanji,
@@ -58,7 +63,7 @@ pub enum Key {
     Colon,
     Semicolon,
     Less,
-    Equals,
+    Equal,
     Greater,
     Question,
     At,
@@ -224,19 +229,14 @@ pub enum Key {
     LaunchMediaPlayer,
     LaunchApp1,
     LaunchApp2,
-    OEM1, // US standard ;: key
     Plus,
     Comma,
     Minus,
     Period,
-    Oem2, // US standard /? key
-    Oem3, // US standard `~ key
-    Oem4, // US standard [{ key
-    Oem5, // US standard \| key
-    Oem6, // US standard ]} key
-    Oem7, // US standard '" key
-    Oem8, // Varies by keyboard
+    Oem8, // Varies by keyboard.
     Oem102,
+    BracketLeft,
+    BracketRight,
     EraseEof,
     Play,
     Zoom,

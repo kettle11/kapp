@@ -1,7 +1,8 @@
+use super::keys_web;
 use crate::events::*;
+use crate::Button;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-
 fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
 }
@@ -19,17 +20,15 @@ pub fn run<T>(callback: T)
 where
     T: 'static + FnMut(Event),
 {
-    let canvas = web_sys::window()
-        .unwrap()
-        .document()
-        .unwrap()
+    let document = web_sys::window().unwrap().document().unwrap();
+    let canvas = document
         .get_element_by_id("canvas")
         .unwrap()
         .dyn_into::<web_sys::HtmlElement>()
         .unwrap();
-    // While the following is unsafe and uses global data in a funky way, it's actually safe because web's main loop is single threaded.
+    // While the following is 'unsafe' and uses global data in a funky way, it's actually safe because web's main loop is single threaded.
     // An alternative approach is documented here: https://rustwasm.github.io/docs/wasm-bindgen/examples/request-animation-frame.html
-    // It may be better, but for now I found the following simpler to follow and implement.
+    // It may be better, but for now I found the following simpler to understand and implement.
     unsafe {
         CALLBACK = Some(Box::new(Box::new(callback)));
 
@@ -48,18 +47,40 @@ where
         mouse_move.forget();
 
         let mouse_down = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            (CALLBACK.as_mut().unwrap())(Event::MouseDown {
+            (CALLBACK.as_mut().unwrap())(Event::ButtonDown {
                 button: match event.button() {
-                    0 => MouseButton::Left,
-                    1 => MouseButton::Middle,
-                    2 => MouseButton::Right,
-                    _ => MouseButton::Unknown,
+                    0 => Button::LeftMouse,
+                    1 => Button::MiddleMouse,
+                    2 => Button::RightMouse,
+                    3 => Button::ExtraMouse1,
+                    4 => Button::ExtraMouse2,
+                    _ => Button::Unknown,
                 },
+                scancode: 0,
             });
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_onmousedown(Some(mouse_down.as_ref().unchecked_ref()));
         mouse_down.forget();
 
+
+        let keydown = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+            (CALLBACK.as_mut().unwrap())(Event::ButtonDown {
+                button: keys_web::virtual_keycode_to_key(&event.code()),
+                scancode: 0,
+            });
+        }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
+        document.set_onkeydown(Some(keydown.as_ref().unchecked_ref()));
+        keydown.forget();
+
+        let keyup = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+            (CALLBACK.as_mut().unwrap())(Event::ButtonUp {
+                button: keys_web::virtual_keycode_to_key(&event.code()),
+                scancode: 0,
+            });
+        }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
+        document.set_onkeyup(Some(keyup.as_ref().unchecked_ref()));
+        keyup.forget();
+        // Finally, start the draw loop.
         request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap());
     }
 }

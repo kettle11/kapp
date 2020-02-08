@@ -8,7 +8,7 @@
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/examples/opengl_context.exe",
+            "program": "${workspaceFolder}/target/debug/examples/mouse_down.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

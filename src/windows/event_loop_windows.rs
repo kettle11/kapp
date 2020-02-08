@@ -1,7 +1,7 @@
 /// All windows share a pixel format and an OpenGlContext.
 use super::keys_windows::virtual_keycode_to_key;
 use crate::events::*;
-use crate::Key;
+use crate::Button;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LRESULT, UINT, WPARAM};
 use winapi::shared::windef::HWND;
@@ -40,23 +40,46 @@ pub unsafe extern "system" fn window_callback(
                 _ => {}
             }
         }
-        winuser::WM_LBUTTONDOWN => produce_event(Event::MouseDown {
-            button: MouseButton::Left,
+        // Mouse and keyboard events are sent through the 'Button' events family.
+        winuser::WM_LBUTTONDOWN => produce_event(Event::ButtonDown {
+            button: Button::LeftMouse,
+            scancode: 0,
         }),
-        winuser::WM_MBUTTONDOWN => produce_event(Event::MouseDown {
-            button: MouseButton::Middle,
+        winuser::WM_MBUTTONDOWN => produce_event(Event::ButtonDown {
+            button: Button::RightMouse,
+            scancode: 0,
         }),
-        winuser::WM_RBUTTONDOWN => produce_event(Event::MouseDown {
-            button: MouseButton::Right,
+        winuser::WM_RBUTTONDOWN => produce_event(Event::ButtonDown {
+            button: Button::MiddleMouse,
+            scancode: 0,
         }),
-        winuser::WM_LBUTTONUP => produce_event(Event::MouseUp {
-            button: MouseButton::Left,
+        winuser::WM_XBUTTONDOWN => produce_event(Event::ButtonDown {
+            button: match HIWORD(w_param as u32) {
+                winuser::XBUTTON1 => Button::ExtraMouse1,
+                winuser::XBUTTON2 => Button::ExtraMouse2,
+                _ => unreachable!(),
+            },
+            scancode: 0,
         }),
-        winuser::WM_MBUTTONUP => produce_event(Event::MouseUp {
-            button: MouseButton::Middle,
+        winuser::WM_LBUTTONUP => produce_event(Event::ButtonUp {
+            button: Button::LeftMouse,
+            scancode: 0,
         }),
-        winuser::WM_RBUTTONUP => produce_event(Event::MouseUp {
-            button: MouseButton::Right,
+        winuser::WM_MBUTTONUP => produce_event(Event::ButtonUp {
+            button: Button::RightMouse,
+            scancode: 0,
+        }),
+        winuser::WM_RBUTTONUP => produce_event(Event::ButtonUp {
+            button: Button::MiddleMouse,
+            scancode: 0,
+        }),
+        winuser::WM_XBUTTONUP => produce_event(Event::ButtonUp {
+            button: match HIWORD(w_param as u32) {
+                winuser::XBUTTON1 => Button::ExtraMouse1,
+                winuser::XBUTTON2 => Button::ExtraMouse2,
+                _ => unreachable!(),
+            },
+            scancode: 0,
         }),
         winuser::WM_MOUSEMOVE => produce_event(process_mouse_move_event(hwnd, l_param)),
         _ => {}
@@ -91,20 +114,20 @@ fn get_width_height(l_param: LPARAM) -> (u32, u32) {
 }
 
 fn process_key_down(w_param: WPARAM, l_param: LPARAM) -> Event {
-    let (scancode, key) = process_key_event(w_param, l_param);
-    Event::KeyDown { key, scancode }
+    let (scancode, button) = process_key_event(w_param, l_param);
+    Event::ButtonDown { button, scancode }
 }
 
 fn process_key_up(w_param: WPARAM, l_param: LPARAM) -> Event {
-    let (scancode, key) = process_key_event(w_param, l_param);
-    Event::KeyUp { key, scancode }
+    let (scancode, button) = process_key_event(w_param, l_param);
+    Event::ButtonUp { button, scancode }
 }
 
-fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key) {
+fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Button) {
     let scancode = ((l_param >> 16) & 16) as UINT; // bits 16-23 represent the scancode
     let _extended = (l_param & (1 << 24)) != 0; // bit 24 represents if its an extended key
-    let key = virtual_keycode_to_key(w_param as _);
-    (scancode, key)
+    let button = virtual_keycode_to_key(w_param as _);
+    (scancode, button)
 }
 
 pub fn run<T>(callback: T)

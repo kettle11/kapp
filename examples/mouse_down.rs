@@ -19,19 +19,19 @@ fn main() {
 
     run(move |event| unsafe {
         match event {
-            Event::MouseDown { button } => match button {
-                MouseButton::Left => {
+            Event::ButtonDown { button, .. } => match button {
+                Button::LeftMouse => {
                     println!("Left mouse button pressed!");
                     println!("Painting the window Red");
 
                     color = (1.0, 0.0, 0.0, 1.0);
                 }
-                MouseButton::Middle => {
+                Button::MiddleMouse => {
                     println!("Middle mouse button pressed!");
                     println!("Painting the window Green");
                     color = (0.0, 1.0, 0.0, 1.0);
                 }
-                MouseButton::Right => {
+                Button::RightMouse => {
                     println!("Right mouse button pressed!");
                     println!("Painting the window Blue");
                     color = (0.0, 0.0, 1.0, 1.0);
