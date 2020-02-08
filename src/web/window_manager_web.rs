@@ -123,7 +123,7 @@ impl WindowManager {
         }
     }
 
-    pub fn swap_buffers(&self, window: &Window) {}
+    pub fn swap_buffers(&self, _window: &Window) {}
 
     #[cfg(feature = "opengl_glow")]
     pub fn gl_context(&self) -> glow::Context {

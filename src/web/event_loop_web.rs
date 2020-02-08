@@ -1,19 +1,9 @@
 use crate::events::*;
-use crate::Key;
-use std::cell::RefCell;
-use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::console;
 
 fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
-}
-
-fn document() -> web_sys::Document {
-    window()
-        .document()
-        .expect("should have a document on window")
 }
 
 fn request_animation_frame(f: &Closure<dyn FnMut()>) {
@@ -23,9 +13,9 @@ fn request_animation_frame(f: &Closure<dyn FnMut()>) {
 }
 
 static mut CALLBACK: Option<Box<dyn FnMut(Event)>> = None;
-static mut REQUEST_ANIMATION_FRAME_CLOSURE: Option<Closure<FnMut()>> = None;
+static mut REQUEST_ANIMATION_FRAME_CLOSURE: Option<Closure<dyn FnMut()>> = None;
 
-pub fn run<T>(mut callback: T)
+pub fn run<T>(callback: T)
 where
     T: 'static + FnMut(Event),
 {
