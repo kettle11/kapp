@@ -84,7 +84,6 @@ impl<'a> WindowBuilder<'a> {
                 ),
                 false,
             )?;
-
             // When a window is constructed, make it current.
             error_if_false(
                 wingdi::wglMakeCurrent(window_device, self.opengl_context.context_ptr),
@@ -95,6 +94,24 @@ impl<'a> WindowBuilder<'a> {
                 handle: window_handle,
                 device: window_device,
             })
+        }
+    }
+}
+
+struct Cursors {
+    pointer: windef::HCURSOR,
+    hand: windef::HCURSOR,
+    i_beam: windef::HCURSOR,
+    wait: windef::HCURSOR,
+}
+
+fn load_cursors() -> Cursors {
+    unsafe {
+        Cursors {
+            pointer: winuser::LoadCursorW(null_mut(), winuser::IDC_ARROW),
+            hand: winuser::LoadCursorW(null_mut(), winuser::IDC_HAND),
+            i_beam: winuser::LoadCursorW(null_mut(), winuser::IDC_IBEAM),
+            wait: winuser::LoadCursorW(null_mut(), winuser::IDC_WAIT),
         }
     }
 }
@@ -164,6 +181,8 @@ impl WindowManagerBuilder {
             let class_name = win32_string("windowing_rust");
             let h_instance = libloaderapi::GetModuleHandleW(null_mut());
 
+            let cursors = load_cursors();
+
             let window_class = winuser::WNDCLASSW {
                 style: 0,
                 lpfnWndProc: Some(super::event_loop_windows::window_callback),
@@ -171,7 +190,7 @@ impl WindowManagerBuilder {
                 cbWndExtra: 0,
                 hInstance: h_instance,
                 hIcon: null_mut(),
-                hCursor: null_mut(),
+                hCursor: cursors.pointer,
                 hbrBackground: null_mut(),
                 lpszMenuName: null_mut(),
                 lpszClassName: class_name.as_ptr(),
@@ -190,10 +209,12 @@ impl WindowManagerBuilder {
                 false,
             )?;
             WindowManager::setup_opengl()?;
+
             Ok(WindowManager {
                 class_name,
                 h_instance,
                 opengl_context,
+                cursors,
             })
         }
     }
@@ -202,6 +223,7 @@ pub struct WindowManager {
     class_name: Vec<u16>,
     h_instance: minwindef::HINSTANCE,
     opengl_context: OpenGLContext,
+    cursors: Cursors,
 }
 
 impl WindowManager {
