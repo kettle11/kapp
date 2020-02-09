@@ -20,8 +20,7 @@ pub struct WindowBuilder<'a> {
     opengl_context: OpenGLContext,
     x: Option<u32>,
     y: Option<u32>,
-    width: Option<u32>,
-    height: Option<u32>,
+    dimensions: Option<(u32, u32)>,
     resizable: bool,
     title: Option<&'a str>,
 }
@@ -38,8 +37,7 @@ impl<'a> WindowBuilder<'a> {
         self
     }
     pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
-        self.width = Some(width);
-        self.height = Some(height);
+        self.dimensions = Some((width, height));
         self
     }
 
@@ -49,20 +47,36 @@ impl<'a> WindowBuilder<'a> {
 
             let x = self.x.map(|x| x as i32).unwrap_or(winuser::CW_USEDEFAULT);
             let y = self.y.map(|y| y as i32).unwrap_or(winuser::CW_USEDEFAULT);
-            let width = self
-                .width
-                .map(|w| w as i32)
-                .unwrap_or(winuser::CW_USEDEFAULT);
-            let height = self
-                .height
-                .map(|h| h as i32)
-                .unwrap_or(winuser::CW_USEDEFAULT);
+            let extended_style = winuser::WS_EX_APPWINDOW;
+            let window_style = winuser::WS_OVERLAPPEDWINDOW | winuser::WS_VISIBLE;
+            let (width, height) =
+                self.dimensions
+                    .map_or((winuser::CW_USEDEFAULT, winuser::CW_USEDEFAULT), |d| {
+                        let mut rect = windef::RECT {
+                            left: 0,
+                            top: 0,
+                            right: d.0 as i32,
+                            bottom: d.1 as i32,
+                        };
+
+                        // Windows will provide a window with a smaller client area than desired (because it includes borders in the window size).
+                        // This call returns an adjusted rect accounting for the borders based on the window_style.
+                        winuser::AdjustWindowRectEx(
+                            &mut rect,
+                            window_style,
+                            minwindef::FALSE,
+                            extended_style,
+                        );
+
+                        (rect.right - rect.left, rect.bottom - rect.top)
+                    });
+            println!("WIDTH: {:?} HEIGHT: {:?}", width, height);
 
             let window_handle = winuser::CreateWindowExW(
-                winuser::WS_EX_APPWINDOW,
+                extended_style,
                 self.class_name.as_ptr(),
                 title.as_ptr(),
-                winuser::WS_OVERLAPPEDWINDOW | winuser::WS_VISIBLE,
+                window_style,
                 x,
                 y,
                 width,
@@ -190,7 +204,7 @@ impl WindowManagerBuilder {
                 cbWndExtra: 0,
                 hInstance: h_instance,
                 hIcon: null_mut(),
-                hCursor: cursors.pointer,
+                hCursor: cursors.pointer, // This may not be what is desired. Potentially this makes it annoying to change the cursor later.
                 hbrBackground: null_mut(),
                 lpszMenuName: null_mut(),
                 lpszClassName: class_name.as_ptr(),
@@ -269,8 +283,7 @@ impl WindowManager {
             opengl_context: self.opengl_context.clone(),
             x: None,
             y: None,
-            width: None,
-            height: None,
+            dimensions: None,
             resizable: true,
             title: None,
         }
@@ -316,6 +329,12 @@ impl WindowManager {
                 */
                 result
             })
+        }
+    }
+
+    pub fn set_cursor(&self) {
+        unsafe {
+            winuser::SetCursor(self.cursors.hand);
         }
     }
 
