@@ -24,19 +24,33 @@ where
     let canvas = document
         .get_element_by_id("canvas")
         .unwrap()
-        .dyn_into::<web_sys::HtmlElement>()
+        .dyn_into::<web_sys::HtmlCanvasElement>()
         .unwrap();
     // While the following is 'unsafe' and uses global data in a funky way, it's actually safe because web's main loop is single threaded.
     // An alternative approach is documented here: https://rustwasm.github.io/docs/wasm-bindgen/examples/request-animation-frame.html
     // It may be better, but for now I found the following simpler to understand and implement.
     unsafe {
         CALLBACK = Some(Box::new(Box::new(callback)));
+        {
+            let canvas = canvas.clone();
+            REQUEST_ANIMATION_FRAME_CLOSURE = Some(Closure::wrap(Box::new(move || {
+                let canvas_client_width = canvas.client_width() as u32;
+                let canvas_client_height = canvas.client_height() as u32;
+                if canvas_client_width != canvas.width() || canvas_client_height != canvas.height()
+                {
+                    canvas.set_width(canvas_client_width);
+                    canvas.set_height(canvas_client_height);
+                    (CALLBACK.as_mut().unwrap())(Event::ResizedWindow {
+                        width: canvas_client_height,
+                        height: canvas_client_height,
+                    });
+                }
 
-        REQUEST_ANIMATION_FRAME_CLOSURE = Some(Closure::wrap(Box::new(move || {
-            (CALLBACK.as_mut().unwrap())(Event::Draw);
-            request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap())
-        }) as Box<dyn FnMut()>));
-
+                (CALLBACK.as_mut().unwrap())(Event::Draw);
+                request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap())
+            })
+                as Box<dyn FnMut()>));
+        }
         let mouse_move = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
             (CALLBACK.as_mut().unwrap())(Event::MouseMoved {
                 x: event.client_x() as f32,
@@ -61,7 +75,6 @@ where
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_onmousedown(Some(mouse_down.as_ref().unchecked_ref()));
         mouse_down.forget();
-
 
         let keydown = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             (CALLBACK.as_mut().unwrap())(Event::ButtonDown {

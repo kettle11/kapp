@@ -22,6 +22,7 @@ version = "0.3.35"
 features = [
     "console",
     "HtmlElement",
+    "HtmlCanvasElement",
     "MouseEvent",
     "KeyboardEvent"
 ]
