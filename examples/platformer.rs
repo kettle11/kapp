@@ -137,16 +137,9 @@ fn main() {
         .build()
         .unwrap();
 
+    // ---------------- Level Data -------------------
     let black = (0.0, 0.0, 0.0, 1.0);
 
-    let blue = Color {
-        r: 0.0,
-        g: 0.3,
-        b: 0.6,
-        a: 1.0,
-    };
-
-    // A bunch of level data
     let murky_grey = Color {
         r: 0.05,
         g: 0.1,
@@ -308,8 +301,8 @@ fn main() {
             color: moody_foreground_waterfall,
         },
     ];
+    // ---------------- End level data -------------------
 
-    // End level data
     let mut player = Player {
         rect: Rect {
             x: 0.,
@@ -321,7 +314,14 @@ fn main() {
         grounded: false,
     };
 
-    // Various player parameters here.
+    // Various player parameters.
+    let player_color = Color {
+        r: 0.0,
+        g: 0.3,
+        b: 0.6,
+        a: 1.0,
+    };
+
     let player_ground_acceleration = 0.5;
     let player_air_acceleration = 0.15;
     let ground_friction = 0.2;
@@ -410,7 +410,7 @@ fn main() {
                             player.rect.x -= collision.0;
                             player.velocity.0 = 0.;
                         } else {
-                            // If the player collides downwards along the y axis they're on the ground.
+                            // If the player collides downwards along the y axis they're on the ground and can jump.
                             if collision.1 < 0. {
                                 player.grounded = true;
                             }
@@ -436,7 +436,7 @@ fn main() {
                     draw_rect(&gl, &block.rect, &block.color);
                 }
                 // Then draw the player
-                draw_rect(&gl, &player.rect, &blue);
+                draw_rect(&gl, &player.rect, &player_color);
 
                 // Draw the foreground!
                 for block in foreground_blocks.iter() {
