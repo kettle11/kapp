@@ -51,6 +51,8 @@ where
             })
                 as Box<dyn FnMut()>));
         }
+
+        // Mouse move event
         let mouse_move = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
             (CALLBACK.as_mut().unwrap())(Event::MouseMoved {
                 x: event.client_x() as f32,
@@ -60,6 +62,7 @@ where
         canvas.set_onmousemove(Some(mouse_move.as_ref().unchecked_ref()));
         mouse_move.forget();
 
+        // Mouse down event
         let mouse_down = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
             (CALLBACK.as_mut().unwrap())(Event::ButtonDown {
                 button: match event.button() {
@@ -76,20 +79,30 @@ where
         canvas.set_onmousedown(Some(mouse_down.as_ref().unchecked_ref()));
         mouse_down.forget();
 
+        // Key down event
         let keydown = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             (CALLBACK.as_mut().unwrap())(Event::ButtonDown {
                 button: keys_web::virtual_keycode_to_key(&event.code()),
                 scancode: 0,
             });
+            event
+                .dyn_into::<web_sys::Event>()
+                .unwrap()
+                .prevent_default();
         }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
         document.set_onkeydown(Some(keydown.as_ref().unchecked_ref()));
         keydown.forget();
 
+        // Key up event
         let keyup = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             (CALLBACK.as_mut().unwrap())(Event::ButtonUp {
                 button: keys_web::virtual_keycode_to_key(&event.code()),
                 scancode: 0,
             });
+            event
+                .dyn_into::<web_sys::Event>()
+                .unwrap()
+                .prevent_default();
         }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
         document.set_onkeyup(Some(keyup.as_ref().unchecked_ref()));
         keyup.forget();
