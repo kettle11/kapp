@@ -43,12 +43,13 @@ impl<'a> WindowBuilder<'a> {
 
     pub fn build(&self) -> Result<Window, Error> {
         unsafe {
+            let extended_style = winuser::WS_EX_APPWINDOW;
+            let window_style = winuser::WS_OVERLAPPEDWINDOW | winuser::WS_VISIBLE;
             let title = win32_string(self.title.unwrap_or("Untitled"));
 
             let x = self.x.map(|x| x as i32).unwrap_or(winuser::CW_USEDEFAULT);
             let y = self.y.map(|y| y as i32).unwrap_or(winuser::CW_USEDEFAULT);
-            let extended_style = winuser::WS_EX_APPWINDOW;
-            let window_style = winuser::WS_OVERLAPPEDWINDOW | winuser::WS_VISIBLE;
+
             let (width, height) =
                 self.dimensions
                     .map_or((winuser::CW_USEDEFAULT, winuser::CW_USEDEFAULT), |d| {
@@ -70,7 +71,6 @@ impl<'a> WindowBuilder<'a> {
 
                         (rect.right - rect.left, rect.bottom - rect.top)
                     });
-            println!("WIDTH: {:?} HEIGHT: {:?}", width, height);
 
             let window_handle = winuser::CreateWindowExW(
                 extended_style,

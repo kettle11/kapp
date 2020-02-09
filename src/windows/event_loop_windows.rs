@@ -114,20 +114,26 @@ fn get_width_height(l_param: LPARAM) -> (u32, u32) {
 }
 
 fn process_key_down(w_param: WPARAM, l_param: LPARAM) -> Event {
-    let (scancode, button) = process_key_event(w_param, l_param);
-    Event::ButtonDown { button, scancode }
+    let (scancode, button, repeat) = process_key_event(w_param, l_param);
+
+    if repeat {
+        Event::ButtonRepeat { button }
+    } else {
+        Event::ButtonDown { button, scancode }
+    }
 }
 
 fn process_key_up(w_param: WPARAM, l_param: LPARAM) -> Event {
-    let (scancode, button) = process_key_event(w_param, l_param);
+    let (scancode, button, _repeat) = process_key_event(w_param, l_param);
     Event::ButtonUp { button, scancode }
 }
 
-fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Button) {
+fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Button, bool) {
     let scancode = ((l_param >> 16) & 16) as UINT; // bits 16-23 represent the scancode
-    let _extended = (l_param & (1 << 24)) != 0; // bit 24 represents if its an extended key
+    let _extended = (l_param >> 24) & 1 != 0; // bit 24 represents if its an extended key
+    let repeat = (l_param >> 30) & 1 == 1;
     let button = virtual_keycode_to_key(w_param as _);
-    (scancode, button)
+    (scancode, button, repeat)
 }
 
 pub fn run<T>(callback: T)

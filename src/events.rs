@@ -18,6 +18,9 @@ pub enum Event {
         button: Button,
         scancode: u32,
     },
+    ButtonRepeat {
+        button: Button,
+    },
     MinimizedWindow,
     MaximizedWindow,
     ResizedWindow {
