@@ -46,11 +46,11 @@ pub unsafe extern "system" fn window_callback(
             scancode: 0,
         }),
         winuser::WM_MBUTTONDOWN => produce_event(Event::ButtonDown {
-            button: Button::RightMouse,
+            button: Button::MiddleMouse,
             scancode: 0,
         }),
         winuser::WM_RBUTTONDOWN => produce_event(Event::ButtonDown {
-            button: Button::MiddleMouse,
+            button: Button::RightMouse,
             scancode: 0,
         }),
         winuser::WM_XBUTTONDOWN => produce_event(Event::ButtonDown {
