@@ -1,6 +1,7 @@
 use std::io::Error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use web_sys::console;
 
 pub struct Window {}
 
@@ -138,9 +139,8 @@ impl WindowManager {
         // There should be a way to choose webgl1 or webgl2
         // Or perhaps choose automatically based on support?
 
-        if let Ok(canvas) = canvas.get_context("webgl2") {
+        if let Some(canvas) = canvas.get_context("webgl2").unwrap() {
             let webgl2_context = canvas
-                .unwrap()
                 .dyn_into::<web_sys::WebGl2RenderingContext>()
                 .unwrap();
             glow::Context::from_webgl2_context(webgl2_context)
