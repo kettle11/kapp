@@ -66,11 +66,11 @@ pub unsafe extern "system" fn window_callback(
             scancode: 0,
         }),
         winuser::WM_MBUTTONUP => produce_event(Event::ButtonUp {
-            button: Button::RightMouse,
+            button: Button::MiddleMouse,
             scancode: 0,
         }),
         winuser::WM_RBUTTONUP => produce_event(Event::ButtonUp {
-            button: Button::MiddleMouse,
+            button: Button::RightMouse,
             scancode: 0,
         }),
         winuser::WM_XBUTTONUP => produce_event(Event::ButtonUp {
