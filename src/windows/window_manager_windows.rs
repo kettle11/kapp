@@ -316,7 +316,7 @@ impl WindowManager {
                 let mut result = wingdi::wglGetProcAddress(name.as_ptr() as *const i8)
                     as *const std::ffi::c_void;
                 if result.is_null() {
-                    // Functions were part of OpenGL1 need to be loaded differently.
+                    // Functions that were part of OpenGL1 need to be loaded differently.
                     result = libloaderapi::GetProcAddress(opengl_module, name.as_ptr() as *const i8)
                         as *const std::ffi::c_void;
                 }
@@ -327,6 +327,23 @@ impl WindowManager {
                     println!("Loaded: {}", s);
                 }
                 */
+                result
+            })
+        }
+    }
+
+    pub fn gl_loader_c_string(&self) -> Box<dyn FnMut(*const i8) -> *const std::ffi::c_void> {
+        unsafe {
+            let opengl_module = libloaderapi::LoadLibraryA(
+                std::ffi::CString::new("opengl32.dll").unwrap().as_ptr(),
+            );
+            Box::new(move |s| {
+                let mut result = wingdi::wglGetProcAddress(s) as *const std::ffi::c_void;
+                if result.is_null() {
+                    // Functions that were part of OpenGL1 need to be loaded differently.
+                    result =
+                        libloaderapi::GetProcAddress(opengl_module, s) as *const std::ffi::c_void;
+                }
                 result
             })
         }
