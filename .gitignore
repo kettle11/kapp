@@ -13,3 +13,5 @@ Cargo.lock
 
 /examples/web_build/*
 !/examples/web_build/index.html
+
+/examples/ogl33/target/
