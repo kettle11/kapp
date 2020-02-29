@@ -136,6 +136,11 @@ impl WindowManager {
             .unwrap()
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .unwrap();
+
+        // These should be configurable
+        let mut context_attributes = web_sys::WebGlContextAttributes::new();
+        context_attributes.alpha(false); // Disable the canvas background transparency.
+
         // There should be a way to choose webgl1 or webgl2
         // Or perhaps choose automatically based on support?
         /*
@@ -146,7 +151,7 @@ impl WindowManager {
             glow::Context::from_webgl2_context(webgl2_context)
         } else {*/
         let webgl_context = canvas
-            .get_context("webgl")
+            .get_context_with_context_options("webgl", context_attributes.as_ref())
             .unwrap()
             .unwrap()
             .dyn_into::<web_sys::WebGlRenderingContext>()
