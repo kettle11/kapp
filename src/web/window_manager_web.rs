@@ -138,20 +138,20 @@ impl WindowManager {
             .unwrap();
         // There should be a way to choose webgl1 or webgl2
         // Or perhaps choose automatically based on support?
-
+        /*
         if let Some(canvas) = canvas.get_context("webgl2").unwrap() {
             let webgl2_context = canvas
                 .dyn_into::<web_sys::WebGl2RenderingContext>()
                 .unwrap();
             glow::Context::from_webgl2_context(webgl2_context)
-        } else {
-            let webgl_context = canvas
-                .get_context("webgl")
-                .unwrap()
-                .unwrap()
-                .dyn_into::<web_sys::WebGlRenderingContext>()
-                .unwrap();
-            glow::Context::from_webgl1_context(webgl_context)
-        }
+        } else {*/
+        let webgl_context = canvas
+            .get_context("webgl")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::WebGlRenderingContext>()
+            .unwrap();
+        glow::Context::from_webgl1_context(webgl_context)
+        // }
     }
 }
