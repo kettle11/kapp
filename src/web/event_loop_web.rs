@@ -42,7 +42,7 @@ where
                     canvas.set_width(canvas_client_width);
                     canvas.set_height(canvas_client_height);
                     (CALLBACK.as_mut().unwrap())(Event::ResizedWindow {
-                        width: canvas_client_height,
+                        width: canvas_client_width,
                         height: canvas_client_height,
                     });
                 }
