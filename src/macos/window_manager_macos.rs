@@ -436,6 +436,17 @@ impl App {
         unimplemented!();
     }
 
+    pub fn gl_loader_c_string(&self) -> Box<dyn FnMut(*const i8) -> *const std::ffi::c_void> {
+        unsafe {
+            Box::new(move |s| {
+                unsafe {
+                    let name = std::ffi::CStr::from_ptr(s);
+                    get_proc_address((&name).to_str().unwrap())
+                }
+            })
+        }
+    }
+
     #[cfg(feature = "opengl_glow")]
     pub fn gl_context(&self) -> glow::Context {
         glow::Context::from_loader_function(|s| get_proc_address(s))
