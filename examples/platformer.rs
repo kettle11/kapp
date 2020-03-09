@@ -128,8 +128,8 @@ fn main() {
         gl.enable(SCISSOR_TEST);
     }
 
-    let screen_width = 600;
-    let screen_height = 600;
+    let mut screen_width = 600;
+    let mut screen_height = 600;
     let window = app
         .new_window()
         .title("Platformer Example")

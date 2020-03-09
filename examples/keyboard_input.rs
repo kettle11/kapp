@@ -4,17 +4,17 @@ use kettlewin::*;
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut window_manager = WindowManager::new().build().unwrap();
-    let gl = window_manager.gl_context();
+    let mut app = App::new().build().unwrap();
+    let gl = app.gl_context();
 
-    let window = window_manager
+    let window = app
         .new_window()
         .title("Keyboard Input Example")
-        .build()
+        .build(&app)
         .unwrap();
     let mut color = (0.0, 0.0, 0.0, 1.0);
 
-    run(move |event| unsafe {
+    app.run(move |event, app| unsafe {
         match event {
             Event::ButtonDown {
                 button,
@@ -32,7 +32,7 @@ fn main() {
                 gl.clear_color(color.0, color.1, color.2, color.3);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                 // When we're done rendering swap the window buffers to display to the screen.
-                window_manager.swap_buffers(&window);
+                app.swap_buffers();
             }
             _ => {}
         }

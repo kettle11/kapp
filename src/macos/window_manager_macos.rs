@@ -5,7 +5,7 @@ extern crate core_foundation;
 use crate::Event;
 use cocoa::appkit::*;
 use cocoa::base::{id, nil};
-use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
+use cocoa::foundation::{NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString};
 use core_foundation::base::TCFType;
 use core_foundation::bundle::{CFBundleGetBundleWithIdentifier, CFBundleGetFunctionPointerForName};
 use core_foundation::string::CFString;
@@ -102,6 +102,23 @@ impl<'a> WindowBuilder<'a> {
             let () = msg_send![window, setContentView: view];
             let () = msg_send![window, makeFirstResponder: view];
 
+            // Setup a tracking rect to receive mouse events within
+            let rect: NSRect = msg_send![view, visibleRect];
+            let tracking_rect: NSInteger = msg_send![view,
+                addTrackingRect:rect
+                owner:view
+                userData:nil
+                assumeInside:NO
+            ];
+
+            let trackingArea: id = msg_send![class!(NSTrackingArea), alloc];
+            let () = msg_send![
+                trackingArea,
+                initWithRect: rect
+                options: NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveInKeyWindow
+                owner: view
+                userInfo:nil];
+            let () = msg_send![view, addTrackingArea: trackingArea];
             TEST_VIEW = Some(Box::new(ViewData { view }));
             let window = Window { view };
             app.make_current(&window).unwrap();
@@ -217,13 +234,30 @@ impl AppBuilder {
                     }
                 }*/
             }
+            extern "C" fn window_did_resize(this: &Object, _sel: Sel, event: id) {
+                // TEST_VIEW needs to be replaced with the actual window view.
+                unsafe {
+                    if let Some(data) = TEST_VIEW.as_ref() {
+                        let rect = unsafe { NSView::frame(data.view) };
+                        let width = rect.size.width;
+                        let height = rect.size.height;
+                        produce_event(crate::Event::ResizedWindow {
+                            width: width as u32,
+                            height: height as u32,
+                        });
+                        println!("Resized: {:?}, {:?}", width, height);
+                    }
+                }
+            }
 
-            /*
             decl.add_method(
                 sel!(windowDidMove:),
                 window_moved as extern "C" fn(&Object, Sel, id),
             );
-            */
+            decl.add_method(
+                sel!(windowDidResize:),
+                window_did_resize as extern "C" fn(&Object, Sel, id),
+            );
 
             let window_delegate_class = decl.register();
 
@@ -231,22 +265,62 @@ impl AppBuilder {
             let superclass = class!(NSView);
             let mut decl = ClassDecl::new("KettlewinViewClass", superclass).unwrap();
             extern "C" fn key_down(this: &Object, _sel: Sel, event: id) {
-                println!("KEY DOWN");
-            }
-
-            extern "C" fn draw_rect(this: &Object, _sel: Sel, rect: NSRect) {
-                // This should be moved to a user requested frame later.
-                // This means the current window needs to be detected somehow.
-                /*
                 unsafe {
-                    if let Some(data) = TEST_VIEW.as_ref() {
-                        let () = msg_send![data.view, setNeedsDisplay: YES];
-                    }
-                }*/
-                // produce_event(Event::Draw);
+                    produce_event(crate::Event::ButtonDown {
+                        button: super::keys_mac::virtual_keycode_to_key(event.keyCode()),
+                        scancode: 0,
+                    });
+                }
             }
 
+            extern "C" fn key_up(this: &Object, _sel: Sel, event: id) {
+                unsafe {
+                    produce_event(crate::Event::ButtonUp {
+                        button: super::keys_mac::virtual_keycode_to_key(event.keyCode()),
+                        scancode: 0,
+                    });
+                }
+            }
+            extern "C" fn draw_rect(this: &Object, _sel: Sel, rect: NSRect) {}
+
+            extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: id) {
+                unsafe {
+                    let window_point = event.locationInWindow();
+
+                    // The following code snippet is taken from winit.
+                    // We have to do this to have access to the `NSView` trait...
+                    let view: id = this as *const _ as *mut _;
+
+                    let window_point = event.locationInWindow();
+                    let view_point = view.convertPoint_fromView_(window_point, nil);
+                    let view_rect = NSView::frame(view);
+
+                    if view_point.x.is_sign_negative()
+                        || view_point.y.is_sign_negative()
+                        || view_point.x > view_rect.size.width
+                        || view_point.y > view_rect.size.height
+                    {
+                        // Point is outside of the client area (view)
+                        return;
+                    }
+
+                    let x = view_point.x;
+                    let y = view_rect.size.height - view_point.y;
+
+                    produce_event(crate::Event::MouseMoved {
+                        x: x as f32,
+                        y: y as f32,
+                    });
+                }
+            }
+
+            decl.add_method(
+                sel!(mouseMoved:),
+                mouse_moved as extern "C" fn(&Object, Sel, id),
+            );
             decl.add_method(sel!(keyDown:), key_down as extern "C" fn(&Object, Sel, id));
+            decl.add_method(sel!(keyUp:), key_up as extern "C" fn(&Object, Sel, id));
+
             decl.add_method(
                 sel!(drawRect:),
                 draw_rect as extern "C" fn(&Object, Sel, NSRect),
@@ -391,6 +465,10 @@ fn get_proc_address(addr: &str) -> *const core::ffi::c_void {
         unsafe { CFBundleGetFunctionPointerForName(framework, symbol_name.as_concrete_TypeRef()) };
     symbol as *const _
 }
+
+pub static NSTrackingMouseEnteredAndExited: NSInteger = 0x01;
+pub static NSTrackingMouseMoved: NSInteger = 0x02;
+pub static NSTrackingActiveInKeyWindow: NSInteger = 0x20;
 
 #[link(name = "CoreFoundation", kind = "framework")]
 extern "C" {
