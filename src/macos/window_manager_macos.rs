@@ -1,17 +1,34 @@
 use std::io::Error;
 extern crate cocoa;
 extern crate core_foundation;
-extern crate objc;
+
+use crate::Event;
 use cocoa::appkit::*;
-use cocoa::base::{nil, NO};
+use cocoa::base::{id, nil};
 use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
 use core_foundation::base::TCFType;
 use core_foundation::bundle::{CFBundleGetBundleWithIdentifier, CFBundleGetFunctionPointerForName};
 use core_foundation::string::CFString;
 
+use objc::{
+    declare::ClassDecl,
+    runtime::{Class, Object, Sel, BOOL, NO, YES},
+};
+
 use std::str::FromStr;
 
-pub struct Window {}
+type Callback = dyn 'static + FnMut(Event, &mut App);
+static mut PROGRAM_CALLBACK: Option<Box<Callback>> = None;
+static mut APP: Option<Box<App>> = None;
+
+struct ViewData {
+    view: id,
+}
+static mut TEST_VIEW: Option<Box<ViewData>> = None;
+
+pub struct Window {
+    view: id,
+}
 
 pub struct WindowBuilder<'a> {
     position: Option<(u32, u32)>,
@@ -40,7 +57,7 @@ impl<'a> WindowBuilder<'a> {
         self
     }
 
-    pub fn build(&self) -> Result<Window, Error> {
+    pub fn build(&self, app: &App) -> Result<Window, Error> {
         unsafe {
             let (x, y) = self
                 .position
@@ -75,12 +92,25 @@ impl<'a> WindowBuilder<'a> {
             window.makeKeyAndOrderFront_(nil);
             let current_app = NSRunningApplication::currentApplication(nil);
             current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
-            Ok(Window {})
+            // setup window delegate
+            let window_delegate: id = msg_send![app.window_delegate_class, new];
+            let () = msg_send![window, setDelegate: window_delegate];
+
+            // setup view
+            let view: id = msg_send![app.view_delegate_class, new];
+            let () = msg_send![window, setDelegate: window_delegate];
+            let () = msg_send![window, setContentView: view];
+            let () = msg_send![window, makeFirstResponder: view];
+
+            TEST_VIEW = Some(Box::new(ViewData { view }));
+            let window = Window { view };
+            app.make_current(&window).unwrap();
+            Ok(window)
         }
     }
 }
 
-pub struct WindowManagerBuilder {
+pub struct AppBuilder {
     color_bits: u8,
     alpha_bits: u8,
     depth_bits: u8,
@@ -89,7 +119,7 @@ pub struct WindowManagerBuilder {
     srgb: bool,
 }
 
-impl WindowManagerBuilder {
+impl AppBuilder {
     pub fn bits(
         &mut self,
         color_bits: u8,
@@ -139,7 +169,7 @@ impl WindowManagerBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<WindowManager, Error> {
+    pub fn build(&self) -> Result<App, Error> {
         unsafe {
             let _pool = NSAutoreleasePool::new(nil);
 
@@ -163,23 +193,134 @@ impl WindowManagerBuilder {
             ];
 
             let pixel_format = NSOpenGLPixelFormat::alloc(nil).initWithAttributes_(&attrs);
-            let gl_context =
+            let gl_context: id =
                 NSOpenGLContext::alloc(nil).initWithFormat_shareContext_(pixel_format, nil);
 
             gl_context.makeCurrentContext();
-            Ok(WindowManager { app, gl_context })
+
+            // Enable vsync
+            NSOpenGLContext::setValues_forParameter_(
+                gl_context,
+                &(1 as i32),
+                cocoa::appkit::NSOpenGLContextParameter::NSOpenGLCPSwapInterval,
+            );
+
+            // Setup window_delegate_class
+            let superclass = class!(NSResponder);
+            let mut decl = ClassDecl::new("KettlewinWindowClass", superclass).unwrap();
+            extern "C" fn window_moved(this: &Object, _sel: Sel, event: id) {
+                //  println!("WINDOW MOVED");
+                /*
+                unsafe {
+                    if let Some(data) = TEST_VIEW.as_ref() {
+                        let () = msg_send![data.view, setNeedsDisplay: YES];
+                    }
+                }*/
+            }
+
+            /*
+            decl.add_method(
+                sel!(windowDidMove:),
+                window_moved as extern "C" fn(&Object, Sel, id),
+            );
+            */
+
+            let window_delegate_class = decl.register();
+
+            // Setup view_delegate_class
+            let superclass = class!(NSView);
+            let mut decl = ClassDecl::new("KettlewinViewClass", superclass).unwrap();
+            extern "C" fn key_down(this: &Object, _sel: Sel, event: id) {
+                println!("KEY DOWN");
+            }
+
+            extern "C" fn draw_rect(this: &Object, _sel: Sel, rect: NSRect) {
+                // This should be moved to a user requested frame later.
+                // This means the current window needs to be detected somehow.
+                /*
+                unsafe {
+                    if let Some(data) = TEST_VIEW.as_ref() {
+                        let () = msg_send![data.view, setNeedsDisplay: YES];
+                    }
+                }*/
+                // produce_event(Event::Draw);
+            }
+
+            decl.add_method(sel!(keyDown:), key_down as extern "C" fn(&Object, Sel, id));
+            decl.add_method(
+                sel!(drawRect:),
+                draw_rect as extern "C" fn(&Object, Sel, NSRect),
+            );
+
+            let view_delegate_class = decl.register();
+
+            // Stuff taken from Winit to setup a loopobserver
+            extern "C" fn control_flow_end_handler(
+                _: CFRunLoopObserverRef,
+                activity: CFRunLoopActivity,
+                _: *mut std::ffi::c_void,
+            ) {
+                produce_event(Event::Draw);
+            }
+            // Setup a runloop observer (Idea borrowed from Winit)
+            let observer = CFRunLoopObserverCreate(
+                std::ptr::null_mut(),
+                kCFRunLoopBeforeWaiting,
+                YES,                  // Indicates we want this to run repeatedly
+                CFIndex::min_value(), // The lower the value, the sooner this will run
+                control_flow_end_handler,
+                std::ptr::null_mut(),
+            );
+            CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
+
+            // This event is empty because it's only used continuously wakeup the main thread.
+            extern "C" fn wakeup_main_loop(
+                _timer: CFRunLoopTimerRef,
+                _info: *mut std::ffi::c_void,
+            ) {
+            }
+            let timer = CFRunLoopTimerCreate(
+                std::ptr::null_mut(),
+                0.,
+                0.000_000_1,
+                0,
+                0,
+                wakeup_main_loop,
+                std::ptr::null_mut(),
+            );
+            CFRunLoopAddTimer(CFRunLoopGetMain(), timer, kCFRunLoopCommonModes);
+
+            Ok(App {
+                app,
+                gl_context,
+                window_delegate_class,
+                view_delegate_class,
+            })
         }
     }
 }
 
-pub struct WindowManager {
-    pub app: *mut objc::runtime::Object,
-    gl_context: *mut objc::runtime::Object,
+fn produce_event(event: crate::Event) {
+    unsafe {
+        if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
+            if let Some(app) = APP.as_mut() {
+                program_callback(event, app);
+            }
+        }
+    }
 }
 
-impl WindowManager {
-    pub fn new() -> WindowManagerBuilder {
-        WindowManagerBuilder {
+#[derive(Clone)]
+pub struct App {
+    pub app: id,
+    gl_context: id,
+    window_delegate_class: *const objc::runtime::Class,
+    view_delegate_class: *const objc::runtime::Class,
+}
+
+impl App {
+    pub fn new() -> AppBuilder {
+        AppBuilder {
             color_bits: 32,
             alpha_bits: 8,
             depth_bits: 16,
@@ -203,11 +344,16 @@ impl WindowManager {
     }
 
     pub fn make_current(&self, window: &Window) -> Result<(), Error> {
-        unimplemented!()
+        unsafe {
+            NSOpenGLContext::setView_(self.gl_context, window.view);
+        }
+        Ok(())
     }
 
-    pub fn swap_buffers(&self, window: &Window) {
-        unimplemented!();
+    pub fn swap_buffers(&self) {
+        unsafe {
+            NSOpenGLContext::flushBuffer(self.gl_context);
+        }
     }
 
     // This belongs to the window builder because the OpenGL context must be constructed first
@@ -218,7 +364,19 @@ impl WindowManager {
 
     #[cfg(feature = "opengl_glow")]
     pub fn gl_context(&self) -> glow::Context {
-        unsafe { glow::Context::from_loader_function(|s| get_proc_address(s)) }
+        glow::Context::from_loader_function(|s| get_proc_address(s))
+    }
+
+    pub fn run<T>(&mut self, mut callback: T)
+    where
+        T: 'static + FnMut(crate::Event, &mut App),
+    {
+        println!("Running");
+        unsafe {
+            PROGRAM_CALLBACK = Some(Box::new(callback));
+            APP = Some(Box::new(self.clone()));
+            self.app.run();
+        }
     }
 }
 
@@ -233,3 +391,75 @@ fn get_proc_address(addr: &str) -> *const core::ffi::c_void {
         unsafe { CFBundleGetFunctionPointerForName(framework, symbol_name.as_concrete_TypeRef()) };
     symbol as *const _
 }
+
+#[link(name = "CoreFoundation", kind = "framework")]
+extern "C" {
+    pub fn CFRunLoopGetMain() -> CFRunLoopRef;
+
+    pub static kCFRunLoopCommonModes: CFRunLoopMode;
+    pub static NSRunLoopCommonModes: id;
+
+    pub fn CFRunLoopObserverCreate(
+        allocator: CFAllocatorRef,
+        activities: CFOptionFlags,
+        repeats: BOOL,
+        order: CFIndex,
+        callout: CFRunLoopObserverCallBack,
+        context: *mut CFRunLoopObserverContext,
+    ) -> CFRunLoopObserverRef;
+    pub fn CFRunLoopAddObserver(
+        rl: CFRunLoopRef,
+        observer: CFRunLoopObserverRef,
+        mode: CFRunLoopMode,
+    );
+
+    pub fn CFRunLoopTimerCreate(
+        allocator: CFAllocatorRef,
+        fireDate: CFAbsoluteTime,
+        interval: CFTimeInterval,
+        flags: CFOptionFlags,
+        order: CFIndex,
+        callout: CFRunLoopTimerCallBack,
+        context: *mut CFRunLoopTimerContext,
+    ) -> CFRunLoopTimerRef;
+    pub fn CFRunLoopAddTimer(rl: CFRunLoopRef, timer: CFRunLoopTimerRef, mode: CFRunLoopMode);
+}
+
+pub enum CFAllocator {}
+pub type CFAllocatorRef = *mut CFAllocator;
+pub enum CFRunLoop {}
+pub type CFRunLoopRef = *mut CFRunLoop;
+pub type CFRunLoopMode = CFStringRef;
+pub enum CFRunLoopObserver {}
+pub type CFRunLoopObserverRef = *mut CFRunLoopObserver;
+pub enum CFRunLoopTimer {}
+pub type CFRunLoopTimerRef = *mut CFRunLoopTimer;
+pub enum CFRunLoopSource {}
+pub type CFRunLoopSourceRef = *mut CFRunLoopSource;
+pub type CFStringRef = *const CFString;
+pub type CFHashCode = std::os::raw::c_ulong;
+pub type CFIndex = std::os::raw::c_long;
+pub type CFOptionFlags = std::os::raw::c_ulong;
+pub type CFRunLoopActivity = CFOptionFlags;
+
+pub type CFAbsoluteTime = CFTimeInterval;
+pub type CFTimeInterval = f64;
+pub type CFRunLoopObserverCallBack = extern "C" fn(
+    observer: CFRunLoopObserverRef,
+    activity: CFRunLoopActivity,
+    info: *mut std::ffi::c_void,
+);
+pub type CFRunLoopTimerCallBack =
+    extern "C" fn(timer: CFRunLoopTimerRef, info: *mut std::ffi::c_void);
+
+pub enum CFRunLoopObserverContext {}
+pub enum CFRunLoopTimerContext {}
+
+#[allow(non_upper_case_globals)]
+pub const kCFRunLoopEntry: CFRunLoopActivity = 0;
+#[allow(non_upper_case_globals)]
+pub const kCFRunLoopBeforeWaiting: CFRunLoopActivity = 1 << 5;
+#[allow(non_upper_case_globals)]
+pub const kCFRunLoopAfterWaiting: CFRunLoopActivity = 1 << 6;
+#[allow(non_upper_case_globals)]
+pub const kCFRunLoopExit: CFRunLoopActivity = 1 << 7;

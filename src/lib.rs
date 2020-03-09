@@ -20,3 +20,7 @@ pub use web::*;
 
 #[cfg(feature = "opengl_glow")]
 pub extern crate glow;
+
+#[cfg(all(target_os = "macos"))]
+#[macro_use]
+extern crate objc;

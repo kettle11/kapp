@@ -4,20 +4,20 @@ use kettlewin::*;
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut window_manager = WindowManager::new().build().unwrap();
-    let gl = window_manager.gl_context();
-    let window = window_manager
+    let mut app = App::new().build().unwrap();
+    let gl = app.gl_context();
+    let window = app
         .new_window()
         .title("Mouse Move")
         .dimensions(500, 500)
-        .build()
+        .build(&app)
         .unwrap();
 
     let mut window_width = 500.0;
     let mut window_height = 500.0;
     let mut color = (0.0, 0.0, 0.0, 1.0);
 
-    run(move |event| unsafe {
+    app.run(move |event, app| unsafe {
         match event {
             Event::ResizedWindow { width, height } => {
                 window_width = width as f32;
@@ -30,7 +30,7 @@ fn main() {
             Event::Draw => {
                 gl.clear_color(color.0, color.1, color.2, color.3);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-                window_manager.swap_buffers(&window);
+                app.swap_buffers();
             }
             _ => {}
         }

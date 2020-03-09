@@ -122,19 +122,19 @@ fn rect_overlap(rect0: &Rect, rect1: &Rect) -> Option<(f32, f32)> {
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut window_manager = WindowManager::new().build().unwrap();
-    let gl = window_manager.gl_context();
+    let mut app = App::new().build().unwrap();
+    let gl = app.gl_context();
     unsafe {
         gl.enable(SCISSOR_TEST);
     }
 
     let screen_width = 600;
     let screen_height = 600;
-    let window = window_manager
+    let window = app
         .new_window()
         .title("Platformer Example")
         .dimensions(screen_width, screen_height)
-        .build()
+        .build(&app)
         .unwrap();
 
     // ---------------- Level Data -------------------
@@ -332,7 +332,7 @@ fn main() {
     let mut right_held = false;
     let mut left_held = false;
 
-    run(move |event| unsafe {
+    app.run(move |event, app| unsafe {
         match event {
             Event::ButtonDown {
                 button,
@@ -443,7 +443,7 @@ fn main() {
                     draw_rect(&gl, &block.rect, &block.color);
                 }
                 // When we're done rendering swap the window buffers to display to the screen.
-                window_manager.swap_buffers(&window);
+                app.swap_buffers();
             }
             _ => {}
         }
