@@ -7,16 +7,8 @@ fn main() {
     let mut app = App::new().build().unwrap();
     let gl = app.gl_context();
 
-    let window_red = app
-        .new_window()
-        .title("Window Red")
-        .build(&app)
-        .unwrap();
-    let window_blue = app
-        .new_window()
-        .title("Window Blue")
-        .build(&app)
-        .unwrap();
+    let window_red = app.new_window().title("Window Red").build(&app).unwrap();
+    let window_blue = app.new_window().title("Window Blue").build(&app).unwrap();
 
     // Run forever
     app.run(move |event, app| match event {
@@ -30,14 +22,7 @@ fn main() {
     });
 }
 
-fn draw_to_window(
-    gl: &Context,
-    app: &App,
-    window: &Window,
-    r: f32,
-    g: f32,
-    b: f32,
-) {
+fn draw_to_window(gl: &Context, app: &App, window: &Window, r: f32, g: f32, b: f32) {
     // If make_current fails the window may no longer be open.
     if app.make_current(window).is_ok() {
         unsafe {

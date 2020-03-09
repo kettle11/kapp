@@ -55,7 +55,7 @@ pub fn virtual_keycode_to_key(key_in: u16) -> Button {
         0x75 => Delete,
         0x7D => Down,
         0x77 => End,
-        0x24 => Return, // Should this be called enter? 
+        0x24 => Return, // Should this be called enter?
         0x35 => Escape,
         0x7A => F1,
         0x78 => F2,
@@ -113,6 +113,6 @@ pub fn virtual_keycode_to_key(key_in: u16) -> Button {
         0x51 => NumPadEquals,
         0x43 => NumPadMultiply,
         0x4E => NumPadSubtract,
-        _ => Unknown
+        _ => Unknown,
     }
 }

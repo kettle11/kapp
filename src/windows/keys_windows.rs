@@ -4,7 +4,7 @@ use winapi::um::winuser::*;
 // Hand transcribed from here:
 // It took a while
 // https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
-// Also useful: 
+// Also useful:
 // https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
 pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Button {
     match key_in {
@@ -84,7 +84,7 @@ pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Button {
         0x58 => X,
         0x59 => Y,
         0x5a => Z,
-        VK_LWIN | VK_RWIN => Meta, 
+        VK_LWIN | VK_RWIN => Meta,
         VK_APPS => ContextMenu,
         VK_SLEEP => Sleep,
         VK_NUMPAD0 => NumPad0,
@@ -138,7 +138,7 @@ pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Button {
         VK_BROWSER_BACK => BrowserBack,
         VK_BROWSER_FORWARD => BrowserForward,
         VK_BROWSER_REFRESH => BrowserRefresh,
-        VK_BROWSER_STOP => BrowserStop, 
+        VK_BROWSER_STOP => BrowserStop,
         VK_BROWSER_SEARCH => BrowserSearch,
         VK_BROWSER_FAVORITES => BrowserFavorites,
         VK_BROWSER_HOME => BrowserHome,
