@@ -122,19 +122,21 @@ fn rect_overlap(rect0: &Rect, rect1: &Rect) -> Option<(f32, f32)> {
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut app = App::new().build().unwrap();
+    // let mut app = App::new().build().unwrap();
+
+    let mut screen_width = 600;
+    let mut screen_height = 600;
+    let mut app = App::new(&AppParameters::default()).unwrap();
     let gl = app.gl_context();
     unsafe {
         gl.enable(SCISSOR_TEST);
     }
 
-    let mut screen_width = 600;
-    let mut screen_height = 600;
     let window = app
-        .new_window()
-        .title("Platformer Example")
-        .dimensions(screen_width, screen_height)
-        .build(&app)
+        .new_window(&WindowParameters {
+            title: Some("Hello"),
+            ..Default::default()
+        })
         .unwrap();
 
     // ---------------- Level Data -------------------

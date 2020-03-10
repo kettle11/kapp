@@ -1,18 +1,8 @@
-// This could be in build.rs, but it's simpler to have to here.
-// This causes AppKit to be linked.
-#[link(name = "AppKit", kind = "framework")]
-extern "C" {}
-
-use std::io::Error;
-use std::os::raw::c_double;
-
+use super::apple::*;
+use crate::AppParameters;
 use crate::Event;
-use libc::{c_long, c_ulong};
-
-use objc::{
-    declare::ClassDecl,
-    runtime::{Object, Sel, BOOL, NO, YES},
-};
+use crate::WindowParameters;
+use std::io::Error;
 
 pub const nil: *mut Object = 0 as *mut Object;
 
@@ -29,175 +19,33 @@ pub struct Window {
     view: *mut Object,
 }
 
-pub struct WindowBuilder<'a> {
-    position: Option<(u32, u32)>,
-    dimensions: Option<(u32, u32)>,
-    resizable: bool,
-    title: Option<&'a str>,
-}
-
-impl<'a> WindowBuilder<'a> {
-    pub fn title(&mut self, title: &'a str) -> &mut Self {
-        self.title = Some(title);
-        self
-    }
-
-    pub fn resizable(&mut self, resizable: bool) -> &mut Self {
-        self.resizable = resizable;
-        self
-    }
-
-    pub fn position(&mut self, x: u32, y: u32) -> &mut Self {
-        self.position = Some((x, y));
-        self
-    }
-    pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
-        self.dimensions = Some((width, height));
-        self
-    }
-
-    pub fn build(&self, app: &App) -> Result<Window, Error> {
-        unsafe {
-            let (x, y) = self
-                .position
-                .map_or((0., 0.), |(x, y)| (x as f64, y as f64));
-
-            let (width, height) = self.dimensions.map_or((600., 600.), |(width, height)| {
-                (width as f64, height as f64)
-            });
-            let rect = NSRect::new(NSPoint::new(x, y), NSSize::new(width, height));
-
-            // It appears these flags are deprecated, but the Rust wrapper does not expose the nondepcrated version?
-            let mut style = NSWindowStyleMaskTitled
-                | NSWindowStyleMaskClosable
-                | NSWindowStyleMaskMiniaturizable;
-            if self.resizable {
-                style |= NSWindowStyleMaskResizable;
+fn produce_event(event: crate::Event) {
+    unsafe {
+        if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
+            if let Some(app) = APP.as_mut() {
+                program_callback(event, app);
             }
-
-            /*
-            let window = NSWindow::alloc(nil)
-                .initWithContentRect_styleMask_backing_defer_(
-                    rect,
-                    style,
-                    NSBackingStoreBuffered,
-                    NO,
-                )
-                .autorelease();
-            */
-            // Needs to be released somehow
-
-            let window: *mut Object = msg_send![class!(NSWindow), alloc];
-            let () = msg_send![
-                window,
-                initWithContentRect:rect
-                styleMask:style
-                backing:NSBackingStoreBuffered
-                defer:NO
-            ];
-
-            let () = msg_send![window, cascadeTopLeftFromPoint:NSPoint::new(20., 20.)];
-
-            let () = msg_send![window, center];
-            let title = self.title.unwrap_or("Untitled");
-            let title_nsstring: *mut Object = msg_send![class!(NSString), alloc];
-            let title: *mut Object = msg_send![
-                title_nsstring,
-                initWithBytes:title.as_ptr()
-                length:title.len()
-                encoding:UTF8_ENCODING as *mut Object
-            ];
-
-            let () = msg_send![window, setTitle: title];
-            let () = msg_send![window, makeKeyAndOrderFront: nil];
-
-            // setup window delegate
-            let window_delegate: *mut Object = msg_send![app.window_delegate_class, new];
-            let () = msg_send![window, setDelegate: window_delegate];
-
-            // setup view
-            let view: *mut Object = msg_send![app.view_delegate_class, new];
-            let () = msg_send![window, setDelegate: window_delegate];
-            let () = msg_send![window, setContentView: view];
-            let () = msg_send![window, makeFirstResponder: view];
-
-            // Setup a tracking area to receive mouse events within
-            let tracking_area: *mut Object = msg_send![class!(NSTrackingArea), alloc];
-            let () = msg_send![
-                tracking_area,
-                initWithRect: rect
-                options: NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveInKeyWindow
-                owner: view
-                userInfo:nil];
-            let () = msg_send![view, addTrackingArea: tracking_area];
-            TEST_VIEW = Some(Box::new(ViewData { view }));
-            let window = Window { view };
-            app.make_current(&window).unwrap();
-            Ok(window)
         }
     }
 }
 
-pub struct AppBuilder {
-    color_bits: u8,
-    alpha_bits: u8,
-    depth_bits: u8,
-    stencil_bits: u8,
-    samples: u8,
-    srgb: bool,
+#[derive(Clone)]
+pub struct App {
+    pub app: *mut Object,
+    gl_context: *mut Object,
+    window_delegate_class: *const objc::runtime::Class,
+    view_delegate_class: *const objc::runtime::Class,
 }
 
-impl AppBuilder {
-    pub fn bits(
-        &mut self,
-        color_bits: u8,
-        alpha_bits: u8,
-        depth_bits: u8,
-        stencil_bits: u8,
-    ) -> &mut Self {
-        self.color_bits = color_bits;
-        self.alpha_bits = alpha_bits;
-        self.depth_bits = depth_bits;
-        self.stencil_bits = stencil_bits;
-        self
+fn get_window_data(this: &Object) -> *mut Object {
+    unsafe {
+        let data = *this.get_ivar("window_data");
+        println!("WINDOW OUT:{:?}", data);
+        data
     }
-    pub fn color_bits(&mut self, bits: u8) -> &mut Self {
-        self.color_bits = bits;
-        self
-    }
-
-    pub fn alpha_bits(&mut self, bits: u8) -> &mut Self {
-        self.alpha_bits = bits;
-        self
-    }
-
-    pub fn depth_bits(&mut self, bits: u8) -> &mut Self {
-        self.depth_bits = bits;
-        self
-    }
-
-    pub fn stencil_bits(&mut self, bits: u8) -> &mut Self {
-        self.stencil_bits = bits;
-        self
-    }
-
-    /// Sets the MSAA samples.
-    /// Set this to a power of 2.
-    /// With an Nvidia card on Windows I was unable to set this below 2.
-    pub fn samples(&mut self, samples: u8) -> &mut Self {
-        self.samples = samples;
-        self
-    }
-
-    /// This sets if the backbuffer for the windows will be in sRGB color space... or it would if drivers respected it.
-    /// Unfortunately this flag does nothing as tested on Windows with an Nvidia GPU.
-    /// In that case backbuffer was set to sRGB colorspace.
-    pub fn srgb(&mut self, srgb: bool) -> &mut Self {
-        self.srgb = srgb;
-        self
-    }
-
-    pub fn build(&self) -> Result<App, Error> {
+}
+impl App {
+    pub fn new(app_parameters: &AppParameters) -> Result<App, ()> {
         unsafe {
             // let pool: *mut Object = unsafe { msg_send![class!(NSAutoreleasePool), new] };
 
@@ -252,14 +100,29 @@ impl AppBuilder {
                 unsafe {
                     if let Some(data) = TEST_VIEW.as_ref() {
                         let rect: NSRect = msg_send![data.view, frame];
+                        let window = get_window_data(this);
+                        let new_name = NSString::new("resized");
+                        let () = msg_send![window, setTitle: new_name.raw];
 
+                        let screen: *mut Object = msg_send![window, screen];
+
+                        let scale_factor: CGFloat = msg_send![screen, backingScaleFactor];
+
+                        println!("Backing scale factor: {:?}", scale_factor);
+
+                        println!("RECT: {:?}", rect);
                         let width = rect.size.width;
                         let height = rect.size.height;
+
+                        println!(
+                            "RESIZED SCALED: {:?}, {:?}",
+                            width * scale_factor,
+                            height * scale_factor
+                        );
                         produce_event(crate::Event::ResizedWindow {
                             width: width as u32,
                             height: height as u32,
                         });
-                        println!("Resized: {:?}, {:?}", width, height);
                     }
                 }
             }
@@ -272,6 +135,8 @@ impl AppBuilder {
                 sel!(windowDidResize:),
                 window_did_resize as extern "C" fn(&Object, Sel, *mut Object),
             );
+
+            decl.add_ivar::<*mut Object>("window_data");
 
             let window_delegate_class = decl.register();
 
@@ -393,48 +258,80 @@ impl AppBuilder {
             })
         }
     }
-}
-
-fn produce_event(event: crate::Event) {
-    unsafe {
-        if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
-            if let Some(app) = APP.as_mut() {
-                program_callback(event, app);
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct App {
-    pub app: *mut Object,
-    gl_context: *mut Object,
-    window_delegate_class: *const objc::runtime::Class,
-    view_delegate_class: *const objc::runtime::Class,
-}
-
-impl App {
-    pub fn new() -> AppBuilder {
-        AppBuilder {
-            color_bits: 32,
-            alpha_bits: 8,
-            depth_bits: 16,
-            stencil_bits: 0,
-            samples: 1,
-            srgb: true,
-        }
-    }
 
     fn setup_opengl() -> Result<(), Error> {
         Ok(())
     }
 
-    pub fn new_window<'a>(&mut self) -> WindowBuilder<'a> {
-        WindowBuilder {
-            position: None,
-            dimensions: None,
-            resizable: true,
-            title: None,
+    pub fn new_window<'a>(&mut self, window_parameters: &WindowParameters) -> Result<Window, ()> {
+        unsafe {
+            let (x, y) = window_parameters
+                .position
+                .map_or((0., 0.), |(x, y)| (x as f64, y as f64));
+
+            let (width, height) = window_parameters
+                .dimensions
+                .map_or((600., 600.), |(width, height)| {
+                    (width as f64, height as f64)
+                });
+            let rect = NSRect::new(NSPoint::new(x, y), NSSize::new(width, height));
+
+            // It appears these flags are deprecated, but the Rust wrapper does not expose the nondepcrated version?
+            let mut style = NSWindowStyleMaskTitled
+                | NSWindowStyleMaskClosable
+                | NSWindowStyleMaskMiniaturizable;
+            if window_parameters.resizable {
+                style |= NSWindowStyleMaskResizable;
+            }
+
+            // Needs to be released somehow
+
+            let window: *mut Object = msg_send![class!(NSWindow), alloc];
+            let () = msg_send![
+                window,
+                initWithContentRect:rect
+                styleMask:style
+                backing:NSBackingStoreBuffered
+                defer:NO
+            ];
+
+            let () = msg_send![window, cascadeTopLeftFromPoint:NSPoint::new(20., 20.)];
+
+            let () = msg_send![window, center];
+            let title = window_parameters.title.unwrap_or("Untitled");
+            let title = NSString::new(title);
+            let () = msg_send![window, setTitle: title.raw];
+            let () = msg_send![window, makeKeyAndOrderFront: nil];
+
+            // setup view
+            let view: *mut Object = msg_send![self.view_delegate_class, alloc];
+            // Apparently this defaults to YES even without this call
+            let () = msg_send![view, setWantsBestResolutionOpenGLSurface: YES];
+
+            // Setup a tracking area to receive mouse events within
+            let tracking_area: *mut Object = msg_send![class!(NSTrackingArea), alloc];
+            let () = msg_send![
+                tracking_area,
+                initWithRect: rect
+                options: NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveInKeyWindow
+                owner: view
+                userInfo:nil];
+            let () = msg_send![view, addTrackingArea: tracking_area];
+
+            // setup window delegate
+            let window_delegate: *mut Object = msg_send![self.window_delegate_class, new];
+
+            (*window_delegate).set_ivar("window_data", window);
+            println!("WINDOW IN:{:?}", window);
+            let () = msg_send![window, setDelegate: window_delegate];
+            let () = msg_send![window, setContentView: view];
+            let () = msg_send![window, makeFirstResponder: view];
+
+            TEST_VIEW = Some(Box::new(ViewData { view }));
+
+            let window = Window { view };
+            self.make_current(&window).unwrap();
+            Ok(window)
         }
     }
 
@@ -492,304 +389,4 @@ fn get_proc_address(addr: &str) -> *const core::ffi::c_void {
     let framework = unsafe { CFBundleGetBundleWithIdentifier(framework_name.raw) };
     let symbol = unsafe { CFBundleGetFunctionPointerForName(framework, symbol_name.raw) };
     symbol as *const _
-}
-
-pub static NSTrackingMouseEnteredAndExited: NSInteger = 0x01;
-pub static NSTrackingMouseMoved: NSInteger = 0x02;
-pub static NSTrackingActiveInKeyWindow: NSInteger = 0x20;
-
-#[link(name = "CoreFoundation", kind = "framework")]
-extern "C" {
-    pub fn CFRunLoopGetMain() -> CFRunLoopRef;
-
-    pub static kCFRunLoopCommonModes: CFRunLoopMode;
-    pub static NSRunLoopCommonModes: *mut Object;
-
-    pub fn CFRunLoopObserverCreate(
-        allocator: CFAllocatorRef,
-        activities: CFOptionFlags,
-        repeats: BOOL,
-        order: CFIndex,
-        callout: CFRunLoopObserverCallBack,
-        context: *mut CFRunLoopObserverContext,
-    ) -> CFRunLoopObserverRef;
-    pub fn CFRunLoopAddObserver(
-        rl: CFRunLoopRef,
-        observer: CFRunLoopObserverRef,
-        mode: CFRunLoopMode,
-    );
-
-    pub fn CFRunLoopTimerCreate(
-        allocator: CFAllocatorRef,
-        fireDate: CFAbsoluteTime,
-        interval: CFTimeInterval,
-        flags: CFOptionFlags,
-        order: CFIndex,
-        callout: CFRunLoopTimerCallBack,
-        context: *mut CFRunLoopTimerContext,
-    ) -> CFRunLoopTimerRef;
-    pub fn CFRunLoopAddTimer(rl: CFRunLoopRef, timer: CFRunLoopTimerRef, mode: CFRunLoopMode);
-}
-
-pub enum CFAllocator {}
-pub type CFAllocatorRef = *mut CFAllocator;
-pub enum CFRunLoop {}
-pub type CFRunLoopRef = *mut CFRunLoop;
-pub type CFRunLoopMode = CFStringRef;
-pub enum CFRunLoopObserver {}
-pub type CFRunLoopObserverRef = *mut CFRunLoopObserver;
-pub enum CFRunLoopTimer {}
-pub type CFRunLoopTimerRef = *mut CFRunLoopTimer;
-pub enum CFRunLoopSource {}
-pub type CFRunLoopSourceRef = *mut CFRunLoopSource;
-pub type CFStringRef = *const Object; // CFString
-pub type CFHashCode = std::os::raw::c_ulong;
-pub type CFIndex = std::os::raw::c_long;
-pub type CFOptionFlags = std::os::raw::c_ulong;
-pub type CFRunLoopActivity = CFOptionFlags;
-
-pub type CFAbsoluteTime = CFTimeInterval;
-pub type CFTimeInterval = f64;
-pub type CFRunLoopObserverCallBack = extern "C" fn(
-    observer: CFRunLoopObserverRef,
-    activity: CFRunLoopActivity,
-    info: *mut std::ffi::c_void,
-);
-pub type CFRunLoopTimerCallBack =
-    extern "C" fn(timer: CFRunLoopTimerRef, info: *mut std::ffi::c_void);
-
-pub enum CFRunLoopObserverContext {}
-pub enum CFRunLoopTimerContext {}
-
-#[allow(non_upper_case_globals)]
-pub const kCFRunLoopEntry: CFRunLoopActivity = 0;
-#[allow(non_upper_case_globals)]
-pub const kCFRunLoopBeforeWaiting: CFRunLoopActivity = 1 << 5;
-#[allow(non_upper_case_globals)]
-pub const kCFRunLoopAfterWaiting: CFRunLoopActivity = 1 << 6;
-#[allow(non_upper_case_globals)]
-pub const kCFRunLoopExit: CFRunLoopActivity = 1 << 7;
-
-// NSWindowStyleMask
-// https://developer.apple.com/documentation/appkit/nswindowstylemask?language=objc
-const NSWindowStyleMaskBorderless: NSUInteger = 0;
-const NSWindowStyleMaskTitled: NSUInteger = 1 << 0;
-const NSWindowStyleMaskClosable: NSUInteger = 1 << 1;
-const NSWindowStyleMaskMiniaturizable: NSUInteger = 1 << 2;
-const NSWindowStyleMaskResizable: NSUInteger = 1 << 3;
-
-const NSBackingStoreBuffered: NSUInteger = 2;
-const UTF8_ENCODING: usize = 4;
-
-// These enums are taken from the core-foundation-rs crate
-#[repr(u64)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum NSOpenGLContextParameter {
-    NSOpenGLCPSwapInterval = 222,
-    NSOpenGLCPSurfaceOrder = 235,
-    NSOpenGLCPSurfaceOpacity = 236,
-    NSOpenGLCPSurfaceBackingSize = 304,
-    NSOpenGLCPReclaimResources = 308,
-    NSOpenGLCPCurrentRendererID = 309,
-    NSOpenGLCPGPUVertexProcessing = 310,
-    NSOpenGLCPGPUFragmentProcessing = 311,
-    NSOpenGLCPHasDrawable = 314,
-    NSOpenGLCPMPSwapsInFlight = 315,
-}
-
-#[repr(i64)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum NSApplicationActivationPolicy {
-    NSApplicationActivationPolicyRegular = 0,
-    NSApplicationActivationPolicyAccessory = 1,
-    NSApplicationActivationPolicyProhibited = 2,
-    NSApplicationActivationPolicyERROR = -1,
-}
-
-use NSApplicationActivationPolicy::*;
-
-#[repr(u64)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum NSOpenGLPixelFormatAttribute {
-    NSOpenGLPFAAllRenderers = 1,
-    NSOpenGLPFATripleBuffer = 3,
-    NSOpenGLPFADoubleBuffer = 5,
-    NSOpenGLPFAStereo = 6,
-    NSOpenGLPFAAuxBuffers = 7,
-    NSOpenGLPFAColorSize = 8,
-    NSOpenGLPFAAlphaSize = 11,
-    NSOpenGLPFADepthSize = 12,
-    NSOpenGLPFAStencilSize = 13,
-    NSOpenGLPFAAccumSize = 14,
-    NSOpenGLPFAMinimumPolicy = 51,
-    NSOpenGLPFAMaximumPolicy = 52,
-    NSOpenGLPFAOffScreen = 53,
-    NSOpenGLPFAFullScreen = 54,
-    NSOpenGLPFASampleBuffers = 55,
-    NSOpenGLPFASamples = 56,
-    NSOpenGLPFAAuxDepthStencil = 57,
-    NSOpenGLPFAColorFloat = 58,
-    NSOpenGLPFAMultisample = 59,
-    NSOpenGLPFASupersample = 60,
-    NSOpenGLPFASampleAlpha = 61,
-    NSOpenGLPFARendererID = 70,
-    NSOpenGLPFASingleRenderer = 71,
-    NSOpenGLPFANoRecovery = 72,
-    NSOpenGLPFAAccelerated = 73,
-    NSOpenGLPFAClosestPolicy = 74,
-    NSOpenGLPFARobust = 75,
-    NSOpenGLPFABackingStore = 76,
-    NSOpenGLPFAMPSafe = 78,
-    NSOpenGLPFAWindow = 80,
-    NSOpenGLPFAMultiScreen = 81,
-    NSOpenGLPFACompliant = 83,
-    NSOpenGLPFAScreenMask = 84,
-    NSOpenGLPFAPixelBuffer = 90,
-    NSOpenGLPFARemotePixelBuffer = 91,
-    NSOpenGLPFAAllowOfflineRenderers = 96,
-    NSOpenGLPFAAcceleratedCompute = 97,
-    NSOpenGLPFAOpenGLProfile = 99,
-    NSOpenGLPFAVirtualScreenCount = 128,
-}
-use NSOpenGLPixelFormatAttribute::*;
-
-#[repr(u64)]
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum NSOpenGLPFAOpenGLProfiles {
-    NSOpenGLProfileVersionLegacy = 0x1000,
-    NSOpenGLProfileVersion3_2Core = 0x3200,
-    NSOpenGLProfileVersion4_1Core = 0x4100,
-}
-
-#[cfg(target_pointer_width = "32")]
-pub type NSInteger = c_int;
-#[cfg(target_pointer_width = "32")]
-pub type NSUInteger = c_uint;
-
-#[cfg(target_pointer_width = "64")]
-pub type NSInteger = c_long;
-#[cfg(target_pointer_width = "64")]
-pub type NSUInteger = c_ulong;
-
-use NSOpenGLPFAOpenGLProfiles::*;
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct CGPoint {
-    pub x: CGFloat,
-    pub y: CGFloat,
-}
-
-type NSPoint = CGPoint;
-
-impl NSPoint {
-    fn new(x: CGFloat, y: CGFloat) -> Self {
-        Self { x, y }
-    }
-}
-
-type CGFloat = c_double;
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct CGRect {
-    pub origin: CGPoint,
-    pub size: CGSize,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct CGSize {
-    pub width: CGFloat,
-    pub height: CGFloat,
-}
-
-impl CGSize {
-    pub fn new(width: CGFloat, height: CGFloat) -> Self {
-        Self { width, height }
-    }
-}
-
-type NSSize = CGSize;
-
-impl CGRect {
-    pub fn new(origin: CGPoint, size: CGSize) -> Self {
-        Self { origin, size }
-    }
-}
-
-unsafe impl objc::Encode for CGRect {
-    fn encode() -> objc::Encoding {
-        let encoding = format!(
-            "{{CGRect={}{}}}",
-            NSPoint::encode().as_str(),
-            NSSize::encode().as_str()
-        );
-        unsafe { objc::Encoding::from_str(&encoding) }
-    }
-}
-
-unsafe impl objc::Encode for CGPoint {
-    fn encode() -> objc::Encoding {
-        let encoding = format!(
-            "{{CGPoint={}{}}}",
-            CGFloat::encode().as_str(),
-            CGFloat::encode().as_str()
-        );
-        unsafe { objc::Encoding::from_str(&encoding) }
-    }
-}
-
-unsafe impl objc::Encode for CGSize {
-    fn encode() -> objc::Encoding {
-        let encoding = format!(
-            "{{CGSize={}{}}}",
-            CGFloat::encode().as_str(),
-            CGFloat::encode().as_str()
-        );
-        unsafe { objc::Encoding::from_str(&encoding) }
-    }
-}
-
-type NSRect = CGRect;
-
-#[repr(C)]
-pub struct __CFBundle(std::ffi::c_void);
-pub type CFBundleRef = *mut __CFBundle;
-
-extern "C" {
-    pub fn CFBundleGetBundleWithIdentifier(bundleID: CFStringRef) -> CFBundleRef;
-    pub fn CFBundleGetFunctionPointerForName(
-        bundle: CFBundleRef,
-        function_name: CFStringRef,
-    ) -> *const std::ffi::c_void;
-}
-
-struct NSString {
-    raw: *mut Object,
-}
-
-impl NSString {
-    fn new(string: &str) -> Self {
-        unsafe {
-            let raw: *mut Object = msg_send![class!(NSString), alloc];
-            let raw: *mut Object = msg_send![
-                raw,
-                initWithBytes: string.as_ptr()
-                length: string.len()
-                encoding:UTF8_ENCODING as *mut Object
-            ];
-
-            Self { raw }
-        }
-    }
-}
-
-impl Drop for NSString {
-    fn drop(&mut self) {
-        unsafe {
-            let () = msg_send![self.raw, release];
-        }
-    }
 }

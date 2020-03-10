@@ -1,5 +1,11 @@
+mod app_parameters;
 mod buttons;
 mod events;
+mod window_parameters;
+
+pub use app_parameters::*;
+pub use window_parameters::*;
+
 pub use buttons::Button;
 pub use events::*;
 

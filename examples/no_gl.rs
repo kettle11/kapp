@@ -3,14 +3,14 @@ use kettlewin::*;
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut window_manager = WindowManager::new().build().unwrap();
-    let window = window_manager.new_window().build().unwrap();
+    let mut app = App::new().build().unwrap();
+    let _window = app.new_window().build(&app).unwrap();
 
     // Run forever
-    run(move |event| match event {
+    app.run(move |event, app| match event {
         Event::Draw => {
             // When we're done rendering swap the window buffers to display to the screen.
-            window_manager.swap_buffers(&window);
+            app.swap_buffers();
         }
         _ => {}
     });

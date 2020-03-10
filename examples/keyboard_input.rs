@@ -7,7 +7,7 @@ fn main() {
     let mut app = App::new().build().unwrap();
     let gl = app.gl_context();
 
-    let window = app
+    let _window = app
         .new_window()
         .title("Keyboard Input Example")
         .build(&app)

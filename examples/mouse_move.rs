@@ -6,7 +6,7 @@ fn main() {
     // Create a new window manager with default settings.
     let mut app = App::new().build().unwrap();
     let gl = app.gl_context();
-    let window = app
+    let _window = app
         .new_window()
         .title("Mouse Move")
         .dimensions(500, 500)
