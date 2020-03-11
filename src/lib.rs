@@ -1,10 +1,10 @@
+mod async_application;
 mod buttons;
 mod events;
-mod async_application;
 
+pub use async_application::*;
 pub use buttons::Button;
 pub use events::*;
-pub use async_application::*;
 
 #[cfg(all(target_os = "windows"))]
 mod windows;

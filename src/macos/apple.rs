@@ -27,6 +27,7 @@ pub enum NSApplicationActivationPolicy {
 #[link(name = "CoreFoundation", kind = "framework")]
 extern "C" {
     pub fn CFRunLoopGetMain() -> CFRunLoopRef;
+    pub fn CFRunLoopWakeUp(rl: CFRunLoopRef);
 
     pub static kCFRunLoopCommonModes: CFRunLoopMode;
     // pub static NSRunLoopCommonModes: *mut Object;
@@ -55,7 +56,36 @@ extern "C" {
         context: *mut CFRunLoopTimerContext,
     ) -> CFRunLoopTimerRef;
     pub fn CFRunLoopAddTimer(rl: CFRunLoopRef, timer: CFRunLoopTimerRef, mode: CFRunLoopMode);
+
+    pub fn CFRunLoopSourceCreate(
+        allocator: CFAllocatorRef,
+        order: CFIndex,
+        context: *mut CFRunLoopSourceContext,
+    ) -> CFRunLoopSourceRef;
+    pub fn CFRunLoopAddSource(rl: CFRunLoopRef, source: CFRunLoopSourceRef, mode: CFRunLoopMode);
+    #[allow(dead_code)]
+    pub fn CFRunLoopSourceInvalidate(source: CFRunLoopSourceRef);
+    pub fn CFRunLoopSourceSignal(source: CFRunLoopSourceRef);
 }
+
+#[allow(non_snake_case)]
+#[repr(C)]
+pub struct CFRunLoopSourceContext {
+    pub version: CFIndex,
+    pub info: *mut c_void,
+    pub retain: Option<extern "C" fn(*const c_void) -> *const c_void>,
+    pub release: Option<extern "C" fn(*const c_void)>,
+    pub copyDescription: Option<extern "C" fn(*const c_void) -> CFStringRef>,
+    pub equal: Option<extern "C" fn(*const c_void, *const c_void) -> BOOL>,
+    pub hash: Option<extern "C" fn(*const c_void) -> CFHashCode>,
+    pub schedule: Option<extern "C" fn(*mut c_void, CFRunLoopRef, CFRunLoopMode)>,
+    pub cancel: Option<extern "C" fn(*mut c_void, CFRunLoopRef, CFRunLoopMode)>,
+    pub perform: Option<extern "C" fn(*mut c_void)>,
+}
+
+pub type CFHashCode = c_ulong;
+pub enum CFRunLoopSource {}
+pub type CFRunLoopSourceRef = *mut CFRunLoopSource;
 
 pub enum CFAllocator {}
 pub type CFAllocatorRef = *mut CFAllocator;

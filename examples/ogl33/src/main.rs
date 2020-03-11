@@ -5,7 +5,7 @@ fn main() {
     // Create a new window manager with default settings.
     let mut app = Application::new().build().unwrap();
     let window = app.new_window().title("OGL Example").build().unwrap();
-    let gl_context = GLContext::new(); // Create a gl_context for the app
+    let gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
     gl_context.set_window(&window).unwrap();
 
     unsafe {

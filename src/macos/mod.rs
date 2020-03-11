@@ -13,4 +13,4 @@ mod gl_context;
 pub use gl_context::*;
 mod application_mac;
 
-pub use application_mac::{Application, Window};
+pub use application_mac::{Application, EventLoop, Window};

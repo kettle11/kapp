@@ -6,8 +6,10 @@ pub struct GLContext {
     gl_context: *mut Object,
 }
 
-impl GLContext {
-    pub fn new() -> Self {
+pub struct GLContextBuilder {}
+
+impl GLContextBuilder {
+    pub fn build(&self) -> Result<GLContext, ()> {
         unsafe {
             let attrs = [
                 NSOpenGLPFAOpenGLProfile as u32,
@@ -35,8 +37,14 @@ impl GLContext {
 
             // Enable vsync
             let () = msg_send![gl_context, setValues:&(1 as i32) forParameter:NSOpenGLContextParameter::NSOpenGLCPSwapInterval];
-            Self { gl_context }
+            Ok(GLContext { gl_context })
         }
+    }
+}
+
+impl GLContext {
+    pub fn new() -> GLContextBuilder {
+        GLContextBuilder {}
     }
 
     pub fn set_window(&self, window: &Window) -> Result<(), Error> {

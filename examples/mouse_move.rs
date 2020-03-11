@@ -15,7 +15,7 @@ fn main() {
     let gl_context = GLContext::new(); // Create a gl_context for the app
     gl_context.set_window(&window).unwrap();
     let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
-    
+
     let mut window_width = 500.0;
     let mut window_height = 500.0;
     let mut color = (0.0, 0.0, 0.0, 1.0);

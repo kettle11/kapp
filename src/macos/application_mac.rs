@@ -14,6 +14,8 @@ pub struct Application {
     pub app: *mut Object,
     window_delegate_class: *const objc::runtime::Class,
     view_delegate_class: *const objc::runtime::Class,
+    frame_requested: bool,
+    run_loop_custom_event_source: CFRunLoopSourceRef,
 }
 
 /*
@@ -54,13 +56,20 @@ impl ApplicationBuilder {
                     NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular
             ];
 
-            // Stuff taken from Winit to setup a loopobserver
+            // At the end of a frame produce a draw event.
             extern "C" fn control_flow_end_handler(
                 _: CFRunLoopObserverRef,
                 _: CFRunLoopActivity,
                 _: *mut std::ffi::c_void,
             ) {
-                super::events_mac::produce_event(Event::Draw);
+                unsafe {
+                    if let Some(app) = APP.as_mut() {
+                        if app.frame_requested {
+                            app.frame_requested = false;
+                            super::events_mac::produce_event(Event::Draw);
+                        }
+                    }
+                }
             }
 
             // Setup a runloop observer (Idea borrowed from Winit)
@@ -74,31 +83,33 @@ impl ApplicationBuilder {
             );
             CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 
-            // This event is empty because it's only used continuously wakeup the main thread.
-            extern "C" fn wakeup_main_loop(
-                _timer: CFRunLoopTimerRef,
-                _info: *mut std::ffi::c_void,
-            ) {
-            }
-            let timer = CFRunLoopTimerCreate(
-                std::ptr::null_mut(),
-                0.,
-                0.000_000_1,
-                0,
-                0,
-                wakeup_main_loop,
-                std::ptr::null_mut(),
-            );
-            CFRunLoopAddTimer(CFRunLoopGetMain(), timer, kCFRunLoopCommonModes);
+            let run_loop_custom_event_source = self::create_run_loop_source();
 
             let app = Application {
                 app,
                 window_delegate_class: window_delegate_declaration(),
                 view_delegate_class: view_delegate_declaration(),
+                frame_requested: true,
+                run_loop_custom_event_source,
             };
             APP = Some(Box::new(app.clone()));
             Ok(app)
         }
+    }
+}
+
+fn create_run_loop_source() -> CFRunLoopSourceRef {
+    extern "C" fn event_loop_proxy_handler(_: *mut std::ffi::c_void) {}
+
+    unsafe {
+        let rl = CFRunLoopGetMain();
+        let mut context: CFRunLoopSourceContext = std::mem::zeroed();
+        context.perform = Some(event_loop_proxy_handler);
+        let source =
+            CFRunLoopSourceCreate(std::ptr::null_mut(), CFIndex::max_value() - 1, &mut context);
+        CFRunLoopAddSource(rl, source, kCFRunLoopCommonModes);
+        CFRunLoopWakeUp(rl);
+        source
     }
 }
 
@@ -132,14 +143,10 @@ impl<'a> WindowBuilder<'a> {
 
     pub fn build(&self) -> Result<Window, ()> {
         unsafe {
-            let (x, y) = self
-                .position
-                .map_or((0., 0.), |(x, y)| (x as f64, y as f64));
-
             let (width, height) = self.dimensions.map_or((600., 600.), |(width, height)| {
                 (width as f64, height as f64)
             });
-            let rect = NSRect::new(NSPoint::new(x, y), NSSize::new(width, height));
+            let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(width, height));
 
             // It appears these flags are deprecated, but the Rust wrapper does not expose the nondepcrated version?
             let mut style = NSWindowStyleMaskTitled
@@ -160,9 +167,13 @@ impl<'a> WindowBuilder<'a> {
                 defer:NO
             ];
 
-            let () = msg_send![window, cascadeTopLeftFromPoint:NSPoint::new(20., 20.)];
+            if let Some(position) = self.position {
+                let () = msg_send![window, cascadeTopLeftFromPoint:NSPoint::new(position.0 as f64, position.1 as f64)];
+            } else {
+                // Center the window
+                let () = msg_send![window, center];
+            }
 
-            let () = msg_send![window, center];
             let title = self.title.unwrap_or("Untitled");
             let title = NSString::new(title);
             let () = msg_send![window, setTitle: title.raw];
@@ -216,6 +227,25 @@ impl Application {
 
     pub fn event_loop(&mut self) -> EventLoop {
         EventLoop {}
+    }
+
+    pub fn request_frame(&mut self) {
+        unsafe {
+            if let Some(app) = APP.as_mut() {
+                app.frame_requested = true;
+                self::poke_run_loop();
+            }
+        }
+    }
+}
+
+fn poke_run_loop() {
+    unsafe {
+        if let Some(app) = APP.as_mut() {
+            CFRunLoopSourceSignal(app.run_loop_custom_event_source);
+            let run_loop = CFRunLoopGetMain();
+            CFRunLoopWakeUp(run_loop);
+        }
     }
 }
 
