@@ -1,44 +1,58 @@
 use super::apple::*;
 use crate::Event;
+use std::cell::RefCell;
+use std::ffi::c_void;
+use std::rc::Rc;
 
-type Callback = dyn 'static + FnMut(Event);
-pub static mut PROGRAM_CALLBACK: Option<Box<Callback>> = None;
-pub static mut APP: Option<Box<Application>> = None;
+pub type ProgramCallback = dyn 'static + FnMut(Event);
+
+static WINDOW_DATA_IVAR_ID: &str = "window_instance_data";
+static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
+static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
 
 pub struct Window {
     pub ns_view: *mut Object,
 }
 
-#[derive(Clone)]
-pub struct Application {
-    pub app: *mut Object,
-    window_delegate_class: *const objc::runtime::Class,
-    view_delegate_class: *const objc::runtime::Class,
-    frame_requested: bool,
-    run_loop_custom_event_source: CFRunLoopSourceRef,
+// Information about a window instance attached with an iVar.
+pub struct WindowInstanceData {
+    pub application_data: Rc<RefCell<ApplicationData>>,
 }
 
-/*
-fn get_window_data(this: &Object) -> *mut Object {
+pub fn get_window_instance_data(this: &Object) -> *mut WindowInstanceData {
     unsafe {
-        let data = *this.get_ivar("window_data");
-        data
+        let data: *mut c_void = *this.get_ivar(WINDOW_DATA_IVAR_ID);
+        data as *mut WindowInstanceData
     }
 }
-*/
+
+// Global singleton data shared by all windows and the application struct.
+pub struct ApplicationData {
+    frame_requested: bool,
+    ns_application: *mut Object,
+    pub program_callback: Option<Box<ProgramCallback>>,
+}
+
+#[derive(Clone)]
+pub struct Application {
+    window_delegate_class: *const objc::runtime::Class,
+    view_delegate_class: *const objc::runtime::Class,
+    run_loop_custom_event_source: CFRunLoopSourceRef,
+    application_data: Rc<RefCell<ApplicationData>>,
+}
 
 fn window_delegate_declaration() -> *const objc::runtime::Class {
     let superclass = class!(NSResponder);
-    let mut decl = ClassDecl::new("KettlewinWindowClass", superclass).unwrap();
+    let mut decl = ClassDecl::new(WINDOW_CLASS_NAME, superclass).unwrap();
     super::events_mac::add_window_events_to_decl(&mut decl);
 
-    decl.add_ivar::<*mut Object>("window_data");
+    decl.add_ivar::<*mut c_void>(WINDOW_DATA_IVAR_ID);
     decl.register()
 }
 
 fn view_delegate_declaration() -> *const objc::runtime::Class {
     let superclass = class!(NSView);
-    let mut decl = ClassDecl::new("KettlewinViewClass", superclass).unwrap();
+    let mut decl = ClassDecl::new(VIEW_CLASS_NAME, superclass).unwrap();
     super::events_mac::add_view_events_to_decl(&mut decl);
     decl.register()
 }
@@ -49,9 +63,9 @@ impl ApplicationBuilder {
         unsafe {
             // let pool: *mut Object = unsafe { msg_send![class!(NSAutoreleasePool), new] };
 
-            let app: *mut Object = msg_send![class!(NSApplication), sharedApplication];
+            let ns_application: *mut Object = msg_send![class!(NSApplication), sharedApplication];
             let () = msg_send![
-                app,
+                ns_application,
                 setActivationPolicy:
                     NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular
             ];
@@ -60,39 +74,77 @@ impl ApplicationBuilder {
             extern "C" fn control_flow_end_handler(
                 _: CFRunLoopObserverRef,
                 _: CFRunLoopActivity,
-                _: *mut std::ffi::c_void,
+                observer_context_info: *mut std::ffi::c_void,
             ) {
                 unsafe {
-                    if let Some(app) = APP.as_mut() {
-                        if app.frame_requested {
-                            app.frame_requested = false;
-                            super::events_mac::produce_event(Event::Draw);
+                    // This is a little awkward, but the application_data cannot be borrowed
+                    // while the program_callback is called as it may call functions that borrow application_data
+                    let (mut frame_requested, mut program_callback) = {
+                        let mut application_data = (*(observer_context_info
+                            as *mut Rc<RefCell<ApplicationData>>))
+                            .borrow_mut();
+                        let frame_requested = application_data.frame_requested;
+                        application_data.frame_requested = false;
+                        (frame_requested, application_data.program_callback.take())
+                    };
+
+                    if frame_requested {
+                        if let Some(program_callback) = program_callback.as_mut() {
+                            program_callback(Event::Draw);
+                        } else {
+                            println!("Program not available");
                         }
                     }
+
+                    let mut application_data = (*(observer_context_info
+                        as *mut Rc<RefCell<ApplicationData>>))
+                        .borrow_mut();
+                    application_data.frame_requested = frame_requested;
+                    application_data.program_callback = program_callback;
                 }
             }
+            let application_data = ApplicationData {
+                frame_requested: true, // Always request an initial frame
+                ns_application,
+                program_callback: None,
+            };
 
-            // Setup a runloop observer (Idea borrowed from Winit)
+            let application_data = Rc::new(RefCell::new(application_data));
+
+            // This box that is leaked needs a way to be deallocated later.
+            let observer_context_info = Box::leak(Box::new(Rc::clone(&application_data)))
+                as *mut Rc<RefCell<ApplicationData>>
+                as *mut c_void;
+
+            // We only used this context to pass application_data to the observer
+            // The values in this data structure will be copied out.
+            let observer_context = CFRunLoopObserverContext {
+                copyDescription: std::ptr::null(),
+                info: observer_context_info,
+                release: std::ptr::null(),
+                version: 0,
+                retain: std::ptr::null(),
+            };
+
             let observer = CFRunLoopObserverCreate(
                 std::ptr::null_mut(),
                 kCFRunLoopBeforeWaiting,
                 YES,                  // Indicates we want this to run repeatedly
                 CFIndex::min_value(), // The lower the value, the sooner this will run
                 control_flow_end_handler,
-                std::ptr::null_mut(),
+                &observer_context as *const CFRunLoopObserverContext,
             );
             CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 
             let run_loop_custom_event_source = self::create_run_loop_source();
 
             let app = Application {
-                app,
                 window_delegate_class: window_delegate_declaration(),
                 view_delegate_class: view_delegate_declaration(),
-                frame_requested: true,
                 run_loop_custom_event_source,
+                application_data,
             };
-            APP = Some(Box::new(app.clone()));
+
             Ok(app)
         }
     }
@@ -148,7 +200,6 @@ impl<'a> WindowBuilder<'a> {
             });
             let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(width, height));
 
-            // It appears these flags are deprecated, but the Rust wrapper does not expose the nondepcrated version?
             let mut style = NSWindowStyleMaskTitled
                 | NSWindowStyleMaskClosable
                 | NSWindowStyleMaskMiniaturizable;
@@ -156,8 +207,7 @@ impl<'a> WindowBuilder<'a> {
                 style |= NSWindowStyleMaskResizable;
             }
 
-            // Needs to be released somehow
-
+            // Everything alloc-ed needs to be released somehow.
             let window: *mut Object = msg_send![class!(NSWindow), alloc];
             let () = msg_send![
                 window,
@@ -170,7 +220,7 @@ impl<'a> WindowBuilder<'a> {
             if let Some(position) = self.position {
                 let () = msg_send![window, cascadeTopLeftFromPoint:NSPoint::new(position.0 as f64, position.1 as f64)];
             } else {
-                // Center the window
+                // Center the window if no position is specified.
                 let () = msg_send![window, center];
             }
 
@@ -195,11 +245,17 @@ impl<'a> WindowBuilder<'a> {
                 userInfo:nil];
             let () = msg_send![ns_view, addTrackingArea: tracking_area];
 
-            // setup window delegate
+            // Setup window delegate
             let window_delegate: *mut Object =
                 msg_send![self.application.window_delegate_class, new];
 
-            (*window_delegate).set_ivar("window_data", window);
+            // Heap allocate a data structure for the window.
+            // Because this data is leaked it must be cleaned up manually later.
+            let window_instance_data = Box::leak(Box::new(WindowInstanceData {
+                application_data: Rc::clone(&self.application.application_data),
+            })) as *mut WindowInstanceData as *mut c_void;
+
+            (*window_delegate).set_ivar(WINDOW_DATA_IVAR_ID, window_instance_data);
             let () = msg_send![window, setDelegate: window_delegate];
             let () = msg_send![window, setContentView: ns_view];
             let () = msg_send![window, makeFirstResponder: ns_view];
@@ -226,41 +282,44 @@ impl Application {
     }
 
     pub fn event_loop(&mut self) -> EventLoop {
-        EventLoop {}
+        EventLoop {
+            application_data: Rc::clone(&self.application_data),
+        }
     }
 
     pub fn request_frame(&mut self) {
-        unsafe {
-            if let Some(app) = APP.as_mut() {
-                app.frame_requested = true;
-                self::poke_run_loop();
-            }
-        }
-    }
-}
+        let mut application_data = self.application_data.borrow_mut();
+        application_data.frame_requested = true;
 
-fn poke_run_loop() {
-    unsafe {
-        if let Some(app) = APP.as_mut() {
-            CFRunLoopSourceSignal(app.run_loop_custom_event_source);
+        self.wake_run_loop();
+    }
+
+    fn wake_run_loop(&self) {
+        unsafe {
+            CFRunLoopSourceSignal(self.run_loop_custom_event_source); // This line may not even be necessary.
             let run_loop = CFRunLoopGetMain();
             CFRunLoopWakeUp(run_loop);
         }
     }
 }
 
-pub struct EventLoop {}
+pub struct EventLoop {
+    application_data: Rc<RefCell<ApplicationData>>,
+}
 impl EventLoop {
     pub fn run<T>(&self, callback: T)
     where
         T: 'static + FnMut(crate::Event),
     {
-        println!("Running");
+        // The mutable borrow to application_data is dropped here before
+        // the rest of the program runs.
+        let ns_application = {
+            let mut application_data = self.application_data.borrow_mut();
+            application_data.program_callback = Some(Box::new(callback));
+            application_data.ns_application
+        };
         unsafe {
-            PROGRAM_CALLBACK = Some(Box::new(callback));
-            if let Some(app) = APP.as_mut() {
-                let () = msg_send![app.app, run];
-            }
+            let () = msg_send![ns_application, run];
         }
     }
 }

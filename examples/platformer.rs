@@ -121,23 +121,22 @@ fn rect_overlap(rect0: &Rect, rect1: &Rect) -> Option<(f32, f32)> {
 }
 
 fn main() {
-    // Create a new window manager with default settings.
-    // let mut app = App::new().build().unwrap();
+    // Create a new application with default settings.
+    let mut app = Application::new().build().unwrap();
 
     let mut screen_width = 600;
     let mut screen_height = 600;
-    let mut app = App::new(&AppParameters::default()).unwrap();
-    let gl = app.gl_context();
+
+    let gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
+    let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
+
     unsafe {
         gl.enable(SCISSOR_TEST);
     }
 
-    let window = app
-        .new_window(&WindowParameters {
-            title: Some("Hello"),
-            ..Default::default()
-        })
-        .unwrap();
+    let window = app.new_window().build().unwrap();
+
+    gl_context.set_window(&window).unwrap();
 
     // ---------------- Level Data -------------------
     let black = (0.0, 0.0, 0.0, 1.0);
@@ -261,7 +260,7 @@ fn main() {
 
     let moody_foreground_waterfall = Color {
         r: 0.01,
-        g: 0.02,
+        g: 0.3,
         b: 0.22,
         a: 1.0,
     };
@@ -334,7 +333,7 @@ fn main() {
     let mut right_held = false;
     let mut left_held = false;
 
-    app.run(move |event, app| unsafe {
+    app.event_loop().run(move |event| unsafe {
         match event {
             Event::ButtonDown {
                 button,
@@ -445,7 +444,8 @@ fn main() {
                     draw_rect(&gl, &block.rect, &block.color);
                 }
                 // When we're done rendering swap the window buffers to display to the screen.
-                app.swap_buffers();
+                gl_context.swap_buffers();
+                app.request_frame();
             }
             _ => {}
         }

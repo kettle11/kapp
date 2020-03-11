@@ -89,7 +89,7 @@ impl<'a> WindowBuilder<'a> {
             let window_device = winuser::GetDC(window_handle);
             error_if_null(window_device, false)?;
 
-            // make that match the device context's current pixel format
+            // Make the window device's pixel_format match the device context's current pixel format
             error_if_false(
                 wingdi::SetPixelFormat(
                     window_device,
@@ -98,7 +98,7 @@ impl<'a> WindowBuilder<'a> {
                 ),
                 false,
             )?;
-            // When a window is constructed, make it current.
+            // Make the new window current.
             error_if_false(
                 wingdi::wglMakeCurrent(window_device, self.opengl_context.context_ptr),
                 false,

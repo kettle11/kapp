@@ -30,7 +30,7 @@ async fn run(mut app: Application, mut events: Events) {
                 color += 0.02;
 
                 gl_context.swap_buffers(); // Swaps the currently bound window.
-                                           // Blocks if Vsync is used.
+                app.request_frame();
             }
             _ => {}
         }

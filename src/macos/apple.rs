@@ -38,7 +38,7 @@ extern "C" {
         repeats: BOOL,
         order: CFIndex,
         callout: CFRunLoopObserverCallBack,
-        context: *mut CFRunLoopObserverContext,
+        context: *const CFRunLoopObserverContext,
     ) -> CFRunLoopObserverRef;
     pub fn CFRunLoopAddObserver(
         rl: CFRunLoopRef,
@@ -107,7 +107,16 @@ pub type CFRunLoopObserverCallBack =
     extern "C" fn(observer: CFRunLoopObserverRef, activity: CFRunLoopActivity, info: *mut c_void);
 pub type CFRunLoopTimerCallBack = extern "C" fn(timer: CFRunLoopTimerRef, info: *mut c_void);
 
-pub enum CFRunLoopObserverContext {}
+// https://developer.apple.com/documentation/corefoundation/cfrunloopobservercontext?language=objc
+#[repr(C)]
+pub struct CFRunLoopObserverContext {
+    pub copyDescription: *const c_void,
+    pub info: *const c_void,
+    pub release: *const c_void,
+    pub version: CFIndex,
+    pub retain: *const c_void,
+}
+
 pub enum CFRunLoopTimerContext {}
 
 // pub const kCFRunLoopEntry: CFRunLoopActivity = 0;

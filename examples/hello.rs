@@ -16,7 +16,6 @@ fn main() {
 
     app.event_loop().run(move |event| match event {
         Event::Draw => {
-            println!("Drawing");
             unsafe {
                 gl.clear_color(1.0, 0.0, color, 1.0);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);

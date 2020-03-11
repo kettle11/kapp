@@ -2,7 +2,7 @@ use super::apple::*;
 
 // ------------------------ Window Events --------------------------
 extern "C" fn window_moved(_this: &Object, _sel: Sel, _event: *mut Object) {}
-extern "C" fn window_did_resize(_this: &Object, _sel: Sel, _event: *mut Object) {
+extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
     // TEST_VIEW needs to be replaced with the actual window view.
     /*
     unsafe {
@@ -44,23 +44,29 @@ extern "C" fn window_did_resize(_this: &Object, _sel: Sel, _event: *mut Object) 
 // ------------------------ End Window Events --------------------------
 
 // ------------------------ View Events --------------------------
-extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
-        self::produce_event(crate::Event::ButtonDown {
-            button: super::keys_mac::virtual_keycode_to_key(key_code),
-            scancode: 0,
-        });
+        self::produce_event_from_view(
+            this,
+            crate::Event::ButtonDown {
+                button: super::keys_mac::virtual_keycode_to_key(key_code),
+                scancode: 0,
+            },
+        );
     }
 }
 
-extern "C" fn key_up(_this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn key_up(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
-        self::produce_event(crate::Event::ButtonUp {
-            button: super::keys_mac::virtual_keycode_to_key(key_code),
-            scancode: 0,
-        });
+        self::produce_event_from_view(
+            this,
+            crate::Event::ButtonUp {
+                button: super::keys_mac::virtual_keycode_to_key(key_code),
+                scancode: 0,
+            },
+        );
     }
 }
 
@@ -86,20 +92,60 @@ extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
         let x = view_point.x;
         let y = view_rect.size.height - view_point.y;
 
-        self::produce_event(crate::Event::MouseMoved {
-            x: x as f32,
-            y: y as f32,
-        });
+        self::produce_event_from_view(
+            this,
+            crate::Event::MouseMoved {
+                x: x as f32,
+                y: y as f32,
+            },
+        );
     }
 }
 // ------------------------ End View Events --------------------------
 
-pub fn produce_event(event: crate::Event) {
+pub fn produce_event_from_window(this: &Object, event: crate::Event) {
+    let window_data = super::application_mac::get_window_instance_data(this);
     unsafe {
-        if let Some(program_callback) = super::application_mac::PROGRAM_CALLBACK.as_mut() {
-            program_callback(event);
+        // This is a little awkward, but the application_data cannot be borrowed
+        // while the program_callback is called as it may call functions that borrow application_data
+        let mut program_callback = (*window_data)
+            .application_data
+            .borrow_mut()
+            .program_callback
+            .take();
+        if let Some(callback) = program_callback.as_mut() {
+            callback(event)
         }
+        (*window_data)
+            .application_data
+            .borrow_mut()
+            .program_callback = program_callback;
     }
+}
+
+pub fn produce_event_from_view(this: &Object, event: crate::Event) {
+    // First get the view's window
+    /*
+    unsafe {
+        let window: &Object = msg_send![this, window];
+        let window_data = super::application_mac::get_window_instance_data(window);
+
+        // This is a little awkward, but the application_data cannot be borrowed
+        // while the program_callback is called as it may call functions that borrow application_data
+        let mut program_callback = (*window_data)
+            .application_data
+            .borrow_mut()
+            .program_callback
+            .take();
+        if let Some(callback) = program_callback.as_mut() {
+            callback(event)
+        }
+        (*window_data)
+            .application_data
+            .borrow_mut()
+            .program_callback = program_callback;
+    }
+    */
 }
 
 pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
