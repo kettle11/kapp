@@ -1,4 +1,4 @@
-use libc::{c_int, c_long, c_ulong};
+use libc::{c_long, c_ulong};
 use std::ffi::c_void;
 use std::os::raw::c_double;
 
@@ -13,12 +13,21 @@ pub static NSTrackingMouseEnteredAndExited: NSInteger = 0x01;
 pub static NSTrackingMouseMoved: NSInteger = 0x02;
 pub static NSTrackingActiveInKeyWindow: NSInteger = 0x20;
 
+#[repr(i64)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum NSApplicationActivationPolicy {
+    NSApplicationActivationPolicyRegular = 0,
+    // NSApplicationActivationPolicyAccessory = 1,
+    // NSApplicationActivationPolicyProhibited = 2,
+    // NSApplicationActivationPolicyERROR = -1,
+}
+
 #[link(name = "CoreFoundation", kind = "framework")]
 extern "C" {
     pub fn CFRunLoopGetMain() -> CFRunLoopRef;
 
     pub static kCFRunLoopCommonModes: CFRunLoopMode;
-    pub static NSRunLoopCommonModes: *mut Object;
+    // pub static NSRunLoopCommonModes: *mut Object;
 
     pub fn CFRunLoopObserverCreate(
         allocator: CFAllocatorRef,
@@ -55,35 +64,28 @@ pub enum CFRunLoopObserver {}
 pub type CFRunLoopObserverRef = *mut CFRunLoopObserver;
 pub enum CFRunLoopTimer {}
 pub type CFRunLoopTimerRef = *mut CFRunLoopTimer;
-pub enum CFRunLoopSource {}
-pub type CFRunLoopSourceRef = *mut CFRunLoopSource;
 pub type CFStringRef = *const Object; // CFString
-pub type CFHashCode = std::os::raw::c_ulong;
 pub type CFIndex = std::os::raw::c_long;
 pub type CFOptionFlags = std::os::raw::c_ulong;
 pub type CFRunLoopActivity = CFOptionFlags;
 
 pub type CFAbsoluteTime = CFTimeInterval;
 pub type CFTimeInterval = f64;
-pub type CFRunLoopObserverCallBack = extern "C" fn(
-    observer: CFRunLoopObserverRef,
-    activity: CFRunLoopActivity,
-    info: *mut std::ffi::c_void,
-);
-pub type CFRunLoopTimerCallBack =
-    extern "C" fn(timer: CFRunLoopTimerRef, info: *mut std::ffi::c_void);
+pub type CFRunLoopObserverCallBack =
+    extern "C" fn(observer: CFRunLoopObserverRef, activity: CFRunLoopActivity, info: *mut c_void);
+pub type CFRunLoopTimerCallBack = extern "C" fn(timer: CFRunLoopTimerRef, info: *mut c_void);
 
 pub enum CFRunLoopObserverContext {}
 pub enum CFRunLoopTimerContext {}
 
-pub const kCFRunLoopEntry: CFRunLoopActivity = 0;
+// pub const kCFRunLoopEntry: CFRunLoopActivity = 0;
 pub const kCFRunLoopBeforeWaiting: CFRunLoopActivity = 1 << 5;
-pub const kCFRunLoopAfterWaiting: CFRunLoopActivity = 1 << 6;
-pub const kCFRunLoopExit: CFRunLoopActivity = 1 << 7;
+// pub const kCFRunLoopAfterWaiting: CFRunLoopActivity = 1 << 6;
+// pub const kCFRunLoopExit: CFRunLoopActivity = 1 << 7;
 
 // NSWindowStyleMask
 // https://developer.apple.com/documentation/appkit/nswindowstylemask?language=objc
-pub const NSWindowStyleMaskBorderless: NSUInteger = 0;
+// pub const NSWindowStyleMaskBorderless: NSUInteger = 0;
 pub const NSWindowStyleMaskTitled: NSUInteger = 1 << 0;
 pub const NSWindowStyleMaskClosable: NSUInteger = 1 << 1;
 pub const NSWindowStyleMaskMiniaturizable: NSUInteger = 1 << 2;
@@ -97,71 +99,20 @@ pub const UTF8_ENCODING: usize = 4;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSOpenGLContextParameter {
     NSOpenGLCPSwapInterval = 222,
-    NSOpenGLCPSurfaceOrder = 235,
-    NSOpenGLCPSurfaceOpacity = 236,
-    NSOpenGLCPSurfaceBackingSize = 304,
-    NSOpenGLCPReclaimResources = 308,
-    NSOpenGLCPCurrentRendererID = 309,
-    NSOpenGLCPGPUVertexProcessing = 310,
-    NSOpenGLCPGPUFragmentProcessing = 311,
-    NSOpenGLCPHasDrawable = 314,
-    NSOpenGLCPMPSwapsInFlight = 315,
 }
 pub use NSOpenGLContextParameter::*;
-
-#[repr(i64)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum NSApplicationActivationPolicy {
-    NSApplicationActivationPolicyRegular = 0,
-    NSApplicationActivationPolicyAccessory = 1,
-    NSApplicationActivationPolicyProhibited = 2,
-    NSApplicationActivationPolicyERROR = -1,
-}
-
-use NSApplicationActivationPolicy::*;
 
 #[repr(u64)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSOpenGLPixelFormatAttribute {
-    NSOpenGLPFAAllRenderers = 1,
-    NSOpenGLPFATripleBuffer = 3,
     NSOpenGLPFADoubleBuffer = 5,
-    NSOpenGLPFAStereo = 6,
-    NSOpenGLPFAAuxBuffers = 7,
     NSOpenGLPFAColorSize = 8,
+
     NSOpenGLPFAAlphaSize = 11,
     NSOpenGLPFADepthSize = 12,
     NSOpenGLPFAStencilSize = 13,
-    NSOpenGLPFAAccumSize = 14,
-    NSOpenGLPFAMinimumPolicy = 51,
-    NSOpenGLPFAMaximumPolicy = 52,
-    NSOpenGLPFAOffScreen = 53,
-    NSOpenGLPFAFullScreen = 54,
-    NSOpenGLPFASampleBuffers = 55,
-    NSOpenGLPFASamples = 56,
-    NSOpenGLPFAAuxDepthStencil = 57,
-    NSOpenGLPFAColorFloat = 58,
-    NSOpenGLPFAMultisample = 59,
-    NSOpenGLPFASupersample = 60,
-    NSOpenGLPFASampleAlpha = 61,
-    NSOpenGLPFARendererID = 70,
-    NSOpenGLPFASingleRenderer = 71,
-    NSOpenGLPFANoRecovery = 72,
     NSOpenGLPFAAccelerated = 73,
-    NSOpenGLPFAClosestPolicy = 74,
-    NSOpenGLPFARobust = 75,
-    NSOpenGLPFABackingStore = 76,
-    NSOpenGLPFAMPSafe = 78,
-    NSOpenGLPFAWindow = 80,
-    NSOpenGLPFAMultiScreen = 81,
-    NSOpenGLPFACompliant = 83,
-    NSOpenGLPFAScreenMask = 84,
-    NSOpenGLPFAPixelBuffer = 90,
-    NSOpenGLPFARemotePixelBuffer = 91,
-    NSOpenGLPFAAllowOfflineRenderers = 96,
-    NSOpenGLPFAAcceleratedCompute = 97,
     NSOpenGLPFAOpenGLProfile = 99,
-    NSOpenGLPFAVirtualScreenCount = 128,
 }
 pub use NSOpenGLPixelFormatAttribute::*;
 
@@ -169,9 +120,8 @@ pub use NSOpenGLPixelFormatAttribute::*;
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSOpenGLPFAOpenGLProfiles {
-    NSOpenGLProfileVersionLegacy = 0x1000,
     NSOpenGLProfileVersion3_2Core = 0x3200,
-    NSOpenGLProfileVersion4_1Core = 0x4100,
+    // NSOpenGLProfileVersion4_1Core = 0x4100,
 }
 pub use NSOpenGLPFAOpenGLProfiles::*;
 
@@ -266,7 +216,7 @@ unsafe impl objc::Encode for CGSize {
 pub type NSRect = CGRect;
 
 #[repr(C)]
-pub struct __CFBundle(std::ffi::c_void);
+pub struct __CFBundle(c_void);
 pub type CFBundleRef = *mut __CFBundle;
 
 extern "C" {
@@ -274,7 +224,7 @@ extern "C" {
     pub fn CFBundleGetFunctionPointerForName(
         bundle: CFBundleRef,
         function_name: CFStringRef,
-    ) -> *const std::ffi::c_void;
+    ) -> *const c_void;
 }
 
 pub struct NSString {

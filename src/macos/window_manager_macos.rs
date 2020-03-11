@@ -2,10 +2,8 @@ use super::apple::*;
 use crate::AppParameters;
 use crate::Event;
 use crate::WindowParameters;
-use std::ffi::c_void;
-use std::io::Error;
 
-type Callback = dyn 'static + FnMut(Event, &mut App);
+type Callback = dyn 'static + FnMut(Event);
 pub static mut PROGRAM_CALLBACK: Option<Box<Callback>> = None;
 pub static mut APP: Option<Box<App>> = None;
 
@@ -20,36 +18,33 @@ pub struct App {
     view_delegate_class: *const objc::runtime::Class,
 }
 
+/*
 fn get_window_data(this: &Object) -> *mut Object {
     unsafe {
         let data = *this.get_ivar("window_data");
-        println!("WINDOW OUT:{:?}", data);
         data
     }
 }
+*/
 
 fn window_delegate_declaration() -> *const objc::runtime::Class {
-    unsafe {
-        let superclass = class!(NSResponder);
-        let mut decl = ClassDecl::new("KettlewinWindowClass", superclass).unwrap();
-        super::events_mac::add_window_events_to_decl(&mut decl);
+    let superclass = class!(NSResponder);
+    let mut decl = ClassDecl::new("KettlewinWindowClass", superclass).unwrap();
+    super::events_mac::add_window_events_to_decl(&mut decl);
 
-        decl.add_ivar::<*mut Object>("window_data");
-        decl.register()
-    }
+    decl.add_ivar::<*mut Object>("window_data");
+    decl.register()
 }
 
 fn view_delegate_declaration() -> *const objc::runtime::Class {
-    unsafe {
-        let superclass = class!(NSView);
-        let mut decl = ClassDecl::new("KettlewinViewClass", superclass).unwrap();
-        super::events_mac::add_view_events_to_decl(&mut decl);
-        decl.register()
-    }
+    let superclass = class!(NSView);
+    let mut decl = ClassDecl::new("KettlewinViewClass", superclass).unwrap();
+    super::events_mac::add_view_events_to_decl(&mut decl);
+    decl.register()
 }
 
 impl App {
-    pub fn new(app_parameters: &AppParameters) -> Result<App, ()> {
+    pub fn new(_app_parameters: &AppParameters) -> Result<App, ()> {
         unsafe {
             // let pool: *mut Object = unsafe { msg_send![class!(NSAutoreleasePool), new] };
 
@@ -63,7 +58,7 @@ impl App {
             // Stuff taken from Winit to setup a loopobserver
             extern "C" fn control_flow_end_handler(
                 _: CFRunLoopObserverRef,
-                activity: CFRunLoopActivity,
+                _: CFRunLoopActivity,
                 _: *mut std::ffi::c_void,
             ) {
                 super::events_mac::produce_event(Event::Draw);
@@ -97,11 +92,13 @@ impl App {
             );
             CFRunLoopAddTimer(CFRunLoopGetMain(), timer, kCFRunLoopCommonModes);
 
-            Ok(App {
+            let app = App {
                 app,
                 window_delegate_class: window_delegate_declaration(),
                 view_delegate_class: view_delegate_declaration(),
-            })
+            };
+            APP = Some(Box::new(app.clone()));
+            Ok(app)
         }
     }
 
@@ -165,7 +162,6 @@ impl App {
             let window_delegate: *mut Object = msg_send![self.window_delegate_class, new];
 
             (*window_delegate).set_ivar("window_data", window);
-            println!("WINDOW IN:{:?}", window);
             let () = msg_send![window, setDelegate: window_delegate];
             let () = msg_send![window, setContentView: ns_view];
             let () = msg_send![window, makeFirstResponder: ns_view];
@@ -175,15 +171,23 @@ impl App {
         }
     }
 
-    pub fn run<T>(&mut self, mut callback: T)
+    pub fn event_loop(&mut self) -> EventLoop {
+        EventLoop {}
+    }
+}
+
+pub struct EventLoop {}
+impl EventLoop {
+    pub fn run<T>(&self, callback: T)
     where
-        T: 'static + FnMut(crate::Event, &mut App),
+        T: 'static + FnMut(crate::Event),
     {
         println!("Running");
         unsafe {
             PROGRAM_CALLBACK = Some(Box::new(callback));
-            APP = Some(Box::new(self.clone()));
-            let () = msg_send![self.app, run];
+            if let Some(app) = APP.as_mut() {
+                let () = msg_send![app.app, run];
+            }
         }
     }
 }

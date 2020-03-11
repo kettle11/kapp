@@ -1,15 +1,11 @@
-use super::window_manager_macos::*;
-use super::App;
+use crate::App;
 use crate::Event;
 use std::cell::RefCell;
 use std::future::Future;
-use std::future::*;
 use std::rc::Rc;
 
 use std::pin::Pin;
 use std::task::{Context, Poll};
-
-pub struct AsyncApplication {}
 
 pub struct EventFuture<'a> {
     events: &'a mut Events,
@@ -18,35 +14,35 @@ pub struct EventFuture<'a> {
 impl<'a> Future for EventFuture<'a> {
     type Output = Event;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output> {
-        unsafe {
-            if let Some(event) = self.events.events_queue.borrow_mut().pop() {
-                Poll::Ready(event)
-            } else {
-                Poll::Pending
-            }
+    fn poll(self: Pin<&mut Self>, _ctx: &mut Context) -> Poll<Self::Output> {
+        if let Some(event) = self.events.events_queue.borrow_mut().pop() {
+            Poll::Ready(event)
+        } else {
+            Poll::Pending
         }
     }
 }
 
-impl AsyncApplication {
+impl App {
     /// Events are sent to the program immediately as they're ready.
     /// However if they main program is blocked then events are queued.
-    pub fn run<F>(mut app: App, mut run_function: impl Fn(Events) -> F) -> !
+    pub fn run_async<F>(&mut self, run_function: impl Fn(App, Events) -> F) -> !
     where
         F: 'static + Future<Output = ()>,
     {
-        let mut events_queue = Rc::new(RefCell::new(Vec::new()));
-        let mut events = Events {
+        let events_queue = Rc::new(RefCell::new(Vec::new()));
+        let events = Events {
             events_queue: Rc::clone(&events_queue),
         };
-        let mut pin = Box::pin(run_function(events));
+
+        // Is cloning the app here problematic?
+        let app_for_function = self.clone();
+
+        let mut pin = Box::pin(run_function(app_for_function, events));
 
         // A proper context and waker need to be setup here.
-        app.run(move |event, app| {
-            unsafe {
-                events_queue.borrow_mut().push(event);
-            }
+        self.event_loop().run(move |event| {
+            events_queue.borrow_mut().push(event);
 
             // This waker does nothing presently,
             // This means that completed futures won't actually wake up the main loop.

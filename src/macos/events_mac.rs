@@ -1,8 +1,8 @@
 use super::apple::*;
 
 // ------------------------ Window Events --------------------------
-extern "C" fn window_moved(this: &Object, _sel: Sel, event: *mut Object) {}
-extern "C" fn window_did_resize(this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn window_moved(_this: &Object, _sel: Sel, _event: *mut Object) {}
+extern "C" fn window_did_resize(_this: &Object, _sel: Sel, _event: *mut Object) {
     // TEST_VIEW needs to be replaced with the actual window view.
     /*
     unsafe {
@@ -44,7 +44,7 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, event: *mut Object) {
 // ------------------------ End Window Events --------------------------
 
 // ------------------------ View Events --------------------------
-extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
         self::produce_event(crate::Event::ButtonDown {
@@ -54,7 +54,7 @@ extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
     }
 }
 
-extern "C" fn key_up(this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn key_up(_this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
         self::produce_event(crate::Event::ButtonUp {
@@ -63,7 +63,6 @@ extern "C" fn key_up(this: &Object, _sel: Sel, event: *mut Object) {
         });
     }
 }
-extern "C" fn draw_rect(this: &Object, _sel: Sel, rect: NSRect) {}
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
@@ -98,9 +97,7 @@ extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
 pub fn produce_event(event: crate::Event) {
     unsafe {
         if let Some(program_callback) = super::window_manager_macos::PROGRAM_CALLBACK.as_mut() {
-            if let Some(app) = super::window_manager_macos::APP.as_mut() {
-                program_callback(event, app);
-            }
+            program_callback(event);
         }
     }
 }
@@ -131,11 +128,6 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
         decl.add_method(
             sel!(keyUp:),
             key_up as extern "C" fn(&Object, Sel, *mut Object),
-        );
-
-        decl.add_method(
-            sel!(drawRect:),
-            draw_rect as extern "C" fn(&Object, Sel, NSRect),
         );
     }
 }

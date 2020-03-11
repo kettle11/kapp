@@ -15,18 +15,12 @@ fn main() {
     let gl_context = GLContext::new(); // Create a gl_context for the app
     let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
 
-    gl_context.set_window(&window);
+    gl_context.set_window(&window).unwrap();
 
     // Run forever
     let mut color = 0.0;
 
-    app.run(move |event, app| match event {
-        Event::ButtonDown { .. } => {
-            app.new_window(&WindowParameters {
-                title: Some("Hello1"),
-                ..Default::default()
-            });
-        }
+    app.event_loop().run(move |event| match event {
         Event::Draw => {
             unsafe {
                 gl.clear_color(0.0, color, 1.0, 1.0);

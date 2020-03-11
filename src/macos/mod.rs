@@ -14,6 +14,3 @@ pub use gl_context::*;
 mod window_manager_macos;
 
 pub use window_manager_macos::{App, Window};
-
-mod async_application;
-pub use async_application::{AsyncApplication, Events};
