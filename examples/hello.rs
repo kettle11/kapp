@@ -8,9 +8,8 @@ fn main() {
     let window = app.new_window().title("Hello").build().unwrap();
 
     let gl_context = GLContext::new(); // Create a gl_context for the app
-    let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
-
     gl_context.set_window(&window).unwrap();
+    let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
 
     // Run forever
     let mut color = 0.0;
