@@ -96,7 +96,7 @@ extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
 
 pub fn produce_event(event: crate::Event) {
     unsafe {
-        if let Some(program_callback) = super::window_manager_macos::PROGRAM_CALLBACK.as_mut() {
+        if let Some(program_callback) = super::application_mac::PROGRAM_CALLBACK.as_mut() {
             program_callback(event);
         }
     }

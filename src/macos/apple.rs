@@ -1,3 +1,5 @@
+// This file is a bunch of stuff needed for calling into MacOS code.
+
 use libc::{c_long, c_ulong};
 use std::ffi::c_void;
 use std::os::raw::c_double;

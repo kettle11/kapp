@@ -1,18 +1,16 @@
 use super::apple::*;
-use crate::AppParameters;
 use crate::Event;
-use crate::WindowParameters;
 
 type Callback = dyn 'static + FnMut(Event);
 pub static mut PROGRAM_CALLBACK: Option<Box<Callback>> = None;
-pub static mut APP: Option<Box<App>> = None;
+pub static mut APP: Option<Box<Application>> = None;
 
 pub struct Window {
     pub ns_view: *mut Object,
 }
 
 #[derive(Clone)]
-pub struct App {
+pub struct Application {
     pub app: *mut Object,
     window_delegate_class: *const objc::runtime::Class,
     view_delegate_class: *const objc::runtime::Class,
@@ -43,8 +41,9 @@ fn view_delegate_declaration() -> *const objc::runtime::Class {
     decl.register()
 }
 
-impl App {
-    pub fn new(_app_parameters: &AppParameters) -> Result<App, ()> {
+pub struct ApplicationBuilder {}
+impl ApplicationBuilder {
+    pub fn build(&self) -> Result<Application, ()> {
         unsafe {
             // let pool: *mut Object = unsafe { msg_send![class!(NSAutoreleasePool), new] };
 
@@ -92,7 +91,7 @@ impl App {
             );
             CFRunLoopAddTimer(CFRunLoopGetMain(), timer, kCFRunLoopCommonModes);
 
-            let app = App {
+            let app = Application {
                 app,
                 window_delegate_class: window_delegate_declaration(),
                 view_delegate_class: view_delegate_declaration(),
@@ -101,25 +100,52 @@ impl App {
             Ok(app)
         }
     }
+}
 
-    pub fn new_window<'a>(&mut self, window_parameters: &WindowParameters) -> Result<Window, ()> {
+pub struct WindowBuilder<'a> {
+    application: &'a Application,
+    pub position: Option<(u32, u32)>,
+    pub dimensions: Option<(u32, u32)>,
+    pub resizable: bool,
+    pub title: Option<&'a str>,
+}
+
+impl<'a> WindowBuilder<'a> {
+    pub fn title(&mut self, title: &'a str) -> &mut Self {
+        self.title = Some(title);
+        self
+    }
+
+    pub fn resizable(&mut self, resizable: bool) -> &mut Self {
+        self.resizable = resizable;
+        self
+    }
+
+    pub fn position(&mut self, x: u32, y: u32) -> &mut Self {
+        self.position = Some((x, y));
+        self
+    }
+    pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
+        self.dimensions = Some((width, height));
+        self
+    }
+
+    pub fn build(&self) -> Result<Window, ()> {
         unsafe {
-            let (x, y) = window_parameters
+            let (x, y) = self
                 .position
                 .map_or((0., 0.), |(x, y)| (x as f64, y as f64));
 
-            let (width, height) = window_parameters
-                .dimensions
-                .map_or((600., 600.), |(width, height)| {
-                    (width as f64, height as f64)
-                });
+            let (width, height) = self.dimensions.map_or((600., 600.), |(width, height)| {
+                (width as f64, height as f64)
+            });
             let rect = NSRect::new(NSPoint::new(x, y), NSSize::new(width, height));
 
             // It appears these flags are deprecated, but the Rust wrapper does not expose the nondepcrated version?
             let mut style = NSWindowStyleMaskTitled
                 | NSWindowStyleMaskClosable
                 | NSWindowStyleMaskMiniaturizable;
-            if window_parameters.resizable {
+            if self.resizable {
                 style |= NSWindowStyleMaskResizable;
             }
 
@@ -137,13 +163,13 @@ impl App {
             let () = msg_send![window, cascadeTopLeftFromPoint:NSPoint::new(20., 20.)];
 
             let () = msg_send![window, center];
-            let title = window_parameters.title.unwrap_or("Untitled");
+            let title = self.title.unwrap_or("Untitled");
             let title = NSString::new(title);
             let () = msg_send![window, setTitle: title.raw];
             let () = msg_send![window, makeKeyAndOrderFront: nil];
 
             // setup view
-            let ns_view: *mut Object = msg_send![self.view_delegate_class, alloc];
+            let ns_view: *mut Object = msg_send![self.application.view_delegate_class, alloc];
 
             // Apparently this defaults to YES even without this call
             let () = msg_send![ns_view, setWantsBestResolutionOpenGLSurface: YES];
@@ -159,7 +185,8 @@ impl App {
             let () = msg_send![ns_view, addTrackingArea: tracking_area];
 
             // setup window delegate
-            let window_delegate: *mut Object = msg_send![self.window_delegate_class, new];
+            let window_delegate: *mut Object =
+                msg_send![self.application.window_delegate_class, new];
 
             (*window_delegate).set_ivar("window_data", window);
             let () = msg_send![window, setDelegate: window_delegate];
@@ -168,6 +195,22 @@ impl App {
 
             let window = Window { ns_view };
             Ok(window)
+        }
+    }
+}
+
+impl Application {
+    pub fn new() -> ApplicationBuilder {
+        ApplicationBuilder {}
+    }
+
+    pub fn new_window<'a>(&'a mut self) -> WindowBuilder<'a> {
+        WindowBuilder {
+            application: self,
+            position: None,
+            dimensions: None,
+            resizable: true,
+            title: None,
         }
     }
 

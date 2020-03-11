@@ -11,6 +11,6 @@ mod keys_mac;
 
 mod gl_context;
 pub use gl_context::*;
-mod window_manager_macos;
+mod application_mac;
 
-pub use window_manager_macos::{App, Window};
+pub use application_mac::{Application, Window};

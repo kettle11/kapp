@@ -1,4 +1,4 @@
-use crate::App;
+use crate::Application;
 use crate::Event;
 use std::cell::RefCell;
 use std::future::Future;
@@ -23,10 +23,10 @@ impl<'a> Future for EventFuture<'a> {
     }
 }
 
-impl App {
+impl Application {
     /// Events are sent to the program immediately as they're ready.
     /// However if they main program is blocked then events are queued.
-    pub fn run_async<F>(&mut self, run_function: impl Fn(App, Events) -> F) -> !
+    pub fn run_async<F>(&mut self, run_function: impl Fn(Application, Events) -> F) -> !
     where
         F: 'static + Future<Output = ()>,
     {

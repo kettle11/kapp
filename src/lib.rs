@@ -1,13 +1,10 @@
-mod app_parameters;
 mod buttons;
 mod events;
-mod window_parameters;
-
-pub use app_parameters::*;
-pub use window_parameters::*;
+mod async_application;
 
 pub use buttons::Button;
 pub use events::*;
+pub use async_application::*;
 
 #[cfg(all(target_os = "windows"))]
 mod windows;
@@ -30,6 +27,3 @@ pub extern crate glow;
 #[cfg(all(target_os = "macos"))]
 #[macro_use]
 extern crate objc;
-
-mod async_application;
-pub use async_application::*;
