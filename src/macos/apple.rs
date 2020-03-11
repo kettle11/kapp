@@ -1,10 +1,13 @@
-use libc::{c_long, c_ulong};
+use libc::{c_int, c_long, c_ulong};
+use std::ffi::c_void;
 use std::os::raw::c_double;
 
 pub use objc::{
     declare::ClassDecl,
     runtime::{Object, Sel, BOOL, NO, YES},
 };
+
+pub const nil: *mut Object = 0 as *mut Object;
 
 pub static NSTrackingMouseEnteredAndExited: NSInteger = 0x01;
 pub static NSTrackingMouseMoved: NSInteger = 0x02;

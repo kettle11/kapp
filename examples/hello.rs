@@ -5,20 +5,27 @@ use kettlewin::*;
 fn main() {
     // Create a new window manager with default settings.
     let mut app = App::new(&AppParameters::default()).unwrap();
-    let gl = app.gl_context();
-    let _window = app
+    let window = app
         .new_window(&WindowParameters {
             title: Some("Hello"),
             ..Default::default()
         })
         .unwrap();
 
+    let gl_context = GLContext::new(); // Create a gl_context for the app
+    let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
+
+    gl_context.set_window(&window);
+
     // Run forever
     let mut color = 0.0;
 
     app.run(move |event, app| match event {
-        Event::ResizedWindow { width, height } => {
-            println!("Resized: {:?}, {:?}", width, height);
+        Event::ButtonDown { .. } => {
+            app.new_window(&WindowParameters {
+                title: Some("Hello1"),
+                ..Default::default()
+            });
         }
         Event::Draw => {
             unsafe {
@@ -26,8 +33,9 @@ fn main() {
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
             }
             color += 0.01;
-            // When we're done rendering swap the window buffers to display to the screen.
-            app.swap_buffers();
+
+            gl_context.swap_buffers(); // Swaps the currently bound window.
+                                       // Blocks if Vsync is used.
 
             // app.request_frame();
         }

@@ -8,6 +8,7 @@ pub enum MouseButton {
     __Nonexhaustive, // More buttons may be added.
 }
 
+#[derive(Debug)]
 pub enum Event {
     Draw, // The 'Draw' event can be seen as a recommendation of when to draw. It is not an actual system event.
     ButtonDown {
