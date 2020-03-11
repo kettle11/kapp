@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 pub type ProgramCallback = dyn 'static + FnMut(Event);
 
-static WINDOW_DATA_IVAR_ID: &str = "window_instance_data";
+static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
 static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
 static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
 
@@ -19,10 +19,21 @@ pub struct WindowInstanceData {
     pub application_data: Rc<RefCell<ApplicationData>>,
 }
 
+pub struct ViewInstanceData {
+    pub application_data: Rc<RefCell<ApplicationData>>,
+}
+
 pub fn get_window_instance_data(this: &Object) -> *mut WindowInstanceData {
     unsafe {
-        let data: *mut c_void = *this.get_ivar(WINDOW_DATA_IVAR_ID);
+        let data: *mut c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
         data as *mut WindowInstanceData
+    }
+}
+
+pub fn get_view_instance_data(this: &Object) -> *mut ViewInstanceData {
+    unsafe {
+        let data: *mut c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
+        data as *mut ViewInstanceData
     }
 }
 
@@ -46,7 +57,7 @@ fn window_delegate_declaration() -> *const objc::runtime::Class {
     let mut decl = ClassDecl::new(WINDOW_CLASS_NAME, superclass).unwrap();
     super::events_mac::add_window_events_to_decl(&mut decl);
 
-    decl.add_ivar::<*mut c_void>(WINDOW_DATA_IVAR_ID);
+    decl.add_ivar::<*mut c_void>(INSTANCE_DATA_IVAR_ID);
     decl.register()
 }
 
@@ -54,6 +65,7 @@ fn view_delegate_declaration() -> *const objc::runtime::Class {
     let superclass = class!(NSView);
     let mut decl = ClassDecl::new(VIEW_CLASS_NAME, superclass).unwrap();
     super::events_mac::add_view_events_to_decl(&mut decl);
+    decl.add_ivar::<*mut c_void>(INSTANCE_DATA_IVAR_ID);
     decl.register()
 }
 
@@ -231,6 +243,12 @@ impl<'a> WindowBuilder<'a> {
 
             // setup view
             let ns_view: *mut Object = msg_send![self.application.view_delegate_class, alloc];
+            // Heap allocate a data structure for the view.
+            // Because this data is leaked it must be cleaned up manually later.
+            let view_instance_data = Box::leak(Box::new(ViewInstanceData {
+                application_data: Rc::clone(&self.application.application_data),
+            })) as *mut ViewInstanceData as *mut c_void;
+            (*ns_view).set_ivar(INSTANCE_DATA_IVAR_ID, view_instance_data);
 
             // Apparently this defaults to YES even without this call
             let () = msg_send![ns_view, setWantsBestResolutionOpenGLSurface: YES];
@@ -246,8 +264,7 @@ impl<'a> WindowBuilder<'a> {
             let () = msg_send![ns_view, addTrackingArea: tracking_area];
 
             // Setup window delegate
-            let window_delegate: *mut Object =
-                msg_send![self.application.window_delegate_class, new];
+            let ns_window: *mut Object = msg_send![self.application.window_delegate_class, new];
 
             // Heap allocate a data structure for the window.
             // Because this data is leaked it must be cleaned up manually later.
@@ -255,8 +272,8 @@ impl<'a> WindowBuilder<'a> {
                 application_data: Rc::clone(&self.application.application_data),
             })) as *mut WindowInstanceData as *mut c_void;
 
-            (*window_delegate).set_ivar(WINDOW_DATA_IVAR_ID, window_instance_data);
-            let () = msg_send![window, setDelegate: window_delegate];
+            (*ns_window).set_ivar(INSTANCE_DATA_IVAR_ID, window_instance_data);
+            let () = msg_send![window, setDelegate: ns_window];
             let () = msg_send![window, setContentView: ns_view];
             let () = msg_send![window, makeFirstResponder: ns_view];
 

@@ -12,7 +12,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let gl_context = GLContext::new(); // Create a gl_context for the app
+    let gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
     gl_context.set_window(&window).unwrap();
     let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
 

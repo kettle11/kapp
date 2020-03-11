@@ -125,14 +125,12 @@ pub fn produce_event_from_window(this: &Object, event: crate::Event) {
 
 pub fn produce_event_from_view(this: &Object, event: crate::Event) {
     // First get the view's window
-    /*
     unsafe {
-        let window: &Object = msg_send![this, window];
-        let window_data = super::application_mac::get_window_instance_data(window);
+        let view_data = super::application_mac::get_view_instance_data(this);
 
         // This is a little awkward, but the application_data cannot be borrowed
         // while the program_callback is called as it may call functions that borrow application_data
-        let mut program_callback = (*window_data)
+        let mut program_callback = (*view_data)
             .application_data
             .borrow_mut()
             .program_callback
@@ -140,12 +138,8 @@ pub fn produce_event_from_view(this: &Object, event: crate::Event) {
         if let Some(callback) = program_callback.as_mut() {
             callback(event)
         }
-        (*window_data)
-            .application_data
-            .borrow_mut()
-            .program_callback = program_callback;
+        (*view_data).application_data.borrow_mut().program_callback = program_callback;
     }
-    */
 }
 
 pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
