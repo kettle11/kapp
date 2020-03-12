@@ -54,6 +54,12 @@ impl GLContext {
         Ok(())
     }
 
+    pub fn make_current(&self) {
+        unsafe {
+            let () = msg_send![self.gl_context, makeCurrentContext];
+        }
+    }
+
     #[cfg(feature = "opengl_glow")]
     pub fn glow_context(&self) -> glow::Context {
         glow::Context::from_loader_function(|s| Self::get_proc_address(s))
