@@ -5,7 +5,13 @@ use kettlewin::*;
 fn main() {
     // Create a new application with default settings.
     let mut app = Application::new().build().unwrap();
-    let window = app.new_window().title("Hello").build().unwrap();
+    let window = app
+        .new_window()
+        .title("Hello")
+        .position(0, 0)
+        .dimensions(50, 10)
+        .build()
+        .unwrap();
 
     let gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
     gl_context.set_window(&window).unwrap();

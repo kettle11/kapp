@@ -43,15 +43,12 @@ pub unsafe extern "system" fn window_callback(
         // Mouse and keyboard events are sent through the 'Button' events family.
         winuser::WM_LBUTTONDOWN => produce_event(Event::ButtonDown {
             button: Button::LeftMouse,
-            scancode: 0,
         }),
         winuser::WM_MBUTTONDOWN => produce_event(Event::ButtonDown {
             button: Button::MiddleMouse,
-            scancode: 0,
         }),
         winuser::WM_RBUTTONDOWN => produce_event(Event::ButtonDown {
             button: Button::RightMouse,
-            scancode: 0,
         }),
         winuser::WM_XBUTTONDOWN => produce_event(Event::ButtonDown {
             button: match HIWORD(w_param as u32) {
@@ -59,19 +56,15 @@ pub unsafe extern "system" fn window_callback(
                 winuser::XBUTTON2 => Button::ExtraMouse2,
                 _ => unreachable!(),
             },
-            scancode: 0,
         }),
         winuser::WM_LBUTTONUP => produce_event(Event::ButtonUp {
             button: Button::LeftMouse,
-            scancode: 0,
         }),
         winuser::WM_MBUTTONUP => produce_event(Event::ButtonUp {
             button: Button::MiddleMouse,
-            scancode: 0,
         }),
         winuser::WM_RBUTTONUP => produce_event(Event::ButtonUp {
             button: Button::RightMouse,
-            scancode: 0,
         }),
         winuser::WM_XBUTTONUP => produce_event(Event::ButtonUp {
             button: match HIWORD(w_param as u32) {
@@ -79,7 +72,6 @@ pub unsafe extern "system" fn window_callback(
                 winuser::XBUTTON2 => Button::ExtraMouse2,
                 _ => unreachable!(),
             },
-            scancode: 0,
         }),
         winuser::WM_MOUSEMOVE => produce_event(process_mouse_move_event(hwnd, l_param)),
         _ => {}

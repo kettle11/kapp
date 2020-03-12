@@ -74,7 +74,6 @@ where
                     4 => Button::ExtraMouse2,
                     _ => Button::Unknown,
                 },
-                scancode: 0,
             });
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_onmousedown(Some(mouse_down.as_ref().unchecked_ref()));
@@ -84,7 +83,6 @@ where
         let keydown = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             (CALLBACK.as_mut().unwrap())(Event::ButtonDown {
                 button: keys_web::virtual_keycode_to_key(&event.code()),
-                scancode: 0,
             });
             event
                 .dyn_into::<web_sys::Event>()
@@ -98,7 +96,6 @@ where
         let keyup = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             (CALLBACK.as_mut().unwrap())(Event::ButtonUp {
                 button: keys_web::virtual_keycode_to_key(&event.code()),
-                scancode: 0,
             });
             event
                 .dyn_into::<web_sys::Event>()

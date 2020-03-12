@@ -200,10 +200,12 @@ impl<'a> WindowBuilder<'a> {
         self
     }
 
+    /// Places the lower left corner of the window.
     pub fn position(&mut self, x: u32, y: u32) -> &mut Self {
         self.position = Some((x, y));
         self
     }
+    
     pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
         self.dimensions = Some((width, height));
         self

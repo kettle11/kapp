@@ -19,10 +19,7 @@ fn main() {
 
     app.event_loop().run(move |event| unsafe {
         match event {
-            Event::ButtonDown {
-                button,
-                scancode: _,
-            } => {
+            Event::ButtonDown { button } => {
                 match button {
                     Button::R => color = (1.0, 0.0, 0.0, 1.0),
                     Button::G => color = (0.0, 1.0, 0.0, 1.0),
@@ -31,10 +28,8 @@ fn main() {
                 }
                 println!("Button pressed: {:?}", button)
             }
-            Event::ButtonUp {
-                button,
-                scancode: _,
-            } => println!("Button released: {:?}", button),
+            Event::ButtonUp { button } => println!("Button released: {:?}", button),
+            Event::ButtonRepeat { button } => println!("Button repeated: {:?}", button),
             Event::Draw => {
                 gl.clear_color(color.0, color.1, color.2, color.3);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);

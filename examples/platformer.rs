@@ -337,7 +337,6 @@ fn main() {
         match event {
             Event::ButtonDown {
                 button,
-                scancode: _,
             } => match button {
                 Button::Left => {
                     left_held = true;
@@ -358,7 +357,6 @@ fn main() {
             },
             Event::ButtonUp {
                 button,
-                scancode: _,
             } => match button {
                 Button::Left => left_held = false,
                 Button::Right => right_held = false,

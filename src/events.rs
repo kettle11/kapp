@@ -13,11 +13,9 @@ pub enum Event {
     Draw, // The 'Draw' event can be seen as a recommendation of when to draw. It is not an actual system event.
     ButtonDown {
         button: Button,
-        scancode: u32,
     },
     ButtonUp {
         button: Button,
-        scancode: u32,
     },
     ButtonRepeat {
         button: Button,

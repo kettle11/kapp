@@ -22,13 +22,14 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
 extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
-        self::produce_event_from_view(
-            this,
-            crate::Event::ButtonDown {
-                button: super::keys_mac::virtual_keycode_to_key(key_code),
-                scancode: 0,
-            },
-        );
+        let repeat: bool = msg_send![event, isARepeat];
+        let button = super::keys_mac::virtual_keycode_to_key(key_code);
+        let event = if repeat {
+            crate::Event::ButtonRepeat { button }
+        } else {
+            crate::Event::ButtonDown { button }
+        };
+        self::produce_event_from_view(this, event);
     }
 }
 
@@ -39,7 +40,6 @@ extern "C" fn key_up(this: &Object, _sel: Sel, event: *mut Object) {
             this,
             crate::Event::ButtonUp {
                 button: super::keys_mac::virtual_keycode_to_key(key_code),
-                scancode: 0,
             },
         );
     }
@@ -82,23 +82,11 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
 
     for i in 0..8 {
         if !flag_state_old[i] && flag_state_new[i] {
-            self::produce_event_from_window(
-                this,
-                crate::Event::ButtonDown {
-                    button: BUTTONS[i],
-                    scancode: 0,
-                },
-            )
+            self::produce_event_from_window(this, crate::Event::ButtonDown { button: BUTTONS[i] })
         }
 
         if flag_state_old[i] && !flag_state_new[i] {
-            self::produce_event_from_window(
-                this,
-                crate::Event::ButtonUp {
-                    button: BUTTONS[i],
-                    scancode: 0,
-                },
-            )
+            self::produce_event_from_window(this, crate::Event::ButtonUp { button: BUTTONS[i] })
         }
     }
 
@@ -109,25 +97,10 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
-        // The following code snippet is taken from winit.
-        // We have to do this to have access to the `NSView` trait...
-        let view: *mut Object = this as *const _ as *mut _;
-
         let window_point: NSPoint = msg_send![event, locationInWindow];
-        let view_point: NSPoint = msg_send![view, convertPoint: window_point fromView: nil];
-        let view_rect: NSRect = msg_send![this, frame];
 
-        if view_point.x.is_sign_negative()
-            || view_point.y.is_sign_negative()
-            || view_point.x > view_rect.size.width
-            || view_point.y > view_rect.size.height
-        {
-            // Point is outside of the client area (view)
-            return;
-        }
-
-        let x = view_point.x;
-        let y = view_rect.size.height - view_point.y;
+        let x = window_point.x;
+        let y = window_point.y; // Don't flip because 0 is bottom left on MacOS
 
         self::produce_event_from_view(
             this,
