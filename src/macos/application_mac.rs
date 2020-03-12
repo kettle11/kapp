@@ -9,6 +9,7 @@ pub type ProgramCallback = dyn 'static + FnMut(Event);
 pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
 static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
 static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
+static APPLICATION_CLASS_NAME: &str = "KettlewinApplicationClass";
 
 pub struct Window {
     pub ns_view: *mut Object, // Used later by GLContext.
@@ -61,6 +62,14 @@ fn view_delegate_declaration() -> *const objc::runtime::Class {
     decl.register()
 }
 
+fn application_delegate_declaration() -> *const objc::runtime::Class {
+    let superclass = class!(NSResponder);
+    let mut decl = ClassDecl::new(APPLICATION_CLASS_NAME, superclass).unwrap();
+    super::events_mac::add_application_events_to_decl(&mut decl);
+    decl.add_ivar::<*mut c_void>(APPLICATION_CLASS_NAME);
+    decl.register()
+}
+
 pub struct ApplicationBuilder {}
 impl ApplicationBuilder {
     pub fn build(&self) -> Result<Application, ()> {
@@ -68,11 +77,18 @@ impl ApplicationBuilder {
             // let pool: *mut Object = unsafe { msg_send![class!(NSAutoreleasePool), new] };
 
             let ns_application: *mut Object = msg_send![class!(NSApplication), sharedApplication];
+
             let () = msg_send![
                 ns_application,
                 setActivationPolicy:
                     NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular
             ];
+
+            // Setup the application delegate to handle application events.
+            let ns_application_delegate_class = application_delegate_declaration();
+            let ns_application_delegate: *mut Object =
+                msg_send![ns_application_delegate_class, new];
+            let () = msg_send![ns_application, setDelegate: ns_application_delegate];
 
             // At the end of a frame produce a draw event.
             extern "C" fn control_flow_end_handler(

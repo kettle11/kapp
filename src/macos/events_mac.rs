@@ -53,6 +53,26 @@ pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
 }
 
 // ------------------------ End Window Events --------------------------
+// ------------------------ Application Events --------------------------
+
+extern "C" fn application_should_terminate_after_last_window_closed(
+    _this: &Object,
+    _sel: Sel,
+    _event: *mut Object,
+) -> BOOL {
+    YES
+}
+
+pub fn add_application_events_to_decl(decl: &mut ClassDecl) {
+    unsafe {
+        decl.add_method(
+            sel!(applicationShouldTerminateAfterLastWindowClosed:),
+            application_should_terminate_after_last_window_closed
+                as extern "C" fn(&Object, Sel, *mut Object) -> BOOL,
+        );
+    }
+}
+// ------------------------ End Application Events --------------------------
 
 // ------------------------ View Events --------------------------
 extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
