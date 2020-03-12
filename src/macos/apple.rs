@@ -291,3 +291,6 @@ pub const NX_DEVICERALTKEYMASK: u64 = 0x40;
 
 pub const NX_DEVICELCMDKEYMASK: u64 = 0x8;
 pub const NX_DEVICERCMDKEYMASK: u64 = 0x10;
+
+pub const NSTerminateNow: NSUInteger = 1;
+//pub const NSTerminateCancel: NSUInteger = 0;

@@ -1,5 +1,8 @@
 use super::apple::*;
-use super::application_mac::{ViewInstanceData, WindowInstanceData, INSTANCE_DATA_IVAR_ID};
+use super::application_mac::{
+    get_window_data, ApplicationInstanceData, ViewInstanceData, WindowInstanceData,
+    INSTANCE_DATA_IVAR_ID,
+};
 use crate::{Button, Event};
 // ------------------------ Window Events --------------------------
 #[derive(Eq, PartialEq)]
@@ -122,30 +125,26 @@ extern "C" fn window_did_change_backing_properties(this: &Object, _sel: Sel, _ev
 
 extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
-    unsafe {
-        self::produce_event_from_window(
-            this,
-            crate::Event::WindowGainedFocus {
-                window_id: WindowId {
-                    ns_window: window_data.ns_window,
-                },
+    self::produce_event_from_window(
+        this,
+        crate::Event::WindowGainedFocus {
+            window_id: WindowId {
+                ns_window: window_data.ns_window,
             },
-        );
-    }
+        },
+    );
 }
 
 extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
-    unsafe {
-        self::produce_event_from_window(
-            this,
-            crate::Event::WindowLostFocus {
-                window_id: WindowId {
-                    ns_window: window_data.ns_window,
-                },
+    self::produce_event_from_window(
+        this,
+        crate::Event::WindowLostFocus {
+            window_id: WindowId {
+                ns_window: window_data.ns_window,
             },
-        );
-    }
+        },
+    );
 }
 
 pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
@@ -201,12 +200,39 @@ extern "C" fn application_should_terminate_after_last_window_closed(
     YES
 }
 
+// https://developer.apple.com/documentation/appkit/nsapplicationdelegate/1428642-applicationshouldterminate?language=objc
+extern "C" fn application_should_terminate(
+    this: &Object,
+    _sel: Sel,
+    _event: *mut Object,
+) -> NSUInteger {
+    let application_data = get_application_data(this);
+    let mut program_callback = (*application_data)
+        .application_data
+        .borrow_mut()
+        .program_callback
+        .take();
+    if let Some(callback) = program_callback.as_mut() {
+        callback(Event::Quit)
+    }
+    (*application_data)
+        .application_data
+        .borrow_mut()
+        .program_callback = program_callback;
+
+    NSTerminateNow
+}
+
 pub fn add_application_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
         decl.add_method(
             sel!(applicationShouldTerminateAfterLastWindowClosed:),
             application_should_terminate_after_last_window_closed
                 as extern "C" fn(&Object, Sel, *mut Object) -> BOOL,
+        );
+        decl.add_method(
+            sel!(applicationShouldTerminate:),
+            application_should_terminate as extern "C" fn(&Object, Sel, *mut Object) -> NSUInteger,
         );
     }
 }
@@ -365,10 +391,10 @@ fn get_view_data(this: &Object) -> &mut ViewInstanceData {
     }
 }
 
-fn get_window_data(this: &Object) -> &mut WindowInstanceData {
+fn get_application_data(this: &Object) -> &mut ApplicationInstanceData {
     unsafe {
         let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
-        &mut *(data as *mut WindowInstanceData)
+        &mut *(data as *mut ApplicationInstanceData)
     }
 }
 

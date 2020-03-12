@@ -31,7 +31,7 @@ pub enum Event {
     WindowMinimized {
         window_id: WindowId,
     },
-    /// This even will not be sent on MacOS
+    /// This event will not be sent on MacOS, only the WindowFullscreened event will be sent.
     WindowMaximized {
         window_id: WindowId,
     },
@@ -47,7 +47,7 @@ pub enum Event {
         height: u32,
         window_id: WindowId,
     },
-    /// Reports the new x and y position of the *lower left* corner of the window.
+    /// Reports the new x and y position for the *lower left* corner of the window.
     WindowMoved {
         x: u32,
         y: u32,
@@ -59,6 +59,8 @@ pub enum Event {
     WindowLostFocus {
         window_id: WindowId,
     },
+    // ------------------- Application Events  ---------------------
+    Quit,
     #[doc(hidden)]
     __Nonexhaustive, // More events will be added
 }

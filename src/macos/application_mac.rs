@@ -12,7 +12,23 @@ static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
 static APPLICATION_CLASS_NAME: &str = "KettlewinApplicationClass";
 
 pub struct Window {
+    pub ns_window: *mut Object,
+    pub window_delegate: *mut Object,
     pub ns_view: *mut Object, // Used later by GLContext.
+}
+
+// Information about a window delegate instance. Attached with an iVar.
+pub struct WindowInstanceData {
+    pub application_data: Rc<RefCell<ApplicationData>>,
+    pub ns_window: *mut Object,
+    pub backing_scale: f64, // On Mac this while likely be either 2.0 or 1.0
+}
+
+pub fn get_window_data(this: &Object) -> &mut WindowInstanceData {
+    unsafe {
+        let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
+        &mut *(data as *mut WindowInstanceData)
+    }
 }
 
 #[derive(Clone)]
@@ -31,13 +47,6 @@ pub struct ApplicationData {
     pub modifier_flags: u64, // Key modifier flags
 }
 
-// Information about a window delegate instance. Attached with an iVar.
-pub struct WindowInstanceData {
-    pub application_data: Rc<RefCell<ApplicationData>>,
-    pub ns_window: *mut Object,
-    pub backing_scale: f64, // On Mac this while likely be either 2.0 or 1.0
-}
-
 // Information about a view instance. Attached with an iVar.
 // Perhaps this a bit redundant, it'd be better if there was a way to access the window's
 // instance data.
@@ -45,11 +54,14 @@ pub struct ViewInstanceData {
     pub window_delegate: *mut Object,
 }
 
+pub struct ApplicationInstanceData {
+    pub application_data: Rc<RefCell<ApplicationData>>,
+}
+
 fn window_delegate_declaration() -> *const objc::runtime::Class {
     let superclass = class!(NSResponder);
     let mut decl = ClassDecl::new(WINDOW_CLASS_NAME, superclass).unwrap();
     super::events_mac::add_window_events_to_decl(&mut decl);
-
     decl.add_ivar::<*mut c_void>(INSTANCE_DATA_IVAR_ID);
     decl.register()
 }
@@ -66,7 +78,7 @@ fn application_delegate_declaration() -> *const objc::runtime::Class {
     let superclass = class!(NSResponder);
     let mut decl = ClassDecl::new(APPLICATION_CLASS_NAME, superclass).unwrap();
     super::events_mac::add_application_events_to_decl(&mut decl);
-    decl.add_ivar::<*mut c_void>(APPLICATION_CLASS_NAME);
+    decl.add_ivar::<*mut c_void>(INSTANCE_DATA_IVAR_ID);
     decl.register()
 }
 
@@ -88,6 +100,7 @@ impl ApplicationBuilder {
             let ns_application_delegate_class = application_delegate_declaration();
             let ns_application_delegate: *mut Object =
                 msg_send![ns_application_delegate_class, new];
+
             let () = msg_send![ns_application, setDelegate: ns_application_delegate];
 
             // At the end of a frame produce a draw event.
@@ -128,6 +141,12 @@ impl ApplicationBuilder {
             };
 
             let application_data = Rc::new(RefCell::new(application_data));
+
+            // This needs to be cleaned up later.
+            let application_instance_data = Box::leak(Box::new(Rc::clone(&application_data)))
+                as *mut Rc<RefCell<ApplicationData>>
+                as *mut c_void;
+            (*ns_application_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, application_instance_data);
 
             // This box that is leaked needs a way to be deallocated later.
             let observer_context_info = Box::leak(Box::new(Rc::clone(&application_data)))
@@ -287,7 +306,11 @@ impl<'a> WindowBuilder<'a> {
             let () = msg_send![ns_window, setContentView: ns_view];
             let () = msg_send![ns_window, makeFirstResponder: ns_view];
 
-            let window = Window { ns_view };
+            let window = Window {
+                ns_window,
+                ns_view,
+                window_delegate,
+            };
             Ok(window)
         }
     }
@@ -350,6 +373,53 @@ impl EventLoop {
 
         unsafe {
             let () = msg_send![ns_application, run];
+        }
+    }
+}
+
+impl Window {
+    pub fn minimize(&self) {
+        unsafe {
+            let () = msg_send![self.ns_window, miniaturize: nil];
+        }
+    }
+
+    pub fn maximize(&self) {
+        // Does nothing for now
+    }
+
+    /// Returns the window from a minimized or maximized state.
+    pub fn restore(&self) {}
+
+    pub fn fullscreen(&self) {}
+
+    pub fn close(&self) {
+        unsafe {
+            let () = msg_send![self.ns_window, close];
+        }
+    }
+
+    /// Set the lower left corner of the window.
+    pub fn set_position(&self, x: u32, y: u32) {
+        unsafe {
+            // Accounts for scale factor
+            let window_data = get_window_data(&(*self.window_delegate));
+            let backing_scale = window_data.backing_scale;
+
+            let () =
+                msg_send![self.ns_window, setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
+        }
+    }
+
+    /// Set the window's width and height, excluding the titlebar
+    pub fn set_size(&self, width: u32, height: u32) {
+        unsafe {
+            // Accounts for scale factor
+            let window_data = get_window_data(&(*self.window_delegate));
+            let backing_scale = window_data.backing_scale;
+
+            let () =
+                msg_send![self.ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
         }
     }
 }
