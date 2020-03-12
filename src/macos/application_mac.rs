@@ -14,11 +14,31 @@ pub struct Window {
     pub ns_view: *mut Object,
 }
 
-// Information about a window instance attached with an iVar.
-pub struct WindowInstanceData {
-    pub application_data: Rc<RefCell<ApplicationData>>,
+#[derive(Clone)]
+pub struct Application {
+    window_class: *const objc::runtime::Class,
+    view_class: *const objc::runtime::Class,
+    run_loop_custom_event_source: CFRunLoopSourceRef,
+    application_data: Rc<RefCell<ApplicationData>>,
 }
 
+// Global singleton data shared by all windows and the application struct.
+pub struct ApplicationData {
+    frame_requested: bool,
+    ns_application: *mut Object,
+    pub program_callback: Option<Box<ProgramCallback>>,
+    pub modifier_flags: u64, // Key modifier flags
+}
+
+// Information about a window delegate instance. Attached with an iVar.
+pub struct WindowInstanceData {
+    pub application_data: Rc<RefCell<ApplicationData>>,
+    pub ns_window: *mut Object,
+}
+
+// Information about a view instance. Attached with an iVar.
+// Perhaps this a bit redundant, it'd be better if there was a way to access the window's
+// instance data.
 pub struct ViewInstanceData {
     pub application_data: Rc<RefCell<ApplicationData>>,
 }
@@ -35,21 +55,6 @@ pub fn get_view_instance_data(this: &Object) -> *mut ViewInstanceData {
         let data: *mut c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
         data as *mut ViewInstanceData
     }
-}
-
-// Global singleton data shared by all windows and the application struct.
-pub struct ApplicationData {
-    frame_requested: bool,
-    ns_application: *mut Object,
-    pub program_callback: Option<Box<ProgramCallback>>,
-}
-
-#[derive(Clone)]
-pub struct Application {
-    window_delegate_class: *const objc::runtime::Class,
-    view_delegate_class: *const objc::runtime::Class,
-    run_loop_custom_event_source: CFRunLoopSourceRef,
-    application_data: Rc<RefCell<ApplicationData>>,
 }
 
 fn window_delegate_declaration() -> *const objc::runtime::Class {
@@ -91,7 +96,7 @@ impl ApplicationBuilder {
                 unsafe {
                     // This is a little awkward, but the application_data cannot be borrowed
                     // while the program_callback is called as it may call functions that borrow application_data
-                    let (mut frame_requested, mut program_callback) = {
+                    let (frame_requested, mut program_callback) = {
                         let mut application_data = (*(observer_context_info
                             as *mut Rc<RefCell<ApplicationData>>))
                             .borrow_mut();
@@ -103,8 +108,6 @@ impl ApplicationBuilder {
                     if frame_requested {
                         if let Some(program_callback) = program_callback.as_mut() {
                             program_callback(Event::Draw);
-                        } else {
-                            println!("Program not available");
                         }
                     }
 
@@ -119,6 +122,7 @@ impl ApplicationBuilder {
                 frame_requested: true, // Always request an initial frame
                 ns_application,
                 program_callback: None,
+                modifier_flags: 0,
             };
 
             let application_data = Rc::new(RefCell::new(application_data));
@@ -151,8 +155,8 @@ impl ApplicationBuilder {
             let run_loop_custom_event_source = self::create_run_loop_source();
 
             let app = Application {
-                window_delegate_class: window_delegate_declaration(),
-                view_delegate_class: view_delegate_declaration(),
+                window_class: window_delegate_declaration(),
+                view_class: view_delegate_declaration(),
                 run_loop_custom_event_source,
                 application_data,
             };
@@ -220,9 +224,9 @@ impl<'a> WindowBuilder<'a> {
             }
 
             // Everything alloc-ed needs to be released somehow.
-            let window: *mut Object = msg_send![class!(NSWindow), alloc];
+            let ns_window: *mut Object = msg_send![class!(NSWindow), alloc];
             let () = msg_send![
-                window,
+                ns_window,
                 initWithContentRect:rect
                 styleMask:style
                 backing:NSBackingStoreBuffered
@@ -230,19 +234,20 @@ impl<'a> WindowBuilder<'a> {
             ];
 
             if let Some(position) = self.position {
-                let () = msg_send![window, cascadeTopLeftFromPoint:NSPoint::new(position.0 as f64, position.1 as f64)];
+                let () = msg_send![ns_window, cascadeTopLeftFromPoint:NSPoint::new(position.0 as f64, position.1 as f64)];
             } else {
                 // Center the window if no position is specified.
-                let () = msg_send![window, center];
+                let () = msg_send![ns_window, center];
             }
 
             let title = self.title.unwrap_or("Untitled");
             let title = NSString::new(title);
-            let () = msg_send![window, setTitle: title.raw];
-            let () = msg_send![window, makeKeyAndOrderFront: nil];
+            let () = msg_send![ns_window, setTitle: title.raw];
+            let () = msg_send![ns_window, makeKeyAndOrderFront: nil];
 
             // setup view
-            let ns_view: *mut Object = msg_send![self.application.view_delegate_class, alloc];
+            let ns_view: *mut Object = msg_send![self.application.view_class, alloc];
+
             // Heap allocate a data structure for the view.
             // Because this data is leaked it must be cleaned up manually later.
             let view_instance_data = Box::leak(Box::new(ViewInstanceData {
@@ -263,19 +268,20 @@ impl<'a> WindowBuilder<'a> {
                 userInfo:nil];
             let () = msg_send![ns_view, addTrackingArea: tracking_area];
 
-            // Setup window delegate
-            let ns_window: *mut Object = msg_send![self.application.window_delegate_class, new];
+            // Setup window delegate that receives events.
+            let ns_window_delegate: *mut Object = msg_send![self.application.window_class, new];
 
             // Heap allocate a data structure for the window.
             // Because this data is leaked it must be cleaned up manually later.
             let window_instance_data = Box::leak(Box::new(WindowInstanceData {
                 application_data: Rc::clone(&self.application.application_data),
+                ns_window,
             })) as *mut WindowInstanceData as *mut c_void;
 
-            (*ns_window).set_ivar(INSTANCE_DATA_IVAR_ID, window_instance_data);
-            let () = msg_send![window, setDelegate: ns_window];
-            let () = msg_send![window, setContentView: ns_view];
-            let () = msg_send![window, makeFirstResponder: ns_view];
+            (*ns_window_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, window_instance_data);
+            let () = msg_send![ns_window, setDelegate: ns_window_delegate];
+            let () = msg_send![ns_window, setContentView: ns_view];
+            let () = msg_send![ns_window, makeFirstResponder: ns_view];
 
             let window = Window { ns_view };
             Ok(window)
@@ -311,6 +317,7 @@ impl Application {
         self.wake_run_loop();
     }
 
+    // Wakes up the run loop giving it a chance to send a draw event at the end of the frame.
     fn wake_run_loop(&self) {
         unsafe {
             CFRunLoopSourceSignal(self.run_loop_custom_event_source); // This line may not even be necessary.
@@ -323,6 +330,7 @@ impl Application {
 pub struct EventLoop {
     application_data: Rc<RefCell<ApplicationData>>,
 }
+
 impl EventLoop {
     pub fn run<T>(&self, callback: T)
     where
@@ -335,6 +343,7 @@ impl EventLoop {
             application_data.program_callback = Some(Box::new(callback));
             application_data.ns_application
         };
+
         unsafe {
             let () = msg_send![ns_application, run];
         }

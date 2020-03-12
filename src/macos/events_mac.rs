@@ -1,45 +1,20 @@
 use super::apple::*;
-
+use crate::Button;
 // ------------------------ Window Events --------------------------
 extern "C" fn window_moved(_this: &Object, _sel: Sel, _event: *mut Object) {}
 extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
-    // TEST_VIEW needs to be replaced with the actual window view.
-    /*
+    let window_data = super::application_mac::get_window_instance_data(this);
+
     unsafe {
-        if let Some(data) = TEST_VIEW.as_ref() {
-            let rect: NSRect = msg_send![data.view, frame];
-            let window = get_window_data(this);
-            let new_name = NSString::new("resized");
-            let () = msg_send![window, setTitle: new_name.raw];
-
-            let screen: *mut Object = msg_send![window, screen];
-
-            let scale_factor: CGFloat = msg_send![screen, backingScaleFactor];
-
-            println!("Backing scale factor: {:?}", scale_factor);
-
-            println!("RECT: {:?}", rect);
-            let width = rect.size.width;
-            let height = rect.size.height;
-
-            println!(
-                "RESIZED SCALED: {:?}, {:?}",
-                width * scale_factor,
-                height * scale_factor
-            );
-
-            if let Some(app) = APP.as_mut() {
-                // The following line is needed to set the view current before updating it.
-                // let () = msg_send![app.gl_context, setView: ];
-                // let () = msg_send![app.gl_context, update];
-            }
-
-            self::produce_event(crate::Event::ResizedWindow {
-                width: width as u32,
-                height: height as u32,
-            });
-        }
-    }*/
+        let frame: CGRect = msg_send![(*window_data).ns_window, frame];
+        self::produce_event_from_window(
+            this,
+            crate::Event::ResizedWindow {
+                width: frame.size.width as u32,
+                height: frame.size.height as u32,
+            },
+        );
+    }
 }
 // ------------------------ End Window Events --------------------------
 
@@ -67,6 +42,68 @@ extern "C" fn key_up(this: &Object, _sel: Sel, event: *mut Object) {
                 scancode: 0,
             },
         );
+    }
+}
+
+// https://developer.apple.com/documentation/appkit/nsresponder/1527647-flagschanged?language=objc
+// This should be changed to keep track of the modifier state and only update if they were previously pressed.
+extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
+    fn get_modifier_state(modifier_flags: u64) -> [bool; 8] {
+        [
+            modifier_flags & NX_DEVICELSHIFTKEYMASK == NX_DEVICELSHIFTKEYMASK,
+            modifier_flags & NX_DEVICERSHIFTKEYMASK == NX_DEVICERSHIFTKEYMASK,
+            modifier_flags & NX_DEVICELCTLKEYMASK == NX_DEVICELCTLKEYMASK,
+            modifier_flags & NX_DEVICERCTLKEYMASK == NX_DEVICERCTLKEYMASK,
+            modifier_flags & NX_DEVICELALTKEYMASK == NX_DEVICELALTKEYMASK,
+            modifier_flags & NX_DEVICERALTKEYMASK == NX_DEVICERALTKEYMASK,
+            modifier_flags & NX_DEVICELCMDKEYMASK == NX_DEVICELCMDKEYMASK,
+            modifier_flags & NX_DEVICERCMDKEYMASK == NX_DEVICERCMDKEYMASK,
+        ]
+    }
+
+    // These correspond to the modifier flag array.
+    const BUTTONS: [Button; 8] = [
+        Button::LeftShift,
+        Button::RightShift,
+        Button::LeftControl,
+        Button::RightControl,
+        Button::LeftAlt,
+        Button::RightAlt,
+        Button::Meta,
+        Button::Meta,
+    ];
+
+    let window_data = super::application_mac::get_window_instance_data(this);
+    let modifier_flags_old = unsafe { (*window_data).application_data.borrow().modifier_flags };
+    let modifier_flags_new: NSUInteger = unsafe { msg_send![event, modifierFlags] };
+
+    let flag_state_old = get_modifier_state(modifier_flags_old);
+    let flag_state_new = get_modifier_state(modifier_flags_new);
+
+    for i in 0..8 {
+        if !flag_state_old[i] && flag_state_new[i] {
+            self::produce_event_from_window(
+                this,
+                crate::Event::ButtonDown {
+                    button: BUTTONS[i],
+                    scancode: 0,
+                },
+            )
+        }
+
+        if flag_state_old[i] && !flag_state_new[i] {
+            self::produce_event_from_window(
+                this,
+                crate::Event::ButtonUp {
+                    button: BUTTONS[i],
+                    scancode: 0,
+                },
+            )
+        }
+    }
+
+    unsafe {
+        (*window_data).application_data.borrow_mut().modifier_flags = modifier_flags_new;
     }
 }
 
@@ -168,6 +205,10 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
         decl.add_method(
             sel!(keyUp:),
             key_up as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(flagsChanged:),
+            flags_changed as extern "C" fn(&Object, Sel, *mut Object),
         );
     }
 }

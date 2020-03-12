@@ -4,17 +4,20 @@ use kettlewin::*;
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut app = App::new().build().unwrap();
-    let gl = app.gl_context();
+    let mut app = Application::new().build().unwrap();
+    let gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
+    let gl = gl_context.glow_context(); // Create a gl context (for gl calls) using the glow crate.
 
-    let _window = app
+    let window = app
         .new_window()
         .title("Keyboard Input Example")
-        .build(&app)
+        .build()
         .unwrap();
+    gl_context.set_window(&window).unwrap();
+
     let mut color = (0.0, 0.0, 0.0, 1.0);
 
-    app.run(move |event, app| unsafe {
+    app.event_loop().run(move |event| unsafe {
         match event {
             Event::ButtonDown {
                 button,
@@ -28,11 +31,15 @@ fn main() {
                 }
                 println!("Button pressed: {:?}", button)
             }
+            Event::ButtonUp {
+                button,
+                scancode: _,
+            } => println!("Button released: {:?}", button),
             Event::Draw => {
                 gl.clear_color(color.0, color.1, color.2, color.3);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                 // When we're done rendering swap the window buffers to display to the screen.
-                app.swap_buffers();
+                gl_context.swap_buffers();
             }
             _ => {}
         }

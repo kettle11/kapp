@@ -3,7 +3,7 @@
 #[link(name = "AppKit", kind = "framework")]
 extern "C" {}
 
-#[allow(non_upper_case_globals)]
+#[allow(non_upper_case_globals, non_snake_case)]
 mod apple;
 
 mod events_mac;

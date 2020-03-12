@@ -11,9 +11,9 @@ pub use objc::{
 
 pub const nil: *mut Object = 0 as *mut Object;
 
-pub static NSTrackingMouseEnteredAndExited: NSInteger = 0x01;
-pub static NSTrackingMouseMoved: NSInteger = 0x02;
-pub static NSTrackingActiveInKeyWindow: NSInteger = 0x20;
+pub const NSTrackingMouseEnteredAndExited: NSInteger = 0x01;
+pub const NSTrackingMouseMoved: NSInteger = 0x02;
+pub const NSTrackingActiveInKeyWindow: NSInteger = 0x20;
 
 #[repr(i64)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -45,17 +45,6 @@ extern "C" {
         observer: CFRunLoopObserverRef,
         mode: CFRunLoopMode,
     );
-
-    pub fn CFRunLoopTimerCreate(
-        allocator: CFAllocatorRef,
-        fireDate: CFAbsoluteTime,
-        interval: CFTimeInterval,
-        flags: CFOptionFlags,
-        order: CFIndex,
-        callout: CFRunLoopTimerCallBack,
-        context: *mut CFRunLoopTimerContext,
-    ) -> CFRunLoopTimerRef;
-    pub fn CFRunLoopAddTimer(rl: CFRunLoopRef, timer: CFRunLoopTimerRef, mode: CFRunLoopMode);
 
     pub fn CFRunLoopSourceCreate(
         allocator: CFAllocatorRef,
@@ -94,18 +83,14 @@ pub type CFRunLoopRef = *mut CFRunLoop;
 pub type CFRunLoopMode = CFStringRef;
 pub enum CFRunLoopObserver {}
 pub type CFRunLoopObserverRef = *mut CFRunLoopObserver;
-pub enum CFRunLoopTimer {}
-pub type CFRunLoopTimerRef = *mut CFRunLoopTimer;
+
 pub type CFStringRef = *const Object; // CFString
 pub type CFIndex = std::os::raw::c_long;
 pub type CFOptionFlags = std::os::raw::c_ulong;
 pub type CFRunLoopActivity = CFOptionFlags;
 
-pub type CFAbsoluteTime = CFTimeInterval;
-pub type CFTimeInterval = f64;
 pub type CFRunLoopObserverCallBack =
     extern "C" fn(observer: CFRunLoopObserverRef, activity: CFRunLoopActivity, info: *mut c_void);
-pub type CFRunLoopTimerCallBack = extern "C" fn(timer: CFRunLoopTimerRef, info: *mut c_void);
 
 // https://developer.apple.com/documentation/corefoundation/cfrunloopobservercontext?language=objc
 #[repr(C)]
@@ -116,8 +101,6 @@ pub struct CFRunLoopObserverContext {
     pub version: CFIndex,
     pub retain: *const c_void,
 }
-
-pub enum CFRunLoopTimerContext {}
 
 // pub const kCFRunLoopEntry: CFRunLoopActivity = 0;
 pub const kCFRunLoopBeforeWaiting: CFRunLoopActivity = 1 << 5;
@@ -295,3 +278,15 @@ impl Drop for NSString {
         }
     }
 }
+
+pub const NX_DEVICELSHIFTKEYMASK: u64 = 0x2;
+pub const NX_DEVICERSHIFTKEYMASK: u64 = 0x4;
+
+pub const NX_DEVICELCTLKEYMASK: u64 = 0x1;
+pub const NX_DEVICERCTLKEYMASK: u64 = 0x2000;
+
+pub const NX_DEVICELALTKEYMASK: u64 = 0x20;
+pub const NX_DEVICERALTKEYMASK: u64 = 0x40;
+
+pub const NX_DEVICELCMDKEYMASK: u64 = 0x8;
+pub const NX_DEVICERCMDKEYMASK: u64 = 0x10;
