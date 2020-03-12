@@ -1,5 +1,5 @@
 use crate::buttons::Button;
-
+use crate::WindowId;
 pub enum MouseButton {
     Left,
     Right,
@@ -10,7 +10,10 @@ pub enum MouseButton {
 
 #[derive(Debug)]
 pub enum Event {
-    Draw, // The 'Draw' event can be seen as a recommendation of when to draw. It is not an actual system event.
+    /// The 'Draw' event can be seen as a recommendation of when to draw. It is not an actual system event.
+    Draw,
+    // ------------------- Input Events  ---------------------
+    // These are received by a window, but the window must be tracked with the 'GainedFocus' event.
     ButtonDown {
         button: Button,
     },
@@ -20,15 +23,41 @@ pub enum Event {
     ButtonRepeat {
         button: Button,
     },
-    MinimizedWindow,
-    MaximizedWindow,
-    ResizedWindow {
-        width: u32,
-        height: u32,
-    },
     MouseMoved {
         x: f32,
         y: f32,
+    },
+    // ------------------- Window Events  ---------------------
+    WindowMinimized {
+        window_id: WindowId,
+    },
+    /// This even will not be sent on MacOS
+    WindowMaximized {
+        window_id: WindowId,
+    },
+    WindowFullscreened {
+        window_id: WindowId,
+    },
+    /// A window is 'restored' when it returns from being minimized or maximized.
+    WindowRestored {
+        window_id: WindowId,
+    },
+    WindowResized {
+        width: u32,
+        height: u32,
+        window_id: WindowId,
+    },
+    /// Reports the new x and y position of the *lower left* corner of the window.
+    WindowMoved {
+        x: u32,
+        y: u32,
+        window_id: WindowId,
+    },
+    WindowGainedFocus {
+        window_id: WindowId,
+    },
+    WindowLostFocus {
+        window_id: WindowId,
     },
     #[doc(hidden)]
     __Nonexhaustive, // More events will be added

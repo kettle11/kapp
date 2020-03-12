@@ -15,9 +15,6 @@ fn main() {
     let mut color = 0.0;
 
     app.event_loop().run(move |event| match event {
-        Event::ButtonDown { .. } => {
-            app.new_window().build().unwrap();
-        }
         Event::Draw => {
             unsafe {
                 gl.clear_color(1.0, 0.0, color, 1.0);

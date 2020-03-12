@@ -23,14 +23,15 @@ fn main() {
 
     app.event_loop().run(move |event| unsafe {
         match event {
-            Event::ResizedWindow { width, height } => {
+            Event::ResizedWindow { width, height, .. } => {
                 window_width = width;
                 window_height = height;
             }
-            Event::MouseMoved { x, y } => {
+            Event::MouseMoved { x, y, .. } => {
                 println!("Mouse moved! X: {:?}, Y:{:?}", x, y);
                 color = (x / window_width as f32, 0.0, y / window_height as f32, 1.0);
 
+                println!("Event: {:?}", event);
                 // By requesting a frame here the program only redraws when the mouse moves.
                 app.request_frame();
             }

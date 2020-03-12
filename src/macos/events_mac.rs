@@ -1,8 +1,90 @@
 use super::apple::*;
 use super::application_mac::{ViewInstanceData, WindowInstanceData, INSTANCE_DATA_IVAR_ID};
-use crate::Button;
+use crate::{Button, Event};
 // ------------------------ Window Events --------------------------
-extern "C" fn window_moved(_this: &Object, _sel: Sel, _event: *mut Object) {}
+#[derive(Eq, PartialEq)]
+pub struct WindowId {
+    ns_window: *mut Object, // Just use the window pointer as the ID, it's unique.
+}
+
+impl std::fmt::Debug for WindowId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        unsafe {
+            // Retrieve the window title and use that to make more legible events
+            let title: *mut Object = msg_send![self.ns_window, title];
+            let title: *const i8 = msg_send![title, UTF8String];
+            let title = std::ffi::CStr::from_ptr(title);
+            f.write_fmt(format_args!(
+                "[Title: {:?}, Pointer: {:?}]",
+                title, self.ns_window
+            ))
+        }
+    }
+}
+
+extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window_data = get_window_data(this);
+    unsafe {
+        let backing_scale = window_data.backing_scale;
+        let frame: CGRect = msg_send![window_data.ns_window, frame];
+        self::produce_event_from_window(
+            this,
+            crate::Event::WindowMoved {
+                x: (frame.origin.x * backing_scale) as u32,
+                y: (frame.origin.y * backing_scale) as u32,
+                window_id: WindowId {
+                    ns_window: window_data.ns_window,
+                },
+            },
+        );
+    }
+}
+extern "C" fn window_did_miniaturize(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window_data = get_window_data(this);
+    self::produce_event_from_window(
+        this,
+        Event::WindowMinimized {
+            window_id: WindowId {
+                ns_window: window_data.ns_window,
+            },
+        },
+    );
+}
+
+extern "C" fn window_did_deminiaturize(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window_data = get_window_data(this);
+    self::produce_event_from_window(
+        this,
+        Event::WindowRestored {
+            window_id: WindowId {
+                ns_window: window_data.ns_window,
+            },
+        },
+    );
+}
+
+extern "C" fn window_did_enter_fullscreen(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window_data = get_window_data(this);
+    self::produce_event_from_window(
+        this,
+        Event::WindowFullscreened {
+            window_id: WindowId {
+                ns_window: window_data.ns_window,
+            },
+        },
+    );
+}
+extern "C" fn window_did_exit_fullscreen(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window_data = get_window_data(this);
+    self::produce_event_from_window(
+        this,
+        Event::WindowRestored {
+            window_id: WindowId {
+                ns_window: window_data.ns_window,
+            },
+        },
+    );
+}
 extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
 
@@ -11,9 +93,12 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
         let frame: CGRect = msg_send![window_data.ns_window, frame];
         self::produce_event_from_window(
             this,
-            crate::Event::ResizedWindow {
+            crate::Event::WindowResized {
                 width: (frame.size.width * backing_scale) as u32,
                 height: (frame.size.height * backing_scale) as u32,
+                window_id: WindowId {
+                    ns_window: window_data.ns_window,
+                },
             },
         );
     }
@@ -35,11 +120,56 @@ extern "C" fn window_did_change_backing_properties(this: &Object, _sel: Sel, _ev
     }
 }
 
+extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window_data = get_window_data(this);
+    unsafe {
+        self::produce_event_from_window(
+            this,
+            crate::Event::WindowGainedFocus {
+                window_id: WindowId {
+                    ns_window: window_data.ns_window,
+                },
+            },
+        );
+    }
+}
+
+extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window_data = get_window_data(this);
+    unsafe {
+        self::produce_event_from_window(
+            this,
+            crate::Event::WindowLostFocus {
+                window_id: WindowId {
+                    ns_window: window_data.ns_window,
+                },
+            },
+        );
+    }
+}
+
 pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
         decl.add_method(
+            sel!(windowDidMiniaturize:),
+            window_did_miniaturize as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(windowDidDeminiaturize:),
+            window_did_deminiaturize as extern "C" fn(&Object, Sel, *mut Object),
+        );
+
+        decl.add_method(
+            sel!(windowDidEnterFullScreen:),
+            window_did_enter_fullscreen as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(windowDidExitFullScreen:),
+            window_did_exit_fullscreen as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
             sel!(windowDidMove:),
-            window_moved as extern "C" fn(&Object, Sel, *mut Object),
+            window_did_move as extern "C" fn(&Object, Sel, *mut Object),
         );
         decl.add_method(
             sel!(windowDidResize:),
@@ -48,6 +178,14 @@ pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
         decl.add_method(
             sel!(windowDidChangeBackingProperties:),
             window_did_change_backing_properties as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(windowDidBecomeKey:),
+            window_did_become_key as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(windowDidResignKey:),
+            window_did_resign_key as extern "C" fn(&Object, Sel, *mut Object),
         );
     }
 }

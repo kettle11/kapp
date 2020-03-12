@@ -24,6 +24,9 @@ fn main() {
     // Additionally using two contexts means each context has different resources.
     // What approaches could be used for sharing?
     app.event_loop().run(move |event| match event {
+        Event::MouseMoved { .. } => {
+            println!("Mouse moved: {:?}", event);
+        }
         Event::Draw => {
             gl_context_red.make_current();
             unsafe {
