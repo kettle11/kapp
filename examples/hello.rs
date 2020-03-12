@@ -5,13 +5,7 @@ use kettlewin::*;
 fn main() {
     // Create a new application with default settings.
     let mut app = Application::new().build().unwrap();
-    let window = app
-        .new_window()
-        .title("Hello")
-        .position(0, 0)
-        .dimensions(50, 10)
-        .build()
-        .unwrap();
+    let window = app.new_window().title("Hello").build().unwrap();
 
     let gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
     gl_context.set_window(&window).unwrap();
@@ -21,6 +15,9 @@ fn main() {
     let mut color = 0.0;
 
     app.event_loop().run(move |event| match event {
+        Event::ButtonDown { .. } => {
+            app.new_window().build().unwrap();
+        }
         Event::Draw => {
             unsafe {
                 gl.clear_color(1.0, 0.0, color, 1.0);

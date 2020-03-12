@@ -117,7 +117,6 @@ impl ApplicationBuilder {
                     let mut application_data = (*(observer_context_info
                         as *mut Rc<RefCell<ApplicationData>>))
                         .borrow_mut();
-                    application_data.frame_requested = frame_requested;
                     application_data.program_callback = program_callback;
                 }
             }

@@ -30,6 +30,9 @@ fn main() {
             Event::MouseMoved { x, y } => {
                 println!("Mouse moved! X: {:?}, Y:{:?}", x, y);
                 color = (x / window_width as f32, 0.0, y / window_height as f32, 1.0);
+
+                // By requesting a frame here the program only redraws when the mouse moves.
+                app.request_frame();
             }
             Event::Draw => {
                 gl.clear_color(color.0, color.1, color.2, color.3);

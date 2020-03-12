@@ -160,8 +160,6 @@ extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
         let x = window_point.x * backing_scale;
         let y = window_point.y * backing_scale; // Don't flip because 0 is bottom left on MacOS
 
-        println!("Backing scale: {:?}", backing_scale);
-
         self::produce_event_from_view(
             this,
             crate::Event::MouseMoved {
