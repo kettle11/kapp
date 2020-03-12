@@ -14,6 +14,7 @@ pub const nil: *mut Object = 0 as *mut Object;
 pub const NSTrackingMouseEnteredAndExited: NSInteger = 0x01;
 pub const NSTrackingMouseMoved: NSInteger = 0x02;
 pub const NSTrackingActiveInKeyWindow: NSInteger = 0x20;
+pub const NSTrackingInVisibleRect: NSInteger = 0x200;
 
 #[repr(i64)]
 #[derive(Clone, Copy, Debug, PartialEq)]

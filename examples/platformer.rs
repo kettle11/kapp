@@ -335,9 +335,7 @@ fn main() {
 
     app.event_loop().run(move |event| unsafe {
         match event {
-            Event::ButtonDown {
-                button,
-            } => match button {
+            Event::ButtonDown { button } => match button {
                 Button::Left => {
                     left_held = true;
                     // This gives the player a little extra velocity when they hit a button.
@@ -355,9 +353,7 @@ fn main() {
                 } // Jump!
                 _ => {}
             },
-            Event::ButtonUp {
-                button,
-            } => match button {
+            Event::ButtonUp { button } => match button {
                 Button::Left => left_held = false,
                 Button::Right => right_held = false,
                 _ => {}

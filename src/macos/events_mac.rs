@@ -1,21 +1,57 @@
 use super::apple::*;
+use super::application_mac::{ViewInstanceData, WindowInstanceData, INSTANCE_DATA_IVAR_ID};
 use crate::Button;
 // ------------------------ Window Events --------------------------
 extern "C" fn window_moved(_this: &Object, _sel: Sel, _event: *mut Object) {}
 extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
-    let window_data = super::application_mac::get_window_instance_data(this);
+    let window_data = get_window_data(this);
 
     unsafe {
-        let frame: CGRect = msg_send![(*window_data).ns_window, frame];
+        let backing_scale = window_data.backing_scale;
+        let frame: CGRect = msg_send![window_data.ns_window, frame];
         self::produce_event_from_window(
             this,
             crate::Event::ResizedWindow {
-                width: frame.size.width as u32,
-                height: frame.size.height as u32,
+                width: (frame.size.width * backing_scale) as u32,
+                height: (frame.size.height * backing_scale) as u32,
             },
         );
     }
 }
+
+extern "C" fn window_did_change_backing_properties(this: &Object, _sel: Sel, _event: *mut Object) {
+    println!("Window changed backing properties");
+    unsafe {
+        let window_data = get_window_data(this);
+        let old_scale = window_data.backing_scale;
+        let new_scale: CGFloat = msg_send![this, backingScaleFactor];
+
+        // The color space could have changed, not the backing scale.
+        // So check here to make sure the scale has actually changed.
+        // However the check doesn't matter as no event is sent (yet!)
+        if old_scale != new_scale {
+            window_data.backing_scale = new_scale;
+        }
+    }
+}
+
+pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
+    unsafe {
+        decl.add_method(
+            sel!(windowDidMove:),
+            window_moved as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(windowDidResize:),
+            window_did_resize as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(windowDidChangeBackingProperties:),
+            window_did_change_backing_properties as extern "C" fn(&Object, Sel, *mut Object),
+        );
+    }
+}
+
 // ------------------------ End Window Events --------------------------
 
 // ------------------------ View Events --------------------------
@@ -73,8 +109,10 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
         Button::Meta,
     ];
 
-    let window_data = super::application_mac::get_window_instance_data(this);
-    let modifier_flags_old = unsafe { (*window_data).application_data.borrow().modifier_flags };
+    let window_data = get_window_data_for_view(this);
+
+    let modifier_flags_old = { (*window_data).application_data.borrow().modifier_flags };
+
     let modifier_flags_new: NSUInteger = unsafe { msg_send![event, modifierFlags] };
 
     let flag_state_old = get_modifier_state(modifier_flags_old);
@@ -82,25 +120,27 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
 
     for i in 0..8 {
         if !flag_state_old[i] && flag_state_new[i] {
-            self::produce_event_from_window(this, crate::Event::ButtonDown { button: BUTTONS[i] })
+            produce_event_from_view(this, crate::Event::ButtonDown { button: BUTTONS[i] })
         }
 
         if flag_state_old[i] && !flag_state_new[i] {
-            self::produce_event_from_window(this, crate::Event::ButtonUp { button: BUTTONS[i] })
+            produce_event_from_view(this, crate::Event::ButtonUp { button: BUTTONS[i] })
         }
     }
 
-    unsafe {
-        (*window_data).application_data.borrow_mut().modifier_flags = modifier_flags_new;
-    }
+    (*window_data).application_data.borrow_mut().modifier_flags = modifier_flags_new;
 }
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
-        let window_point: NSPoint = msg_send![event, locationInWindow];
+        let window_data = get_window_data_for_view(this);
+        let backing_scale = (*window_data).backing_scale;
 
-        let x = window_point.x;
-        let y = window_point.y; // Don't flip because 0 is bottom left on MacOS
+        let window_point: NSPoint = msg_send![event, locationInWindow];
+        let x = window_point.x * backing_scale;
+        let y = window_point.y * backing_scale; // Don't flip because 0 is bottom left on MacOS
+
+        println!("Backing scale: {:?}", backing_scale);
 
         self::produce_event_from_view(
             this,
@@ -108,59 +148,6 @@ extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
                 x: x as f32,
                 y: y as f32,
             },
-        );
-    }
-}
-// ------------------------ End View Events --------------------------
-
-pub fn produce_event_from_window(this: &Object, event: crate::Event) {
-    let window_data = super::application_mac::get_window_instance_data(this);
-    unsafe {
-        // This is a little awkward, but the application_data cannot be borrowed
-        // while the program_callback is called as it may call functions that borrow application_data
-        let mut program_callback = (*window_data)
-            .application_data
-            .borrow_mut()
-            .program_callback
-            .take();
-        if let Some(callback) = program_callback.as_mut() {
-            callback(event)
-        }
-        (*window_data)
-            .application_data
-            .borrow_mut()
-            .program_callback = program_callback;
-    }
-}
-
-pub fn produce_event_from_view(this: &Object, event: crate::Event) {
-    // First get the view's window
-    unsafe {
-        let view_data = super::application_mac::get_view_instance_data(this);
-
-        // This is a little awkward, but the application_data cannot be borrowed
-        // while the program_callback is called as it may call functions that borrow application_data
-        let mut program_callback = (*view_data)
-            .application_data
-            .borrow_mut()
-            .program_callback
-            .take();
-        if let Some(callback) = program_callback.as_mut() {
-            callback(event)
-        }
-        (*view_data).application_data.borrow_mut().program_callback = program_callback;
-    }
-}
-
-pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
-    unsafe {
-        decl.add_method(
-            sel!(windowDidMove:),
-            window_moved as extern "C" fn(&Object, Sel, *mut Object),
-        );
-        decl.add_method(
-            sel!(windowDidResize:),
-            window_did_resize as extern "C" fn(&Object, Sel, *mut Object),
         );
     }
 }
@@ -183,5 +170,56 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
             sel!(flagsChanged:),
             flags_changed as extern "C" fn(&Object, Sel, *mut Object),
         );
+    }
+}
+
+// ------------------------ End View Events --------------------------
+
+fn produce_event_from_window(this: &Object, event: crate::Event) {
+    let window_data = get_window_data(this);
+
+    // This is a little awkward, but the application_data cannot be borrowed
+    // while the program_callback is called as it may call functions that borrow application_data
+    let mut program_callback = (*window_data)
+        .application_data
+        .borrow_mut()
+        .program_callback
+        .take();
+    if let Some(callback) = program_callback.as_mut() {
+        callback(event)
+    }
+    (*window_data)
+        .application_data
+        .borrow_mut()
+        .program_callback = program_callback;
+}
+
+fn produce_event_from_view(this: &Object, event: crate::Event) {
+    // First get the view's window
+    unsafe {
+        let view_data = get_view_data(this);
+        produce_event_from_window(&(*(*view_data).window_delegate), event);
+    }
+}
+
+fn get_view_data(this: &Object) -> &mut ViewInstanceData {
+    unsafe {
+        let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
+        &mut *(data as *mut ViewInstanceData)
+    }
+}
+
+fn get_window_data(this: &Object) -> &mut WindowInstanceData {
+    unsafe {
+        let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
+        &mut *(data as *mut WindowInstanceData)
+    }
+}
+
+fn get_window_data_for_view(this: &Object) -> &mut WindowInstanceData {
+    unsafe {
+        let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
+        let data = data as *mut ViewInstanceData;
+        get_window_data(&*((*data).window_delegate as *mut Object))
     }
 }
