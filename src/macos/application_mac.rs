@@ -381,6 +381,13 @@ impl Application {
         self.wake_run_loop();
     }
 
+    pub fn quit(&self) {
+        let ns_application = self.application_data.borrow().ns_application;
+        unsafe {
+            let () = msg_send![ns_application, terminate: nil];
+        }
+    }
+
     // Wakes up the run loop giving it a chance to send a draw event at the end of the frame.
     fn wake_run_loop(&self) {
         unsafe {
@@ -449,12 +456,6 @@ impl Window {
         }
     }
 
-    pub fn close(&self) {
-        unsafe {
-            let () = msg_send![self.ns_window, close];
-        }
-    }
-
     /// Set the lower left corner of the window.
     pub fn set_position(&self, x: u32, y: u32) {
         unsafe {
@@ -481,6 +482,14 @@ impl Window {
                         msg_send![self.ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
                 }
             }
+        }
+    }
+}
+
+impl Drop for Window {
+    fn drop(&mut self) {
+        unsafe {
+            let () = msg_send![self.ns_window, close];
         }
     }
 }

@@ -23,7 +23,7 @@ fn main() {
 
     app.event_loop().run(move |event| unsafe {
         match event {
-            Event::ResizedWindow { width, height, .. } => {
+            Event::WindowResized { width, height, .. } => {
                 window_width = width;
                 window_height = height;
             }

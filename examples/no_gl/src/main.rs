@@ -8,7 +8,6 @@ fn main() {
 
     // Run forever
     app.event_loop().run(move |event| match event {
-        Event::WindowCloseRequested { .. } => app.quit(),
         _ => {}
     });
 }

@@ -59,7 +59,9 @@ pub enum Event {
     WindowLostFocus {
         window_id: WindowId,
     },
-    WindowClose {
+    /// A close is requested for the WindowId. It is up to you to drop your handle to the appropriate window
+    /// to cause the window to close.
+    WindowCloseRequested {
         window_id: WindowId,
     },
     // ------------------- Application Events  ---------------------

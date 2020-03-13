@@ -22,6 +22,7 @@ async fn run(mut app: Application, mut events: Events) {
     // Loop forever!
     loop {
         match events.next_event().await {
+            Event::WindowCloseRequested { .. } => app.quit(),
             Event::Draw => {
                 unsafe {
                     gl.clear_color(0.0, 0.0, color, 1.0);

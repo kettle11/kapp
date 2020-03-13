@@ -19,27 +19,50 @@ fn main() {
     gl_context_blue.set_window(&window_blue).unwrap();
     gl_context_red.set_window(&window_red).unwrap();
 
+    let mut window_red = Some(window_red);
+    let mut window_blue = Some(window_blue);
+
     // This method of multi-window rendering is perhaps suboptimal with vSync.
     // It's unclear how bad it is and more investigation is needed.
     // Additionally using two contexts means each context has different resources.
     // What approaches could be used for sharing?
     app.event_loop().run(move |event| match event {
-        Event::MouseMoved { .. } => {
-            println!("Mouse moved: {:?}", event);
+        Event::WindowCloseRequested { window_id } => {
+            if let Some(window) = window_red.as_ref() {
+                if window.id == window_id {
+                    window_red.take();
+                }
+            }
+            if let Some(window) = window_red.as_ref() {
+                if window.id == window.id {
+                    window_blue.take();
+                }
+            }
         }
+        Event::ButtonDown { button } => match button {
+            Button::Q => {
+                app.quit();
+            }
+            _ => {}
+        },
         Event::Draw => {
-            gl_context_red.make_current();
-            unsafe {
-                gl.clear_color(1.0, 0.0, 0.0, 1.0);
-                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+            if let Some(window_red) = window_red.as_ref() {
+                gl_context_red.make_current();
+                unsafe {
+                    gl.clear_color(1.0, 0.0, 0.0, 1.0);
+                    gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+                    gl_context_red.swap_buffers();
+                }
             }
-            gl_context_blue.make_current();
-            unsafe {
-                gl.clear_color(0.0, 0.0, 1.0, 1.0);
-                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+
+            if let Some(window_blue) = window_blue.as_ref() {
+                gl_context_blue.make_current();
+                unsafe {
+                    gl.clear_color(0.0, 0.0, 1.0, 1.0);
+                    gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+                    gl_context_blue.swap_buffers();
+                }
             }
-            gl_context_red.swap_buffers();
-            gl_context_blue.swap_buffers();
         }
         _ => {}
     });

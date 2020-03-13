@@ -139,13 +139,13 @@ extern "C" fn window_should_close(this: &Object, _sel: Sel, _event: *mut Object)
     let window_data = get_window_data(this);
     self::produce_event_from_window(
         this,
-        crate::Event::WindowClose {
+        crate::Event::WindowCloseRequested {
             window_id: WindowId {
                 ns_window: window_data.ns_window,
             },
         },
     );
-    YES
+    NO // No because the program must drop its handle to close the window.
 }
 
 pub fn add_window_events_to_decl(decl: &mut ClassDecl) {

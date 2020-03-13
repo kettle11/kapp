@@ -38,6 +38,9 @@ fn main() {
             Button::C => {
                 window.close();
             }
+            Button::Q => {
+                app.quit();
+            }
             _ => {}
         },
         _ => {}
