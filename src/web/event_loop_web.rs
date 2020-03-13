@@ -84,9 +84,17 @@ where
 
         // Key down event
         let keydown = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-            (CALLBACK.as_mut().unwrap())(Event::ButtonDown {
-                button: keys_web::virtual_keycode_to_key(&event.code()),
-            });
+            let key_event = if event.repeat() {
+                Event::ButtonRepeat {
+                    button: keys_web::virtual_keycode_to_key(&event.code()),
+                }
+            } else {
+                Event::ButtonDown {
+                    button: keys_web::virtual_keycode_to_key(&event.code()),
+                }
+            };
+
+            (CALLBACK.as_mut().unwrap())(key_event);
             event
                 .dyn_into::<web_sys::Event>()
                 .unwrap()
