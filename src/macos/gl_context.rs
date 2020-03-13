@@ -54,6 +54,13 @@ impl GLContext {
         Ok(())
     }
 
+    // Updates the backbuffer of the target when it resizes
+    pub fn update_target(&self) {
+        unsafe {
+            let () = msg_send![self.gl_context, update];
+        }
+    }
+
     pub fn make_current(&self) {
         unsafe {
             let () = msg_send![self.gl_context, makeCurrentContext];

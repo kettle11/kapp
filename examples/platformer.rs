@@ -125,7 +125,7 @@ fn main() {
     let mut app = Application::new().build().unwrap();
 
     let mut screen_width = 600;
-    let mut screen_height = 600;
+    let mut screen_height = 300;
 
     let gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
     let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
@@ -134,7 +134,11 @@ fn main() {
         gl.enable(SCISSOR_TEST);
     }
 
-    let window = app.new_window().build().unwrap();
+    let window = app
+        .new_window()
+        .dimensions(screen_width, screen_height)
+        .build()
+        .unwrap();
 
     gl_context.set_window(&window).unwrap();
 
@@ -260,7 +264,7 @@ fn main() {
 
     let moody_foreground_waterfall = Color {
         r: 0.01,
-        g: 0.3,
+        g: 0.02,
         b: 0.22,
         a: 1.0,
     };
@@ -335,6 +339,11 @@ fn main() {
 
     app.event_loop().run(move |event| unsafe {
         match event {
+            Event::WindowResized { width, height, .. } => {
+                gl_context.update_target(); // Resizes the window buffer
+                screen_width = width;
+                screen_height = height;
+            }
             Event::ButtonDown { button } => match button {
                 Button::Left => {
                     left_held = true;
