@@ -25,10 +25,10 @@ async fn run(mut app: Application, mut events: Events) {
             Event::WindowCloseRequested { .. } => app.quit(),
             Event::Draw => {
                 unsafe {
-                    gl.clear_color(0.0, 0.0, color, 1.0);
+                    gl.clear_color(1.0, 1.0, color, 1.0);
                     gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                 }
-                color += 0.02;
+                color += 0.01;
 
                 gl_context.swap_buffers(); // Swaps the currently bound window.
                 app.request_frame();

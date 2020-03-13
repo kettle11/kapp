@@ -1,3 +1,4 @@
+use super::application_web::WindowId;
 use super::keys_web;
 use crate::events::*;
 use crate::Button;
@@ -27,6 +28,7 @@ where
         .unwrap()
         .dyn_into::<web_sys::HtmlCanvasElement>()
         .unwrap();
+
     // While the following is 'unsafe' and uses global data in a funky way, it's actually safe because web's main loop is single threaded.
     // An alternative approach is documented here: https://rustwasm.github.io/docs/wasm-bindgen/examples/request-animation-frame.html
     // It may be better, but for now I found the following simpler to understand and implement.
@@ -41,14 +43,15 @@ where
                 {
                     canvas.set_width(canvas_client_width);
                     canvas.set_height(canvas_client_height);
-                    (CALLBACK.as_mut().unwrap())(Event::ResizedWindow {
+                    (CALLBACK.as_mut().unwrap())(Event::WindowResized {
                         width: canvas_client_width,
                         height: canvas_client_height,
+                        window_id: WindowId {},
                     });
                 }
 
                 (CALLBACK.as_mut().unwrap())(Event::Draw);
-                request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap())
+                // request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap())
             })
                 as Box<dyn FnMut()>));
         }
@@ -105,6 +108,12 @@ where
         document.set_onkeyup(Some(keyup.as_ref().unchecked_ref()));
         keyup.forget();
         // Finally, start the draw loop.
+        request_frame();
+    }
+}
+
+pub fn request_frame() {
+    unsafe {
         request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap());
     }
 }
