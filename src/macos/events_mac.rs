@@ -1,29 +1,13 @@
 use super::apple::*;
 use super::application_mac::{
-    get_window_data, ApplicationInstanceData, ViewInstanceData, WindowInstanceData, WindowState,
-    INSTANCE_DATA_IVAR_ID,
+    get_window_data, ApplicationData, ApplicationInstanceData, ViewInstanceData, WindowId,
+    WindowInstanceData, WindowState, INSTANCE_DATA_IVAR_ID,
 };
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::{Button, Event};
 // ------------------------ Window Events --------------------------
-#[derive(Eq, PartialEq)]
-pub struct WindowId {
-    ns_window: *mut Object, // Just use the window pointer as the ID, it's unique.
-}
-
-impl std::fmt::Debug for WindowId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unsafe {
-            // Retrieve the window title and use that to make more legible events
-            let title: *mut Object = msg_send![self.ns_window, title];
-            let title: *const i8 = msg_send![title, UTF8String];
-            let title = std::ffi::CStr::from_ptr(title);
-            f.write_fmt(format_args!(
-                "[Title: {:?}, Pointer: {:?}]",
-                title, self.ns_window
-            ))
-        }
-    }
-}
 
 extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
@@ -151,8 +135,25 @@ extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Objec
     );
 }
 
+extern "C" fn window_should_close(this: &Object, _sel: Sel, _event: *mut Object) -> BOOL {
+    let window_data = get_window_data(this);
+    self::produce_event_from_window(
+        this,
+        crate::Event::WindowClose {
+            window_id: WindowId {
+                ns_window: window_data.ns_window,
+            },
+        },
+    );
+    YES
+}
+
 pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
+        decl.add_method(
+            sel!(windowShouldClose:),
+            window_should_close as extern "C" fn(&Object, Sel, *mut Object) -> BOOL,
+        );
         decl.add_method(
             sel!(windowDidMiniaturize:),
             window_did_miniaturize as extern "C" fn(&Object, Sel, *mut Object),
@@ -211,18 +212,7 @@ extern "C" fn application_should_terminate(
     _event: *mut Object,
 ) -> NSUInteger {
     let application_data = get_application_data(this);
-    let mut program_callback = (*application_data)
-        .application_data
-        .borrow_mut()
-        .program_callback
-        .take();
-    if let Some(callback) = program_callback.as_mut() {
-        callback(Event::Quit)
-    }
-    (*application_data)
-        .application_data
-        .borrow_mut()
-        .program_callback = program_callback;
+    submit_event(&(*application_data).application_data, Event::Quit);
 
     NSTerminateNow
 }
@@ -363,21 +353,7 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
 
 fn produce_event_from_window(this: &Object, event: crate::Event) {
     let window_data = get_window_data(this);
-
-    // This is a little awkward, but the application_data cannot be borrowed
-    // while the program_callback is called as it may call functions that borrow application_data
-    let mut program_callback = (*window_data)
-        .application_data
-        .borrow_mut()
-        .program_callback
-        .take();
-    if let Some(callback) = program_callback.as_mut() {
-        callback(event)
-    }
-    (*window_data)
-        .application_data
-        .borrow_mut()
-        .program_callback = program_callback;
+    submit_event(&(*window_data).application_data, event);
 }
 
 fn produce_event_from_view(this: &Object, event: crate::Event) {
@@ -408,4 +384,26 @@ fn get_window_data_for_view(this: &Object) -> &mut WindowInstanceData {
         let data = data as *mut ViewInstanceData;
         get_window_data(&*((*data).window_delegate as *mut Object))
     }
+}
+
+pub fn submit_event(application_data: &Rc<RefCell<ApplicationData>>, event: Event) {
+    let mut program_callback = application_data.borrow_mut().program_callback.take();
+
+    if let Some(callback) = program_callback.as_mut() {
+        callback(event);
+
+        // Process any events that may have been queued during the above callback.
+        // Care is taken to not borrow the application_data during the callback.
+        let mut queued_event = application_data.borrow_mut().event_queue.pop();
+        while let Some(event) = queued_event {
+            callback(event);
+            queued_event = application_data.borrow_mut().event_queue.pop();
+        }
+    } else {
+        // If this event is created during a program callback then it can't be processed immediately
+        // and must be enqueued.
+        application_data.borrow_mut().event_queue.push(event);
+    }
+
+    application_data.borrow_mut().program_callback = program_callback;
 }

@@ -59,6 +59,9 @@ pub enum Event {
     WindowLostFocus {
         window_id: WindowId,
     },
+    WindowClose {
+        window_id: WindowId,
+    },
     // ------------------- Application Events  ---------------------
     Quit,
     #[doc(hidden)]

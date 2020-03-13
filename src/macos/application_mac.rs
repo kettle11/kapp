@@ -13,8 +13,30 @@ static APPLICATION_CLASS_NAME: &str = "KettlewinApplicationClass";
 
 pub struct Window {
     pub ns_window: *mut Object,
-    pub window_delegate: *mut Object,
+    window_delegate: *mut Object,
     pub ns_view: *mut Object, // Used later by GLContext.
+    pub id: WindowId,
+}
+
+#[derive(Hash, Eq, PartialEq, Clone, Copy)]
+pub struct WindowId {
+    // This should not be public
+    pub ns_window: *mut Object, // Just use the window pointer as the ID, it's unique.
+}
+
+impl std::fmt::Debug for WindowId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        unsafe {
+            // Retrieve the window title and use that to make more legible events
+            let title: *mut Object = msg_send![self.ns_window, title];
+            let title: *const i8 = msg_send![title, UTF8String];
+            let title = std::ffi::CStr::from_ptr(title);
+            f.write_fmt(format_args!(
+                "[Title: {:?}, Pointer: {:?}]",
+                title, self.ns_window
+            ))
+        }
+    }
 }
 
 // Information about a window delegate instance. Attached with an iVar.
@@ -53,6 +75,10 @@ pub struct ApplicationData {
     ns_application: *mut Object,
     pub program_callback: Option<Box<ProgramCallback>>,
     pub modifier_flags: u64, // Key modifier flags
+    /// This is only used if an event is produced within the program_callback.
+    /// For example if a window is minimized it produces a minimized event in the same
+    /// call tree.
+    pub event_queue: Vec<Event>,
 }
 
 // Information about a view instance. Attached with an iVar.
@@ -146,6 +172,7 @@ impl ApplicationBuilder {
                 ns_application,
                 program_callback: None,
                 modifier_flags: 0,
+                event_queue: Vec::new(),
             };
 
             let application_data = Rc::new(RefCell::new(application_data));
@@ -319,6 +346,7 @@ impl<'a> WindowBuilder<'a> {
                 ns_window,
                 ns_view,
                 window_delegate,
+                id: WindowId { ns_window },
             };
             Ok(window)
         }
