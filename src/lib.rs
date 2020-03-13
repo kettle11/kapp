@@ -27,6 +27,3 @@ pub extern crate glow;
 #[cfg(all(target_os = "macos"))]
 #[macro_use]
 extern crate objc;
-
-mod gl_program;
-pub use gl_program::GLProgram;
