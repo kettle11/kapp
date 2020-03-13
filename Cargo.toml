@@ -33,11 +33,6 @@ features = [
 ]
 
 [[example]]
-name = "no_gl"
-default-features = false
-features = []
-
-[[example]]
 name = "hello"
 required-features = ["opengl_glow"]
 path = "examples/hello.rs"
