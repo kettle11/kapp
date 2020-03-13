@@ -1,6 +1,6 @@
 use super::apple::*;
 use super::application_mac::{
-    get_window_data, ApplicationInstanceData, ViewInstanceData, WindowInstanceData,
+    get_window_data, ApplicationInstanceData, ViewInstanceData, WindowInstanceData, WindowState,
     INSTANCE_DATA_IVAR_ID,
 };
 use crate::{Button, Event};
@@ -44,6 +44,7 @@ extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
 }
 extern "C" fn window_did_miniaturize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
+    window_data.window_state = WindowState::Minimized;
     self::produce_event_from_window(
         this,
         Event::WindowMinimized {
@@ -56,6 +57,7 @@ extern "C" fn window_did_miniaturize(this: &Object, _sel: Sel, _event: *mut Obje
 
 extern "C" fn window_did_deminiaturize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
+    window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately fullscreens?
     self::produce_event_from_window(
         this,
         Event::WindowRestored {
@@ -68,6 +70,7 @@ extern "C" fn window_did_deminiaturize(this: &Object, _sel: Sel, _event: *mut Ob
 
 extern "C" fn window_did_enter_fullscreen(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
+    window_data.window_state = WindowState::Fullscreen;
     self::produce_event_from_window(
         this,
         Event::WindowFullscreened {
@@ -79,6 +82,7 @@ extern "C" fn window_did_enter_fullscreen(this: &Object, _sel: Sel, _event: *mut
 }
 extern "C" fn window_did_exit_fullscreen(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
+    window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately minimizes?
     self::produce_event_from_window(
         this,
         Event::WindowRestored {

@@ -22,6 +22,14 @@ pub struct WindowInstanceData {
     pub application_data: Rc<RefCell<ApplicationData>>,
     pub ns_window: *mut Object,
     pub backing_scale: f64, // On Mac this while likely be either 2.0 or 1.0
+    pub window_state: WindowState,
+}
+
+// Not exposed outside the crate
+pub enum WindowState {
+    Minimized,
+    Windowed, // The typical state a window is in.
+    Fullscreen,
 }
 
 pub fn get_window_data(this: &Object) -> &mut WindowInstanceData {
@@ -276,6 +284,7 @@ impl<'a> WindowBuilder<'a> {
                 application_data: Rc::clone(&self.application.application_data),
                 ns_window,
                 backing_scale: backing_scale_factor,
+                window_state: WindowState::Windowed,
             })) as *mut WindowInstanceData as *mut c_void;
 
             (*window_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, window_instance_data);
@@ -386,12 +395,31 @@ impl Window {
 
     pub fn maximize(&self) {
         // Does nothing for now
+        // MacOS only has the notion of 'fullscreen' not of maximize.
     }
 
     /// Returns the window from a minimized or maximized state.
-    pub fn restore(&self) {}
+    pub fn restore(&self) {
+        unsafe {
+            let window_data = get_window_data(&(*self.window_delegate));
 
-    pub fn fullscreen(&self) {}
+            match window_data.window_state {
+                WindowState::Minimized => {
+                    let () = msg_send![self.ns_window, deminiaturize: nil];
+                }
+                WindowState::Fullscreen => {
+                    let () = msg_send![self.ns_window, toggleFullScreen: nil];
+                }
+                _ => {}
+            }
+        }
+    }
+
+    pub fn fullscreen(&self) {
+        unsafe {
+            let () = msg_send![self.ns_window, toggleFullScreen: nil];
+        }
+    }
 
     pub fn close(&self) {
         unsafe {
@@ -418,8 +446,13 @@ impl Window {
             let window_data = get_window_data(&(*self.window_delegate));
             let backing_scale = window_data.backing_scale;
 
-            let () =
-                msg_send![self.ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+            match window_data.window_state {
+                WindowState::Fullscreen => {} // Don't resize the window if fullscreen.
+                _ => {
+                    let () =
+                        msg_send![self.ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+                }
+            }
         }
     }
 }

@@ -32,6 +32,9 @@ fn main() {
             Button::F => {
                 window.fullscreen();
             }
+            Button::R => {
+                window.restore();
+            }
             Button::C => {
                 window.close();
             }
