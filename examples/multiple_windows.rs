@@ -9,15 +9,15 @@ fn main() {
     // Each of these GLContexts has their own separate resources.
     // They are separate contexts for interacting with OpenGL,
     // just like how seperate programs have separate contexts for OpenGL interaction.
-    let gl_context_blue = GLContext::new().build().unwrap();
-    let gl_context_red = GLContext::new().build().unwrap();
+    let mut gl_context_blue = GLContext::new().build().unwrap();
+    let mut gl_context_red = GLContext::new().build().unwrap();
 
     let gl = gl_context_blue.glow_context(); // Create a glow gl context for gl calls.
     let window_red = app.new_window().title("Window Red").build().unwrap();
     let window_blue = app.new_window().title("Window Blue").build().unwrap();
 
-    gl_context_blue.set_window(&window_blue).unwrap();
-    gl_context_red.set_window(&window_red).unwrap();
+    gl_context_blue.set_window(Some(&window_blue)).unwrap();
+    gl_context_red.set_window(Some(&window_red)).unwrap();
 
     let mut window_red = Some(window_red);
     let mut window_blue = Some(window_blue);
@@ -31,11 +31,15 @@ fn main() {
             if let Some(window) = window_red.as_ref() {
                 if window.id == window_id {
                     window_red.take();
+                    // The gl_context holds a reference to the window preventing it from being dropped.
+                    gl_context_red.set_window(None).unwrap();
                 }
             }
             if let Some(window) = window_blue.as_ref() {
-                if window.id == window.id {
+                if window.id == window_id {
                     window_blue.take();
+                    // The gl_context holds a reference to the window preventing it from being dropped.
+                    gl_context_blue.set_window(None).unwrap();
                 }
             }
         }
@@ -46,7 +50,7 @@ fn main() {
             _ => {}
         },
         Event::Draw => {
-            if let Some(window_red) = window_red.as_ref() {
+            if window_red.is_some() {
                 gl_context_red.make_current();
                 unsafe {
                     gl.clear_color(1.0, 0.0, 0.0, 1.0);
@@ -55,7 +59,7 @@ fn main() {
                 }
             }
 
-            if let Some(window_blue) = window_blue.as_ref() {
+            if window_blue.is_some() {
                 gl_context_blue.make_current();
                 unsafe {
                     gl.clear_color(0.0, 0.0, 1.0, 1.0);

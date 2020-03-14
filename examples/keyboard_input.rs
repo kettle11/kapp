@@ -5,7 +5,7 @@ use kettlewin::*;
 fn main() {
     // Create a new window manager with default settings.
     let mut app = Application::new().build().unwrap();
-    let gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
+    let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
     let gl = gl_context.glow_context(); // Create a gl context (for gl calls) using the glow crate.
 
     let window = app
@@ -13,7 +13,7 @@ fn main() {
         .title("Keyboard Input Example")
         .build()
         .unwrap();
-    gl_context.set_window(&window).unwrap();
+    gl_context.set_window(Some(&window)).unwrap();
 
     let mut color = (0.0, 0.0, 0.0, 1.0);
 

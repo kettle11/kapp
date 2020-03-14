@@ -127,7 +127,7 @@ fn main() {
     let mut screen_width = 600;
     let mut screen_height = 300;
 
-    let gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
+    let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
     let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
 
     unsafe {
@@ -140,7 +140,7 @@ fn main() {
         .build()
         .unwrap();
 
-    gl_context.set_window(&window).unwrap();
+    gl_context.set_window(Some(&window)).unwrap();
 
     // ---------------- Level Data -------------------
     let black = (0.0, 0.0, 0.0, 1.0);
