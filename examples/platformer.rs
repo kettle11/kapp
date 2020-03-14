@@ -49,13 +49,14 @@ struct Block {
 // Draw a rect using glScissor.
 // This is not a good way to draw rectangles!
 // Use a proper library with shaders!
-fn draw_rect(gl: &Context, rect: &Rect, color: &Color) {
+fn draw_rect(gl: &Context, rect: &Rect, color: &Color, scale: f64) {
     unsafe {
+        let scale = scale as f32;
         gl.scissor(
-            rect.x as i32,
-            rect.y as i32,
-            rect.width as i32,
-            rect.height as i32,
+            (rect.x * scale) as i32,
+            (rect.y * scale) as i32,
+            (rect.width * scale) as i32,
+            (rect.height * scale) as i32,
         );
         gl.clear_color(color.r, color.g, color.b, color.a);
         gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
@@ -124,8 +125,8 @@ fn main() {
     // Create a new application with default settings.
     let mut app = Application::new().build().unwrap();
 
-    let mut screen_width = 600;
-    let mut screen_height = 300;
+    let mut screen_width = 1200;
+    let mut screen_height = 1200;
 
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
     let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
@@ -430,21 +431,22 @@ fn main() {
                 gl.clear_color(black.0, black.1, black.2, black.3);
                 gl.clear(COLOR_BUFFER_BIT);
 
+                let scale = window.backing_scale();
                 // Draw the background!
                 for block in background_blocks.iter() {
-                    draw_rect(&gl, &block.rect, &block.color);
+                    draw_rect(&gl, &block.rect, &block.color, scale);
                 }
 
                 // Then draw the blocks the player can interact with
                 for block in interactive_blocks.iter() {
-                    draw_rect(&gl, &block.rect, &block.color);
+                    draw_rect(&gl, &block.rect, &block.color, scale);
                 }
                 // Then draw the player
-                draw_rect(&gl, &player.rect, &player_color);
+                draw_rect(&gl, &player.rect, &player_color, scale);
 
                 // Draw the foreground!
                 for block in foreground_blocks.iter() {
-                    draw_rect(&gl, &block.rect, &block.color);
+                    draw_rect(&gl, &block.rect, &block.color, scale);
                 }
                 // When we're done rendering swap the window buffers to display to the screen.
                 gl_context.swap_buffers();

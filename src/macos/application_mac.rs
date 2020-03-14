@@ -298,19 +298,26 @@ impl<'a> WindowBuilder<'a> {
                 backing:NSBackingStoreBuffered
                 defer:NO
             ];
+            let backing_scale: CGFloat = msg_send![ns_window, backingScaleFactor];
 
             if let Some(position) = self.position {
+                let position = (
+                    position.0 as f64 / backing_scale,
+                    position.1 as f64 / backing_scale,
+                );
                 let () = msg_send![ns_window, cascadeTopLeftFromPoint:NSPoint::new(position.0 as f64, position.1 as f64)];
             } else {
                 // Center the window if no position is specified.
                 let () = msg_send![ns_window, center];
             }
 
+            // Set the window size
+            let () = msg_send![ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+
             let title = self.title.unwrap_or("Untitled");
             let title = NSString::new(title);
             let () = msg_send![ns_window, setTitle: title.raw];
             let () = msg_send![ns_window, makeKeyAndOrderFront: nil];
-            let backing_scale: CGFloat = msg_send![ns_window, backingScaleFactor];
 
             // Setup window delegate that receives events.
             // This allocation will be released when the window is dropped.
@@ -514,5 +521,10 @@ impl Window {
                 }
             }
         }
+    }
+
+    pub fn backing_scale(&self) -> f64 {
+        let inner_window_data = self.inner_window_data.borrow();
+        inner_window_data.backing_scale
     }
 }

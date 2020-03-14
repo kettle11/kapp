@@ -47,7 +47,7 @@ impl GLContext {
         GLContextBuilder {}
     }
 
-    pub fn set_window(&self, _window: &Window) -> Result<(), Error> {
+    pub fn set_window(&self, _window: Option<&Window>) -> Result<(), Error> {
         Ok(())
     }
 
