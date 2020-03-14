@@ -4,6 +4,7 @@ use std::io::Error;
 
 pub struct GLContext {
     gl_context: *mut Object,
+    pixel_format: *mut Object,
 }
 
 pub struct GLContextBuilder {}
@@ -27,9 +28,11 @@ impl GLContextBuilder {
                 0,
             ];
 
+            // This allocation is dropped when GLContext is dropped
             let pixel_format: *mut Object = msg_send![class!(NSOpenGLPixelFormat), alloc];
             let pixel_format: *mut Object = msg_send![pixel_format, initWithAttributes: &attrs];
 
+            // This allocation is dropped when GLContext is dropped
             let gl_context: *mut Object = msg_send![class!(NSOpenGLContext), alloc];
             let gl_context: *mut Object =
                 msg_send![gl_context, initWithFormat: pixel_format shareContext: nil];
@@ -37,7 +40,10 @@ impl GLContextBuilder {
 
             // Enable vsync
             let () = msg_send![gl_context, setValues:&(1 as i32) forParameter:NSOpenGLContextParameter::NSOpenGLCPSwapInterval];
-            Ok(GLContext { gl_context })
+            Ok(GLContext {
+                gl_context,
+                pixel_format,
+            })
         }
     }
 }
@@ -49,7 +55,7 @@ impl GLContext {
 
     pub fn set_window(&self, window: &Window) -> Result<(), Error> {
         unsafe {
-            let () = msg_send![self.gl_context, setView: window.ns_view];
+          //  let () = msg_send![self.gl_context, setView: window.ns_view];
         }
         Ok(())
     }
@@ -93,5 +99,14 @@ impl GLContext {
         let framework = unsafe { CFBundleGetBundleWithIdentifier(framework_name.raw) };
         let symbol = unsafe { CFBundleGetFunctionPointerForName(framework, symbol_name.raw) };
         symbol as *const _
+    }
+}
+
+impl Drop for GLContext {
+    fn drop(&mut self) {
+        unsafe {
+            let () = msg_send![self.gl_context, release];
+            let () = msg_send![self.pixel_format, release];
+        }
     }
 }

@@ -33,7 +33,7 @@ fn main() {
                     window_red.take();
                 }
             }
-            if let Some(window) = window_red.as_ref() {
+            if let Some(window) = window_blue.as_ref() {
                 if window.id == window.id {
                     window_blue.take();
                 }

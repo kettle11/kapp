@@ -13,9 +13,12 @@ static APPLICATION_CLASS_NAME: &str = "KettlewinApplicationClass";
 
 pub struct Window {
     pub ns_window: *mut Object,
-    window_delegate: *mut Object,
     pub ns_view: *mut Object, // Used later by GLContext.
     pub id: WindowId,
+    window_delegate: *mut Object,
+    tracking_area: *mut Object,
+    _window_instance_data: Box<WindowInstanceData>, // Held onto to be dropped when the window closes
+    _view_instance_data: Box<ViewInstanceData>, // Held onto to be dropped when the window closes
 }
 
 #[derive(Hash, Eq, PartialEq, Clone, Copy)]
@@ -55,6 +58,8 @@ pub enum WindowState {
 }
 
 pub fn get_window_data(this: &Object) -> &mut WindowInstanceData {
+    println!("Getting window data");
+
     unsafe {
         let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
         &mut *(data as *mut WindowInstanceData)
@@ -167,6 +172,7 @@ impl ApplicationBuilder {
                     application_data.program_callback = program_callback;
                 }
             }
+
             let application_data = ApplicationData {
                 frame_requested: true, // Always request an initial frame
                 ns_application,
@@ -177,13 +183,13 @@ impl ApplicationBuilder {
 
             let application_data = Rc::new(RefCell::new(application_data));
 
-            // This needs to be cleaned up later.
+            // This allocation will persist until the program is quit.
             let application_instance_data = Box::leak(Box::new(Rc::clone(&application_data)))
                 as *mut Rc<RefCell<ApplicationData>>
                 as *mut c_void;
             (*ns_application_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, application_instance_data);
 
-            // This box that is leaked needs a way to be deallocated later.
+            // This allocation will persist until the program is quit.
             let observer_context_info = Box::leak(Box::new(Rc::clone(&application_data)))
                 as *mut Rc<RefCell<ApplicationData>>
                 as *mut c_void;
@@ -280,7 +286,7 @@ impl<'a> WindowBuilder<'a> {
                 style |= NSWindowStyleMaskResizable;
             }
 
-            // Everything alloc-ed needs to be released somehow.
+            // This allocation will be released when the window is dropped.
             let ns_window: *mut Object = msg_send![class!(NSWindow), alloc];
             let () = msg_send![
                 ns_window,
@@ -304,31 +310,40 @@ impl<'a> WindowBuilder<'a> {
             let backing_scale_factor: CGFloat = msg_send![ns_window, backingScaleFactor];
 
             // Setup window delegate that receives events.
+            // This allocation will be released when the window is dropped.
             let window_delegate: *mut Object = msg_send![self.application.window_class, new];
             // Heap allocate a data structure for the window.
-            // Because this data is leaked it must be cleaned up manually later.
-            let window_instance_data = Box::leak(Box::new(WindowInstanceData {
+            // This allocation will be released when the window is dropped.
+            let mut window_instance_data_box = Box::new(WindowInstanceData {
                 application_data: Rc::clone(&self.application.application_data),
                 ns_window,
                 backing_scale: backing_scale_factor,
                 window_state: WindowState::Windowed,
-            })) as *mut WindowInstanceData as *mut c_void;
-
+            });
+            let window_instance_data =
+                &mut (*window_instance_data_box) as *mut WindowInstanceData as *mut c_void;
+            // let window_instance_data =
+            //    Box::leak(window_instance_data_box) as *mut WindowInstanceData as *mut c_void;
             (*window_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, window_instance_data);
 
             // setup view
+            // This allocation will be released when the window is dropped.
             let ns_view: *mut Object = msg_send![self.application.view_class, alloc];
 
             // Heap allocate a data structure for the view.
-            // Because this data is leaked it must be cleaned up manually later.
-            let view_instance_data = Box::leak(Box::new(ViewInstanceData { window_delegate }))
-                as *mut ViewInstanceData as *mut c_void;
+            let mut view_instance_data_box = Box::new(ViewInstanceData { window_delegate });
+            let view_instance_data =
+                &mut (*view_instance_data_box) as *mut ViewInstanceData as *mut c_void;
+
+            // let view_instance_data =
+            //  Box::leak(view_instance_data_box) as *mut ViewInstanceData as *mut c_void;
             (*ns_view).set_ivar(INSTANCE_DATA_IVAR_ID, view_instance_data);
 
             // Apparently this defaults to YES even without this call
             let () = msg_send![ns_view, setWantsBestResolutionOpenGLSurface: YES];
 
             // Setup a tracking area to receive mouse events within
+            // This allocation will be released when the window is dropped.
             let tracking_area: *mut Object = msg_send![class!(NSTrackingArea), alloc];
             let () = msg_send![
                 tracking_area,
@@ -347,6 +362,9 @@ impl<'a> WindowBuilder<'a> {
                 ns_view,
                 window_delegate,
                 id: WindowId { ns_window },
+                _window_instance_data: window_instance_data_box,
+                 _view_instance_data: view_instance_data_box,
+                tracking_area,
             };
             Ok(window)
         }
@@ -395,6 +413,13 @@ impl Application {
             let run_loop = CFRunLoopGetMain();
             CFRunLoopWakeUp(run_loop);
         }
+    }
+}
+
+// When the application is dropped, quit the program.
+impl Drop for Application {
+    fn drop(&mut self) {
+        self.quit();
     }
 }
 
@@ -490,6 +515,12 @@ impl Drop for Window {
     fn drop(&mut self) {
         unsafe {
             let () = msg_send![self.ns_window, close];
+
+            println!("Window dropping");
+            //let () = msg_send![self.window_delegate, release];
+            // let () = msg_send![self.ns_view, release];
+            // let () = msg_send![self.ns_window, release];
+            // let () = msg_send![self.tracking_area, release];
         }
     }
 }

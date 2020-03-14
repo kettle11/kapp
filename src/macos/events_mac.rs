@@ -78,6 +78,7 @@ extern "C" fn window_did_exit_fullscreen(this: &Object, _sel: Sel, _event: *mut 
 }
 extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
+    println!("window_did_resize");
 
     unsafe {
         let backing_scale = window_data.backing_scale;
@@ -112,6 +113,8 @@ extern "C" fn window_did_change_backing_properties(this: &Object, _sel: Sel, _ev
 }
 
 extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Object) {
+    println!("window_did_become_key");
+
     let window_data = get_window_data(this);
     self::produce_event_from_window(
         this,
@@ -124,6 +127,8 @@ extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Objec
 }
 
 extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Object) {
+    println!("window_did_resign_key");
+
     let window_data = get_window_data(this);
     self::produce_event_from_window(
         this,
@@ -136,6 +141,7 @@ extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Objec
 }
 
 extern "C" fn window_should_close(this: &Object, _sel: Sel, _event: *mut Object) -> BOOL {
+    println!("window_should_close");
     let window_data = get_window_data(this);
     self::produce_event_from_window(
         this,
@@ -202,7 +208,7 @@ extern "C" fn application_should_terminate_after_last_window_closed(
     _sel: Sel,
     _event: *mut Object,
 ) -> BOOL {
-    YES
+    NO
 }
 
 // https://developer.apple.com/documentation/appkit/nsapplicationdelegate/1428642-applicationshouldterminate?language=objc
@@ -352,11 +358,15 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
 // ------------------------ End View Events --------------------------
 
 fn produce_event_from_window(this: &Object, event: crate::Event) {
+    println!("Window event: {:?}", event);
+
     let window_data = get_window_data(this);
+    
     submit_event(&(*window_data).application_data, event);
 }
 
 fn produce_event_from_view(this: &Object, event: crate::Event) {
+    println!("View event: {:?}", event);
     // First get the view's window
     unsafe {
         let view_data = get_view_data(this);
@@ -365,6 +375,7 @@ fn produce_event_from_view(this: &Object, event: crate::Event) {
 }
 
 fn get_view_data(this: &Object) -> &mut ViewInstanceData {
+    println!("Getting view data");
     unsafe {
         let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
         &mut *(data as *mut ViewInstanceData)
@@ -391,11 +402,15 @@ pub fn submit_event(application_data: &Rc<RefCell<ApplicationData>>, event: Even
 
     if let Some(callback) = program_callback.as_mut() {
         callback(event);
+        println!("Queue0");
 
         // Process any events that may have been queued during the above callback.
         // Care is taken to not borrow the application_data during the callback.
         let mut queued_event = application_data.borrow_mut().event_queue.pop();
+        println!("Queue1");
+
         while let Some(event) = queued_event {
+            println!("Queue");
             callback(event);
             queued_event = application_data.borrow_mut().event_queue.pop();
         }

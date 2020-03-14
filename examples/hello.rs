@@ -11,12 +11,13 @@ fn main() {
     gl_context.set_window(&window).unwrap();
     let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
 
+    let mut window = Some(window);
     // Run forever
     let mut color = 0.0;
 
     app.event_loop().run(move |event| match event {
         Event::WindowResized { .. } => gl_context.update_target(), // This call updates the window backbuffer to match the new window size.
-        Event::WindowCloseRequested { .. } => app.quit(),
+        Event::WindowCloseRequested { .. } => {window.take();},
         Event::Draw => {
             unsafe {
                 gl.clear_color(1.0, 0.0, color, 1.0);
