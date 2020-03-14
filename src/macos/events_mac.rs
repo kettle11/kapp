@@ -1,7 +1,7 @@
 use super::apple::*;
 use super::application_mac::{
-    get_window_data, ApplicationData, ApplicationInstanceData, ViewInstanceData, WindowId,
-    WindowInstanceData, WindowState, INSTANCE_DATA_IVAR_ID,
+    get_window_data, ApplicationData, ApplicationInstanceData, WindowId, WindowState,
+    INSTANCE_DATA_IVAR_ID,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -14,7 +14,7 @@ extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
     unsafe {
         let backing_scale = window_data.backing_scale;
         let frame: CGRect = msg_send![window_data.ns_window, frame];
-        self::produce_event_from_window(
+        self::produce_event(
             this,
             crate::Event::WindowMoved {
                 x: (frame.origin.x * backing_scale) as u32,
@@ -29,7 +29,7 @@ extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
 extern "C" fn window_did_miniaturize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Minimized;
-    self::produce_event_from_window(
+    self::produce_event(
         this,
         Event::WindowMinimized {
             window_id: WindowId {
@@ -42,7 +42,7 @@ extern "C" fn window_did_miniaturize(this: &Object, _sel: Sel, _event: *mut Obje
 extern "C" fn window_did_deminiaturize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately fullscreens?
-    self::produce_event_from_window(
+    self::produce_event(
         this,
         Event::WindowRestored {
             window_id: WindowId {
@@ -55,7 +55,7 @@ extern "C" fn window_did_deminiaturize(this: &Object, _sel: Sel, _event: *mut Ob
 extern "C" fn window_did_enter_fullscreen(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Fullscreen;
-    self::produce_event_from_window(
+    self::produce_event(
         this,
         Event::WindowFullscreened {
             window_id: WindowId {
@@ -67,7 +67,7 @@ extern "C" fn window_did_enter_fullscreen(this: &Object, _sel: Sel, _event: *mut
 extern "C" fn window_did_exit_fullscreen(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately minimizes?
-    self::produce_event_from_window(
+    self::produce_event(
         this,
         Event::WindowRestored {
             window_id: WindowId {
@@ -78,12 +78,11 @@ extern "C" fn window_did_exit_fullscreen(this: &Object, _sel: Sel, _event: *mut 
 }
 extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
-    println!("window_did_resize");
 
     unsafe {
         let backing_scale = window_data.backing_scale;
         let frame: CGRect = msg_send![window_data.ns_window, frame];
-        self::produce_event_from_window(
+        self::produce_event(
             this,
             crate::Event::WindowResized {
                 width: (frame.size.width * backing_scale) as u32,
@@ -97,7 +96,6 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
 }
 
 extern "C" fn window_did_change_backing_properties(this: &Object, _sel: Sel, _event: *mut Object) {
-    println!("Window changed backing properties");
     unsafe {
         let window_data = get_window_data(this);
         let old_scale = window_data.backing_scale;
@@ -113,10 +111,8 @@ extern "C" fn window_did_change_backing_properties(this: &Object, _sel: Sel, _ev
 }
 
 extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Object) {
-    println!("window_did_become_key");
-
     let window_data = get_window_data(this);
-    self::produce_event_from_window(
+    self::produce_event(
         this,
         crate::Event::WindowGainedFocus {
             window_id: WindowId {
@@ -127,10 +123,8 @@ extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Objec
 }
 
 extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Object) {
-    println!("window_did_resign_key");
-
     let window_data = get_window_data(this);
-    self::produce_event_from_window(
+    self::produce_event(
         this,
         crate::Event::WindowLostFocus {
             window_id: WindowId {
@@ -141,9 +135,8 @@ extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Objec
 }
 
 extern "C" fn window_should_close(this: &Object, _sel: Sel, _event: *mut Object) -> BOOL {
-    println!("window_should_close");
     let window_data = get_window_data(this);
-    self::produce_event_from_window(
+    self::produce_event(
         this,
         crate::Event::WindowCloseRequested {
             window_id: WindowId {
@@ -249,14 +242,14 @@ extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
         } else {
             crate::Event::ButtonDown { button }
         };
-        self::produce_event_from_view(this, event);
+        self::produce_event(this, event);
     }
 }
 
 extern "C" fn key_up(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
-        self::produce_event_from_view(
+        self::produce_event(
             this,
             crate::Event::ButtonUp {
                 button: super::keys_mac::virtual_keycode_to_key(key_code),
@@ -293,9 +286,9 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
         Button::Meta,
     ];
 
-    let window_data = get_window_data_for_view(this);
+    let window_data = get_window_data(this);
 
-    let modifier_flags_old = { (*window_data).application_data.borrow().modifier_flags };
+    let modifier_flags_old = window_data.application_data.borrow().modifier_flags;
 
     let modifier_flags_new: NSUInteger = unsafe { msg_send![event, modifierFlags] };
 
@@ -304,11 +297,11 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
 
     for i in 0..8 {
         if !flag_state_old[i] && flag_state_new[i] {
-            produce_event_from_view(this, crate::Event::ButtonDown { button: BUTTONS[i] })
+            produce_event(this, crate::Event::ButtonDown { button: BUTTONS[i] })
         }
 
         if flag_state_old[i] && !flag_state_new[i] {
-            produce_event_from_view(this, crate::Event::ButtonUp { button: BUTTONS[i] })
+            produce_event(this, crate::Event::ButtonUp { button: BUTTONS[i] })
         }
     }
 
@@ -317,14 +310,14 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
-        let window_data = get_window_data_for_view(this);
+        let window_data = get_window_data(this);
         let backing_scale = (*window_data).backing_scale;
 
         let window_point: NSPoint = msg_send![event, locationInWindow];
         let x = window_point.x * backing_scale;
         let y = window_point.y * backing_scale; // Don't flip because 0 is bottom left on MacOS
 
-        self::produce_event_from_view(
+        self::produce_event(
             this,
             crate::Event::MouseMoved {
                 x: x as f32,
@@ -357,29 +350,11 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
 
 // ------------------------ End View Events --------------------------
 
-fn produce_event_from_window(this: &Object, event: crate::Event) {
-    println!("Window event: {:?}", event);
-
+// 'this' can be either a Window delegate or a view delegate.
+// Despite being different types both have iVars attached for inner_window_data
+fn produce_event(this: &Object, event: crate::Event) {
     let window_data = get_window_data(this);
-    
     submit_event(&(*window_data).application_data, event);
-}
-
-fn produce_event_from_view(this: &Object, event: crate::Event) {
-    println!("View event: {:?}", event);
-    // First get the view's window
-    unsafe {
-        let view_data = get_view_data(this);
-        produce_event_from_window(&(*(*view_data).window_delegate), event);
-    }
-}
-
-fn get_view_data(this: &Object) -> &mut ViewInstanceData {
-    println!("Getting view data");
-    unsafe {
-        let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
-        &mut *(data as *mut ViewInstanceData)
-    }
 }
 
 fn get_application_data(this: &Object) -> &mut ApplicationInstanceData {
@@ -389,28 +364,17 @@ fn get_application_data(this: &Object) -> &mut ApplicationInstanceData {
     }
 }
 
-fn get_window_data_for_view(this: &Object) -> &mut WindowInstanceData {
-    unsafe {
-        let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
-        let data = data as *mut ViewInstanceData;
-        get_window_data(&*((*data).window_delegate as *mut Object))
-    }
-}
-
 pub fn submit_event(application_data: &Rc<RefCell<ApplicationData>>, event: Event) {
     let mut program_callback = application_data.borrow_mut().program_callback.take();
 
     if let Some(callback) = program_callback.as_mut() {
         callback(event);
-        println!("Queue0");
 
         // Process any events that may have been queued during the above callback.
         // Care is taken to not borrow the application_data during the callback.
         let mut queued_event = application_data.borrow_mut().event_queue.pop();
-        println!("Queue1");
 
         while let Some(event) = queued_event {
-            println!("Queue");
             callback(event);
             queued_event = application_data.borrow_mut().event_queue.pop();
         }

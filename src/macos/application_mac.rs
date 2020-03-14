@@ -11,14 +11,35 @@ static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
 static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
 static APPLICATION_CLASS_NAME: &str = "KettlewinApplicationClass";
 
+#[derive(Clone)]
 pub struct Window {
+    pub id: WindowId,
+    pub inner_window_data: Rc<RefCell<InnerWindowData>>, // this shouldn't be public
+}
+
+// All of this data and the instances must be all be dropped together.
+// Window and GLContext can hold a strong ref to this data, ns_window and ns_view will hold a raw pointer to this data.
+// Because ns_window and ns_view will only be released only when this is dropped, the raw pointers should always be valid.
+pub struct InnerWindowData {
     pub ns_window: *mut Object,
     pub ns_view: *mut Object, // Used later by GLContext.
-    pub id: WindowId,
     window_delegate: *mut Object,
     tracking_area: *mut Object,
-    _window_instance_data: Box<WindowInstanceData>, // Held onto to be dropped when the window closes
-    _view_instance_data: Box<ViewInstanceData>, // Held onto to be dropped when the window closes
+
+    pub application_data: Rc<RefCell<ApplicationData>>,
+    pub backing_scale: f64, // On Mac this while likely be either 2.0 or 1.0
+    pub window_state: WindowState,
+}
+
+impl Drop for InnerWindowData {
+    fn drop(&mut self) {
+        unsafe {
+            let () = msg_send![self.ns_window, close];
+            let () = msg_send![self.window_delegate, release];
+            let () = msg_send![self.ns_view, release];
+            let () = msg_send![self.tracking_area, release];
+        }
+    }
 }
 
 #[derive(Hash, Eq, PartialEq, Clone, Copy)]
@@ -42,14 +63,6 @@ impl std::fmt::Debug for WindowId {
     }
 }
 
-// Information about a window delegate instance. Attached with an iVar.
-pub struct WindowInstanceData {
-    pub application_data: Rc<RefCell<ApplicationData>>,
-    pub ns_window: *mut Object,
-    pub backing_scale: f64, // On Mac this while likely be either 2.0 or 1.0
-    pub window_state: WindowState,
-}
-
 // Not exposed outside the crate
 pub enum WindowState {
     Minimized,
@@ -57,12 +70,10 @@ pub enum WindowState {
     Fullscreen,
 }
 
-pub fn get_window_data(this: &Object) -> &mut WindowInstanceData {
-    println!("Getting window data");
-
+pub fn get_window_data(this: &Object) -> &mut InnerWindowData {
     unsafe {
         let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
-        &mut *(data as *mut WindowInstanceData)
+        &mut *(data as *mut InnerWindowData)
     }
 }
 
@@ -85,14 +96,6 @@ pub struct ApplicationData {
     /// call tree.
     pub event_queue: Vec<Event>,
 }
-
-// Information about a view instance. Attached with an iVar.
-// Perhaps this a bit redundant, it'd be better if there was a way to access the window's
-// instance data.
-pub struct ViewInstanceData {
-    pub window_delegate: *mut Object,
-}
-
 pub struct ApplicationInstanceData {
     pub application_data: Rc<RefCell<ApplicationData>>,
 }
@@ -307,37 +310,20 @@ impl<'a> WindowBuilder<'a> {
             let title = NSString::new(title);
             let () = msg_send![ns_window, setTitle: title.raw];
             let () = msg_send![ns_window, makeKeyAndOrderFront: nil];
-            let backing_scale_factor: CGFloat = msg_send![ns_window, backingScaleFactor];
+            let backing_scale: CGFloat = msg_send![ns_window, backingScaleFactor];
 
             // Setup window delegate that receives events.
             // This allocation will be released when the window is dropped.
             let window_delegate: *mut Object = msg_send![self.application.window_class, new];
             // Heap allocate a data structure for the window.
             // This allocation will be released when the window is dropped.
-            let mut window_instance_data_box = Box::new(WindowInstanceData {
-                application_data: Rc::clone(&self.application.application_data),
-                ns_window,
-                backing_scale: backing_scale_factor,
-                window_state: WindowState::Windowed,
-            });
-            let window_instance_data =
-                &mut (*window_instance_data_box) as *mut WindowInstanceData as *mut c_void;
+
             // let window_instance_data =
             //    Box::leak(window_instance_data_box) as *mut WindowInstanceData as *mut c_void;
-            (*window_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, window_instance_data);
 
             // setup view
             // This allocation will be released when the window is dropped.
             let ns_view: *mut Object = msg_send![self.application.view_class, alloc];
-
-            // Heap allocate a data structure for the view.
-            let mut view_instance_data_box = Box::new(ViewInstanceData { window_delegate });
-            let view_instance_data =
-                &mut (*view_instance_data_box) as *mut ViewInstanceData as *mut c_void;
-
-            // let view_instance_data =
-            //  Box::leak(view_instance_data_box) as *mut ViewInstanceData as *mut c_void;
-            (*ns_view).set_ivar(INSTANCE_DATA_IVAR_ID, view_instance_data);
 
             // Apparently this defaults to YES even without this call
             let () = msg_send![ns_view, setWantsBestResolutionOpenGLSurface: YES];
@@ -357,14 +343,29 @@ impl<'a> WindowBuilder<'a> {
             let () = msg_send![ns_window, setContentView: ns_view];
             let () = msg_send![ns_window, makeFirstResponder: ns_view];
 
-            let window = Window {
+            let inner_window_data = Rc::new(RefCell::new(InnerWindowData {
                 ns_window,
                 ns_view,
                 window_delegate,
-                id: WindowId { ns_window },
-                _window_instance_data: window_instance_data_box,
-                 _view_instance_data: view_instance_data_box,
                 tracking_area,
+                application_data: Rc::clone(&self.application.application_data),
+                backing_scale,
+                window_state: WindowState::Windowed,
+            }));
+
+            // Give weak references to the window data to the window_delegate and ns_view_delegate.
+            (*window_delegate).set_ivar(
+                INSTANCE_DATA_IVAR_ID,
+                inner_window_data.as_ptr() as *mut c_void,
+            );
+            (*ns_view).set_ivar(
+                INSTANCE_DATA_IVAR_ID,
+                inner_window_data.as_ptr() as *mut c_void,
+            );
+
+            let window = Window {
+                id: WindowId { ns_window },
+                inner_window_data,
             };
             Ok(window)
         }
@@ -448,8 +449,9 @@ impl EventLoop {
 
 impl Window {
     pub fn minimize(&self) {
+        let inner_window_data = self.inner_window_data.borrow();
         unsafe {
-            let () = msg_send![self.ns_window, miniaturize: nil];
+            let () = msg_send![inner_window_data.ns_window, miniaturize: nil];
         }
     }
 
@@ -461,14 +463,14 @@ impl Window {
     /// Returns the window from a minimized or maximized state.
     pub fn restore(&self) {
         unsafe {
-            let window_data = get_window_data(&(*self.window_delegate));
+            let inner_window_data = self.inner_window_data.borrow();
 
-            match window_data.window_state {
+            match inner_window_data.window_state {
                 WindowState::Minimized => {
-                    let () = msg_send![self.ns_window, deminiaturize: nil];
+                    let () = msg_send![inner_window_data.ns_window, deminiaturize: nil];
                 }
                 WindowState::Fullscreen => {
-                    let () = msg_send![self.ns_window, toggleFullScreen: nil];
+                    let () = msg_send![inner_window_data.ns_window, toggleFullScreen: nil];
                 }
                 _ => {}
             }
@@ -476,51 +478,41 @@ impl Window {
     }
 
     pub fn fullscreen(&self) {
+        let inner_window_data = self.inner_window_data.borrow();
+
         unsafe {
-            let () = msg_send![self.ns_window, toggleFullScreen: nil];
+            let () = msg_send![inner_window_data.ns_window, toggleFullScreen: nil];
         }
     }
 
     /// Set the lower left corner of the window.
     pub fn set_position(&self, x: u32, y: u32) {
         unsafe {
+            let inner_window_data = self.inner_window_data.borrow();
+
             // Accounts for scale factor
-            let window_data = get_window_data(&(*self.window_delegate));
-            let backing_scale = window_data.backing_scale;
+            let backing_scale = inner_window_data.backing_scale;
 
             let () =
-                msg_send![self.ns_window, setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
+                msg_send![inner_window_data.ns_window, setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
         }
     }
 
     /// Set the window's width and height, excluding the titlebar
     pub fn set_size(&self, width: u32, height: u32) {
         unsafe {
-            // Accounts for scale factor
-            let window_data = get_window_data(&(*self.window_delegate));
-            let backing_scale = window_data.backing_scale;
+            let inner_window_data = self.inner_window_data.borrow();
 
-            match window_data.window_state {
+            // Accounts for scale factor
+            let backing_scale = inner_window_data.backing_scale;
+
+            match inner_window_data.window_state {
                 WindowState::Fullscreen => {} // Don't resize the window if fullscreen.
                 _ => {
                     let () =
-                        msg_send![self.ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+                        msg_send![inner_window_data.ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
                 }
             }
-        }
-    }
-}
-
-impl Drop for Window {
-    fn drop(&mut self) {
-        unsafe {
-            let () = msg_send![self.ns_window, close];
-
-            println!("Window dropping");
-            //let () = msg_send![self.window_delegate, release];
-            // let () = msg_send![self.ns_view, release];
-            // let () = msg_send![self.ns_window, release];
-            // let () = msg_send![self.tracking_area, release];
         }
     }
 }

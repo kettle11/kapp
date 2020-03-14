@@ -5,6 +5,7 @@ use std::io::Error;
 pub struct GLContext {
     gl_context: *mut Object,
     pixel_format: *mut Object,
+    current_window: Option<Window>,
 }
 
 pub struct GLContextBuilder {}
@@ -43,6 +44,7 @@ impl GLContextBuilder {
             Ok(GLContext {
                 gl_context,
                 pixel_format,
+                current_window: None,
             })
         }
     }
@@ -53,10 +55,17 @@ impl GLContext {
         GLContextBuilder {}
     }
 
-    pub fn set_window(&self, window: &Window) -> Result<(), Error> {
-        unsafe {
-          //  let () = msg_send![self.gl_context, setView: window.ns_view];
+    pub fn set_window(&mut self, window: Option<&Window>) -> Result<(), Error> {
+        if let Some(window) = window {
+            let () = unsafe {
+                msg_send![self.gl_context, setView: window.inner_window_data.borrow().ns_view]
+            };
+            self.current_window = Some(window.clone());
+        } else {
+            let () = unsafe { msg_send![self.gl_context, clearDrawable] };
+            self.current_window = None;
         }
+
         Ok(())
     }
 
