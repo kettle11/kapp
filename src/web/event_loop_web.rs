@@ -1,7 +1,8 @@
 use super::application_web::WindowId;
 use super::keys_web;
 use crate::events::*;
-use crate::Button;
+use crate::Key;
+use crate::MouseButton;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -68,29 +69,45 @@ where
 
         // Mouse down event
         let mouse_down = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            (CALLBACK.as_mut().unwrap())(Event::ButtonDown {
+            (CALLBACK.as_mut().unwrap())(Event::MouseButtonDown {
                 button: match event.button() {
-                    0 => Button::LeftMouse,
-                    1 => Button::MiddleMouse,
-                    2 => Button::RightMouse,
-                    3 => Button::ExtraMouse1,
-                    4 => Button::ExtraMouse2,
-                    _ => Button::Unknown,
+                    0 => MouseButton::Left,
+                    1 => MouseButton::Middle,
+                    2 => MouseButton::Right,
+                    3 => MouseButton::Extra1,
+                    4 => MouseButton::Extra2,
+                    _ => MouseButton::Unknown,
                 },
             });
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_onmousedown(Some(mouse_down.as_ref().unchecked_ref()));
         mouse_down.forget();
 
+        // Mouse up event
+        let mouse_up = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+            (CALLBACK.as_mut().unwrap())(Event::MouseButtonUp {
+                button: match event.button() {
+                    0 => MouseButton::Left,
+                    1 => MouseButton::Middle,
+                    2 => MouseButton::Right,
+                    3 => MouseButton::Extra1,
+                    4 => MouseButton::Extra2,
+                    _ => MouseButton::Unknown,
+                },
+            });
+        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+        canvas.set_onmouseup(Some(mouse_up.as_ref().unchecked_ref()));
+        mouse_up.forget();
+
         // Key down event
         let keydown = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             let key_event = if event.repeat() {
-                Event::ButtonRepeat {
-                    button: keys_web::virtual_keycode_to_key(&event.code()),
+                Event::KeyRepeat {
+                    key: keys_web::virtual_keycode_to_key(&event.code()),
                 }
             } else {
-                Event::ButtonDown {
-                    button: keys_web::virtual_keycode_to_key(&event.code()),
+                Event::KeyDown {
+                    key: keys_web::virtual_keycode_to_key(&event.code()),
                 }
             };
 
@@ -105,8 +122,8 @@ where
 
         // Key up event
         let keyup = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-            (CALLBACK.as_mut().unwrap())(Event::ButtonUp {
-                button: keys_web::virtual_keycode_to_key(&event.code()),
+            (CALLBACK.as_mut().unwrap())(Event::KeyUp {
+                key: keys_web::virtual_keycode_to_key(&event.code()),
             });
             event
                 .dyn_into::<web_sys::Event>()

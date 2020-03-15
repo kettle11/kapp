@@ -1,8 +1,8 @@
-use crate::buttons::{Button, Button::*};
+use crate::keys::{Key, Key::*};
 
 // Hand transcribed from here:
 // https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
-pub fn virtual_keycode_to_key(key_in: &str) -> Button {
+pub fn virtual_keycode_to_key(key_in: &str) -> Key {
     match key_in {
         "Cancel" => Cancel,
         "Backspace" => Backspace,
