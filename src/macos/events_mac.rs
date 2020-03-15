@@ -201,7 +201,7 @@ extern "C" fn application_should_terminate_after_last_window_closed(
     _sel: Sel,
     _event: *mut Object,
 ) -> BOOL {
-    NO
+    YES // Close when all windows close.
 }
 
 // https://developer.apple.com/documentation/appkit/nsapplicationdelegate/1428642-applicationshouldterminate?language=objc

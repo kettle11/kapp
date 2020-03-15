@@ -94,6 +94,7 @@ impl GLContext {
         })
     }
 
+    // https://developer.apple.com/documentation/appkit/nsopenglcontext/1436211-flushbuffer?language=objc
     pub fn swap_buffers(&self) {
         unsafe {
             let () = msg_send![self.gl_context, flushBuffer];
