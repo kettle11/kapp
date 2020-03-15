@@ -1,12 +1,6 @@
-use crate::buttons::Button;
+use crate::keys::Key;
+use crate::mouse_buttons::MouseButton;
 use crate::WindowId;
-pub enum MouseButton {
-    Left,
-    Right,
-    Middle,
-    Unknown,
-    __Nonexhaustive, // More buttons may be added.
-}
 
 #[derive(Debug)]
 pub enum Event {
@@ -14,18 +8,24 @@ pub enum Event {
     Draw,
     // ------------------- Input Events  ---------------------
     // These are received by a window, but the window must be tracked with the 'GainedFocus' event.
-    ButtonDown {
-        button: Button,
+    KeyDown {
+        key: Key,
     },
-    ButtonUp {
-        button: Button,
+    KeyUp {
+        key: Key,
     },
-    ButtonRepeat {
-        button: Button,
+    KeyRepeat {
+        key: Key,
     },
     MouseMoved {
         x: f32,
         y: f32,
+    },
+    MouseButtonDown {
+        button: MouseButton,
+    },
+    MouseButtonUp {
+        button: MouseButton,
     },
     // ------------------- Window Events  ---------------------
     WindowMinimized {

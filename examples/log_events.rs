@@ -8,5 +8,10 @@ fn main() {
 
     app.event_loop().run(move |event| {
         println!("Event: {:?}", event);
+
+        match event {
+            Event::WindowCloseRequested { .. } => app.quit(),
+            _ => {}
+        }
     });
 }

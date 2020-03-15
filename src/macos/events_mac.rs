@@ -6,7 +6,7 @@ use super::application_mac::{
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::{Button, Event};
+use crate::{Event, Key, MouseButton};
 // ------------------------ Window Events --------------------------
 
 extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
@@ -236,11 +236,11 @@ extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
         let repeat: bool = msg_send![event, isARepeat];
-        let button = super::keys_mac::virtual_keycode_to_key(key_code);
+        let key = super::keys_mac::virtual_keycode_to_key(key_code);
         let event = if repeat {
-            crate::Event::ButtonRepeat { button }
+            crate::Event::KeyRepeat { key }
         } else {
-            crate::Event::ButtonDown { button }
+            crate::Event::KeyDown { key }
         };
         self::produce_event(this, event);
     }
@@ -251,8 +251,8 @@ extern "C" fn key_up(this: &Object, _sel: Sel, event: *mut Object) {
         let key_code = msg_send![event, keyCode];
         self::produce_event(
             this,
-            crate::Event::ButtonUp {
-                button: super::keys_mac::virtual_keycode_to_key(key_code),
+            crate::Event::KeyUp {
+                key: super::keys_mac::virtual_keycode_to_key(key_code),
             },
         );
     }
@@ -275,15 +275,15 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
     }
 
     // These correspond to the modifier flag array.
-    const BUTTONS: [Button; 8] = [
-        Button::LeftShift,
-        Button::RightShift,
-        Button::LeftControl,
-        Button::RightControl,
-        Button::LeftAlt,
-        Button::RightAlt,
-        Button::Meta,
-        Button::Meta,
+    const KEYS: [Key; 8] = [
+        Key::LeftShift,
+        Key::RightShift,
+        Key::LeftControl,
+        Key::RightControl,
+        Key::LeftAlt,
+        Key::RightAlt,
+        Key::Meta,
+        Key::Meta,
     ];
 
     let window_data = get_window_data(this);
@@ -297,11 +297,11 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
 
     for i in 0..8 {
         if !flag_state_old[i] && flag_state_new[i] {
-            produce_event(this, crate::Event::ButtonDown { button: BUTTONS[i] })
+            produce_event(this, crate::Event::KeyDown { key: KEYS[i] })
         }
 
         if flag_state_old[i] && !flag_state_new[i] {
-            produce_event(this, crate::Event::ButtonUp { button: BUTTONS[i] })
+            produce_event(this, crate::Event::KeyUp { key: KEYS[i] })
         }
     }
 
@@ -327,8 +327,92 @@ extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
     }
 }
 
+extern "C" fn mouse_down(this: &Object, _sel: Sel, _event: *mut Object) {
+    self::produce_event(
+        this,
+        crate::Event::MouseButtonDown {
+            button: MouseButton::Left,
+        },
+    );
+}
+
+extern "C" fn mouse_up(this: &Object, _sel: Sel, _event: *mut Object) {
+    self::produce_event(
+        this,
+        crate::Event::MouseButtonUp {
+            button: MouseButton::Left,
+        },
+    );
+}
+
+extern "C" fn right_mouse_down(this: &Object, _sel: Sel, _event: *mut Object) {
+    self::produce_event(
+        this,
+        crate::Event::MouseButtonDown {
+            button: MouseButton::Right,
+        },
+    );
+}
+
+extern "C" fn right_mouse_up(this: &Object, _sel: Sel, _event: *mut Object) {
+    self::produce_event(
+        this,
+        crate::Event::MouseButtonUp {
+            button: MouseButton::Right,
+        },
+    );
+}
+
+extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
+    let number: NSInteger = unsafe { msg_send![event, buttonNumber] };
+    let button = match number {
+        // Are these correct?
+        4 => MouseButton::Middle,
+        8 => MouseButton::Extra1,
+        16 => MouseButton::Extra2,
+        _ => MouseButton::Unknown,
+    };
+    self::produce_event(this, crate::Event::MouseButtonDown { button });
+}
+
+extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
+    let number: NSInteger = unsafe { msg_send![event, buttonNumber] };
+    let button = match number {
+        // Are these correct?
+        4 => MouseButton::Middle,
+        8 => MouseButton::Extra1,
+        16 => MouseButton::Extra2,
+        _ => MouseButton::Unknown,
+    };
+    self::produce_event(this, crate::Event::MouseButtonUp { button });
+}
+
 pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
+        decl.add_method(
+            sel!(otherMouseDown:),
+            other_mouse_down as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(otherMouseUp:),
+            other_mouse_up as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(rightMouseDown:),
+            right_mouse_down as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(rightMouseUp:),
+            right_mouse_up as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(mouseDown:),
+            mouse_down as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(mouseUp:),
+            mouse_up as extern "C" fn(&Object, Sel, *mut Object),
+        );
         decl.add_method(
             sel!(mouseMoved:),
             mouse_moved as extern "C" fn(&Object, Sel, *mut Object),

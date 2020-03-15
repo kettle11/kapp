@@ -1,10 +1,12 @@
 mod async_application;
-mod buttons;
 mod events;
+mod keys;
+mod mouse_buttons;
 
 pub use async_application::*;
-pub use buttons::Button;
+pub use keys::Key;
 pub use events::*;
+pub use mouse_buttons::MouseButton;
 
 #[cfg(all(target_os = "windows"))]
 mod windows;

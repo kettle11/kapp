@@ -1,5 +1,5 @@
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
-pub enum Button {
+pub enum Key {
     #[doc(hidden)]
     __Nonexhaustive, // More keys may be added.
 

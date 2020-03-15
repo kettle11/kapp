@@ -1,6 +1,6 @@
-use crate::buttons::{Button, Button::*};
+use crate::keys::{Key, Key::*};
 
-pub fn virtual_keycode_to_key(key_in: u16) -> Button {
+pub fn virtual_keycode_to_key(key_in: u16) -> Key {
     match key_in {
         0x1D => Digit0,
         0x12 => Digit1,
