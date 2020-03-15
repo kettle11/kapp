@@ -1,7 +1,9 @@
 /// All windows share a pixel format and an OpenGlContext.
 use super::keys_windows::virtual_keycode_to_key;
+use super::WindowId;
 use crate::events::*;
-use crate::Button;
+use crate::MouseButton;
+use crate::Key;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LRESULT, UINT, WPARAM};
 use winapi::shared::windef::HWND;
@@ -24,52 +26,53 @@ pub unsafe extern "system" fn window_callback(
         winuser::WM_SIZE => {
             let (width, height) = get_width_height(l_param);
             // First send the resize event
-            produce_event(Event::ResizedWindow { width, height });
+            produce_event(Event::WindowResized { width, height, window_id: WindowId {handle: hwnd}});
 
             // Then send more specific events.
             match w_param {
-                winuser::SIZE_MAXIMIZED => produce_event(Event::MaximizedWindow),
-                winuser::SIZE_MINIMIZED => produce_event(Event::MinimizedWindow),
+                winuser::SIZE_MAXIMIZED => produce_event(Event::WindowMaximized{window_id: WindowId {handle: hwnd}}),
+                winuser::SIZE_MINIMIZED => produce_event(Event::WindowMinimized{window_id: WindowId {handle: hwnd}}),
                 winuser::SIZE_RESTORED => {
                     /* Quote from the docs: "The window has been resized, but
                     neither the SIZE_MINIMIZED nor SIZE_MAXIMIZED value applies" */
                     // While resizing the OS directly calls window_callback and does not call the typical event loop.
                     // To redraw the window smoothly Event::Draw is passed in here.
-                    produce_event(Event::Draw);
+                    produce_event(Event::WindowRestored {window_id: WindowId {handle: hwnd}})
+                    // produce_event(Event::Draw);
                 }
                 _ => {}
             }
         }
-        // Mouse and keyboard events are sent through the 'Button' events family.
-        winuser::WM_LBUTTONDOWN => produce_event(Event::ButtonDown {
-            button: Button::LeftMouse,
+
+        winuser::WM_LBUTTONDOWN => produce_event(Event::MouseButtonDown {
+            button: MouseButton::Left,
         }),
-        winuser::WM_MBUTTONDOWN => produce_event(Event::ButtonDown {
-            button: Button::MiddleMouse,
+        winuser::WM_MBUTTONDOWN => produce_event(Event::MouseButtonDown {
+            button: MouseButton::Middle,
         }),
-        winuser::WM_RBUTTONDOWN => produce_event(Event::ButtonDown {
-            button: Button::RightMouse,
+        winuser::WM_RBUTTONDOWN => produce_event(Event::MouseButtonDown {
+            button: MouseButton::Right,
         }),
-        winuser::WM_XBUTTONDOWN => produce_event(Event::ButtonDown {
+        winuser::WM_XBUTTONDOWN => produce_event(Event::MouseButtonDown {
             button: match HIWORD(w_param as u32) {
-                winuser::XBUTTON1 => Button::ExtraMouse1,
-                winuser::XBUTTON2 => Button::ExtraMouse2,
+                winuser::XBUTTON1 => MouseButton::Extra1,
+                winuser::XBUTTON2 => MouseButton::Extra2,
                 _ => unreachable!(),
             },
         }),
-        winuser::WM_LBUTTONUP => produce_event(Event::ButtonUp {
-            button: Button::LeftMouse,
+        winuser::WM_LBUTTONUP => produce_event(Event::MouseButtonUp {
+            button: MouseButton::Left,
         }),
-        winuser::WM_MBUTTONUP => produce_event(Event::ButtonUp {
-            button: Button::MiddleMouse,
+        winuser::WM_MBUTTONUP => produce_event(Event::MouseButtonUp {
+            button: MouseButton::Middle,
         }),
-        winuser::WM_RBUTTONUP => produce_event(Event::ButtonUp {
-            button: Button::RightMouse,
+        winuser::WM_RBUTTONUP => produce_event(Event::MouseButtonUp {
+            button: MouseButton::Right,
         }),
-        winuser::WM_XBUTTONUP => produce_event(Event::ButtonUp {
+        winuser::WM_XBUTTONUP => produce_event(Event::MouseButtonUp {
             button: match HIWORD(w_param as u32) {
-                winuser::XBUTTON1 => Button::ExtraMouse1,
-                winuser::XBUTTON2 => Button::ExtraMouse2,
+                winuser::XBUTTON1 => MouseButton::Extra1,
+                winuser::XBUTTON2 => MouseButton::Extra2,
                 _ => unreachable!(),
             },
         }),
@@ -106,26 +109,26 @@ fn get_width_height(l_param: LPARAM) -> (u32, u32) {
 }
 
 fn process_key_down(w_param: WPARAM, l_param: LPARAM) -> Event {
-    let (scancode, button, repeat) = process_key_event(w_param, l_param);
+    let (scancode, key, repeat) = process_key_event(w_param, l_param);
 
     if repeat {
-        Event::ButtonRepeat { button }
+        Event::KeyRepeat { key }
     } else {
-        Event::ButtonDown { button, scancode }
+        Event::KeyDown { key }
     }
 }
 
 fn process_key_up(w_param: WPARAM, l_param: LPARAM) -> Event {
-    let (scancode, button, _repeat) = process_key_event(w_param, l_param);
-    Event::ButtonUp { button, scancode }
+    let (scancode, key, _repeat) = process_key_event(w_param, l_param);
+    Event::KeyUp { key }
 }
 
-fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Button, bool) {
+fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key, bool) {
     let scancode = ((l_param >> 16) & 16) as UINT; // bits 16-23 represent the scancode
     let _extended = (l_param >> 24) & 1 != 0; // bit 24 represents if its an extended key
     let repeat = (l_param >> 30) & 1 == 1;
-    let button = virtual_keycode_to_key(w_param as _);
-    (scancode, button, repeat)
+    let key = virtual_keycode_to_key(w_param as _);
+    (scancode, key, repeat)
 }
 
 pub fn run<T>(callback: T)

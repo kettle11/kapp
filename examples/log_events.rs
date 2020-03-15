@@ -7,11 +7,13 @@ fn main() {
     let _window = app.new_window().title("Log Events").build().unwrap();
 
     app.event_loop().run(move |event| {
-        println!("Event: {:?}", event);
 
         match event {
+            Event::Draw => {},
             Event::WindowCloseRequested { .. } => app.quit(),
-            _ => {}
+            _ => {
+                println!("Event: {:?}", event);
+            }
         }
     });
 }

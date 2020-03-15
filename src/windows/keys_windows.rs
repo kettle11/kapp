@@ -1,4 +1,4 @@
-use crate::buttons::{Button, Button::*};
+use crate::keys::{Key, Key::*};
 use winapi::um::winuser::*;
 
 // Hand transcribed from here:
@@ -6,7 +6,7 @@ use winapi::um::winuser::*;
 // https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 // Also useful:
 // https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
-pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Button {
+pub fn virtual_keycode_to_key(key_in: std::os::raw::c_int) -> Key {
     match key_in {
         VK_LBUTTON => LeftMouse,
         VK_RBUTTON => RightMouse,
