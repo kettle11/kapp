@@ -27,6 +27,14 @@ pub enum Event {
     MouseButtonUp {
         button: MouseButton,
     },
+    ScrollWheel {
+        delta: f32,
+    },
+    /// Only available on MacOS. Reports absolute position on trackpad.
+    TrackpadTouch {
+        x: f32,
+        y: f32,
+    },
     // ------------------- Window Events  ---------------------
     WindowMinimized {
         window_id: WindowId,

@@ -345,6 +345,7 @@ impl<'a> WindowBuilder<'a> {
                 owner: ns_view
                 userInfo:nil];
             let () = msg_send![ns_view, addTrackingArea: tracking_area];
+            let () = msg_send![ns_view, setAcceptsTouchEvents: YES];
 
             let () = msg_send![ns_window, setDelegate: window_delegate];
             let () = msg_send![ns_window, setContentView: ns_view];
@@ -411,6 +412,15 @@ impl Application {
         let ns_application = self.application_data.borrow().ns_application;
         unsafe {
             let () = msg_send![ns_application, terminate: nil];
+        }
+    }
+
+    pub fn set_mouse_position(&self, x: u32, y: u32) {
+        unsafe {
+            CGWarpMouseCursorPosition(CGPoint {
+                x: x as f64,
+                y: y as f64,
+            });
         }
     }
 

@@ -387,8 +387,84 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     self::produce_event(this, crate::Event::MouseButtonUp { button });
 }
 
+// https://developer.apple.com/documentation/appkit/nsresponder/1534192-scrollwheel?language=objc
+extern "C" fn scroll_wheel(this: &Object, _sel: Sel, event: *mut Object) {
+    let delta_y: CGFloat = unsafe { msg_send![event, scrollingDeltaY] };
+
+    self::produce_event(
+        this,
+        crate::Event::ScrollWheel {
+            delta: delta_y as f32,
+        },
+    );
+}
+
+extern "C" fn accepts_first_responder(_this: &Object, _sel: Sel) -> BOOL {
+    YES
+}
+
+// https://developer.apple.com/documentation/appkit/nsresponder/1531151-touchesbeganwithevent?language=objc
+extern "C" fn touches_began_with_event(this: &Object, _sel: Sel, event: *mut Object) {
+    unsafe {
+        let touches: *mut Object =
+            msg_send![event, touchesMatchingPhase:NSTouchPhaseBegan inView: this];
+
+        let array: *mut Object = msg_send![touches, allObjects];
+        let count: NSUInteger = msg_send![array, count];
+        for i in 0..count {
+            let touch: *mut Object = msg_send![array, objectAtIndex: i];
+            let position: NSPoint = msg_send![touch, normalizedPosition];
+            self::produce_event(
+                this,
+                crate::Event::TrackpadTouch {
+                    x: position.x as f32,
+                    y: position.y as f32,
+                },
+            );
+        }
+    }
+}
+
+// https://developer.apple.com/documentation/appkit/nsresponder/1531151-touchesbeganwithevent?language=objc
+extern "C" fn touches_moved_with_event(this: &Object, _sel: Sel, event: *mut Object) {
+    unsafe {
+        let touches: *mut Object =
+            msg_send![event, touchesMatchingPhase:NSTouchPhaseMoved inView: this];
+
+        let array: *mut Object = msg_send![touches, allObjects];
+        let count: NSUInteger = msg_send![array, count];
+        for i in 0..count {
+            let touch: *mut Object = msg_send![array, objectAtIndex: i];
+            let position: NSPoint = msg_send![touch, normalizedPosition];
+            self::produce_event(
+                this,
+                crate::Event::TrackpadTouch {
+                    x: position.x as f32,
+                    y: position.y as f32,
+                },
+            );
+        }
+    }
+}
+
 pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
+        decl.add_method(
+            sel!(touchesBeganWithEvent:),
+            touches_began_with_event as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(touchesMovedWithEvent:),
+            touches_moved_with_event as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(acceptsFirstResponder),
+            accepts_first_responder as extern "C" fn(&Object, Sel) -> BOOL,
+        );
+        decl.add_method(
+            sel!(scrollWheel:),
+            scroll_wheel as extern "C" fn(&Object, Sel, *mut Object),
+        );
         decl.add_method(
             sel!(otherMouseDown:),
             other_mouse_down as extern "C" fn(&Object, Sel, *mut Object),

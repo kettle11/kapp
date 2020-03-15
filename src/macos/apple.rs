@@ -294,3 +294,11 @@ pub const NX_DEVICERCMDKEYMASK: u64 = 0x10;
 
 pub const NSTerminateNow: NSUInteger = 1;
 //pub const NSTerminateCancel: NSUInteger = 0;
+
+pub const NSTouchPhaseBegan: NSUInteger = 1 << 0;
+pub const NSTouchPhaseMoved: NSUInteger = 1 << 1;
+
+#[link(name = "CoreGraphics", kind = "framework")]
+extern "C" {
+    pub fn CGWarpMouseCursorPosition(point: CGPoint) -> i32;
+}
