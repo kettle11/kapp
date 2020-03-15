@@ -340,32 +340,33 @@ fn main() {
 
     app.event_loop().run(move |event| unsafe {
         match event {
+            Event::WindowCloseRequested { .. } => app.quit(),
             Event::WindowResized { width, height, .. } => {
                 gl_context.update_target(); // Resizes the window buffer
                 screen_width = width;
                 screen_height = height;
             }
-            Event::ButtonDown { button } => match button {
-                Button::Left => {
+            Event::KeyDown { key } => match key {
+                Key::Left => {
                     left_held = true;
                     // This gives the player a little extra velocity when they hit a button.
                     // It helps make the controls feel more responsive.
                     player.velocity.1 -= player_ground_acceleration * 0.2;
                 }
-                Button::Right => {
+                Key::Right => {
                     right_held = true;
                     player.velocity.1 += player_ground_acceleration * 0.2;
                 }
-                Button::Space => {
+                Key::Space => {
                     if player.grounded {
                         player.velocity.1 += jump_power
                     }
                 } // Jump!
                 _ => {}
             },
-            Event::ButtonUp { button } => match button {
-                Button::Left => left_held = false,
-                Button::Right => right_held = false,
+            Event::KeyUp { key } => match key {
+                Key::Left => left_held = false,
+                Key::Right => right_held = false,
                 _ => {}
             },
             Event::Draw => {

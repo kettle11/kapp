@@ -13,8 +13,18 @@ fn main() {
     let mut gl_context_red = GLContext::new().build().unwrap();
 
     let gl = gl_context_blue.glow_context(); // Create a glow gl context for gl calls.
-    let window_red = app.new_window().title("Window Red").build().unwrap();
-    let window_blue = app.new_window().title("Window Blue").build().unwrap();
+    let window_red = app
+        .new_window()
+        .position(200, 200)
+        .title("Window Red")
+        .build()
+        .unwrap();
+    let window_blue = app
+        .new_window()
+        .position(400,400)
+        .title("Window Blue")
+        .build()
+        .unwrap();
 
     gl_context_blue.set_window(Some(&window_blue)).unwrap();
     gl_context_red.set_window(Some(&window_red)).unwrap();
@@ -43,12 +53,6 @@ fn main() {
                 }
             }
         }
-        Event::ButtonDown { button } => match button {
-            Button::Q => {
-                app.quit();
-            }
-            _ => {}
-        },
         Event::Draw => {
             if window_red.is_some() {
                 gl_context_red.make_current();

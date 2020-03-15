@@ -7,38 +7,35 @@ fn main() {
     let window = app.new_window().title("Window Controls").build().unwrap();
 
     app.event_loop().run(move |event| match event {
-        Event::ButtonDown { button } => match button {
-            Button::Digit1 => {
+        Event::KeyDown { key } => match key {
+            Key::Digit1 => {
                 window.set_position(0, 0);
             }
-            Button::Digit2 => {
+            Key::Digit2 => {
                 window.set_position(400, 0);
             }
-            Button::Digit3 => {
+            Key::Digit3 => {
                 window.set_position(800, 0);
             }
-            Button::A => {
+            Key::A => {
                 window.set_size(100, 100);
             }
-            Button::S => {
+            Key::S => {
                 window.set_size(400, 400);
             }
-            Button::D => {
+            Key::D => {
                 window.set_size(800, 800);
             }
-            Button::M => {
+            Key::M => {
                 window.minimize();
             }
-            Button::F => {
+            Key::F => {
                 window.fullscreen();
             }
-            Button::R => {
+            Key::R => {
                 window.restore();
             }
-            Button::C => {
-                window.close();
-            }
-            Button::Q => {
+            Key::Q => {
                 app.quit();
             }
             _ => {}
