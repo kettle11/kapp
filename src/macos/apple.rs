@@ -146,7 +146,7 @@ pub use NSOpenGLPixelFormatAttribute::*;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSOpenGLPFAOpenGLProfiles {
     NSOpenGLProfileVersion3_2Core = 0x3200,
-    // NSOpenGLProfileVersion4_1Core = 0x4100,
+    NSOpenGLProfileVersion4_1Core = 0x4100,
 }
 pub use NSOpenGLPFAOpenGLProfiles::*;
 

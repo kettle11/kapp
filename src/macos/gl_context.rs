@@ -15,7 +15,7 @@ impl GLContextBuilder {
         unsafe {
             let attrs = [
                 NSOpenGLPFAOpenGLProfile as u32,
-                NSOpenGLProfileVersion3_2Core as u32, // Needed if using opengl 3.2 you can comment this line out to use the old version.
+                NSOpenGLProfileVersion4_1Core as u32, // Needed if using opengl 3.2 you can comment this line out to use the old version.
                 NSOpenGLPFAColorSize as u32,
                 24,
                 NSOpenGLPFAAlphaSize as u32,
