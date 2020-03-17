@@ -302,3 +302,5 @@ pub const NSTouchPhaseMoved: NSUInteger = 1 << 1;
 extern "C" {
     pub fn CGWarpMouseCursorPosition(point: CGPoint) -> i32;
 }
+
+pub const NSEventModifierFlagCapsLock: NSUInteger = 1 << 16;

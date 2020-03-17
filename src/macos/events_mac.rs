@@ -260,9 +260,11 @@ extern "C" fn key_up(this: &Object, _sel: Sel, event: *mut Object) {
 
 // https://developer.apple.com/documentation/appkit/nsresponder/1527647-flagschanged?language=objc
 // This should be changed to keep track of the modifier state and only update if they were previously pressed.
+// Caps lock keyup events are only registered when the key switches to an off state.
 extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
-    fn get_modifier_state(modifier_flags: u64) -> [bool; 8] {
+    fn get_modifier_state(modifier_flags: u64) -> [bool; 9] {
         [
+            modifier_flags & NSEventModifierFlagCapsLock == NSEventModifierFlagCapsLock,
             modifier_flags & NX_DEVICELSHIFTKEYMASK == NX_DEVICELSHIFTKEYMASK,
             modifier_flags & NX_DEVICERSHIFTKEYMASK == NX_DEVICERSHIFTKEYMASK,
             modifier_flags & NX_DEVICELCTLKEYMASK == NX_DEVICELCTLKEYMASK,
@@ -275,7 +277,8 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
     }
 
     // These correspond to the modifier flag array.
-    const KEYS: [Key; 8] = [
+    const KEYS: [Key; 9] = [
+        Key::CapsLock,
         Key::LeftShift,
         Key::RightShift,
         Key::LeftControl,
