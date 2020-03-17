@@ -8,9 +8,11 @@ mod apple;
 
 mod events_mac;
 mod keys_mac;
+mod window_mac;
 
 mod gl_context;
 pub use gl_context::*;
 mod application_mac;
 
-pub use application_mac::{Application, EventLoop, Window, WindowId};
+pub use application_mac::{Application, EventLoop};
+pub use window_mac::{Window, WindowId};

@@ -1,8 +1,8 @@
 use super::apple::*;
 use super::application_mac::{
-    get_window_data, ApplicationData, ApplicationInstanceData, WindowId, WindowState,
-    INSTANCE_DATA_IVAR_ID,
+    get_window_data, ApplicationData, ApplicationInstanceData, INSTANCE_DATA_IVAR_ID,
 };
+use super::window_mac::{WindowId, WindowState};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -19,9 +19,7 @@ extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
             crate::Event::WindowMoved {
                 x: (frame.origin.x * backing_scale) as u32,
                 y: (frame.origin.y * backing_scale) as u32,
-                window_id: WindowId {
-                    ns_window: window_data.ns_window,
-                },
+                window_id: WindowId::new(window_data.ns_window),
             },
         );
     }
@@ -32,9 +30,7 @@ extern "C" fn window_did_miniaturize(this: &Object, _sel: Sel, _event: *mut Obje
     self::produce_event(
         this,
         Event::WindowMinimized {
-            window_id: WindowId {
-                ns_window: window_data.ns_window,
-            },
+            window_id: WindowId::new(window_data.ns_window),
         },
     );
 }
@@ -45,9 +41,7 @@ extern "C" fn window_did_deminiaturize(this: &Object, _sel: Sel, _event: *mut Ob
     self::produce_event(
         this,
         Event::WindowRestored {
-            window_id: WindowId {
-                ns_window: window_data.ns_window,
-            },
+            window_id: WindowId::new(window_data.ns_window),
         },
     );
 }
@@ -58,9 +52,7 @@ extern "C" fn window_did_enter_fullscreen(this: &Object, _sel: Sel, _event: *mut
     self::produce_event(
         this,
         Event::WindowFullscreened {
-            window_id: WindowId {
-                ns_window: window_data.ns_window,
-            },
+            window_id: WindowId::new(window_data.ns_window),
         },
     );
 }
@@ -70,12 +62,33 @@ extern "C" fn window_did_exit_fullscreen(this: &Object, _sel: Sel, _event: *mut 
     self::produce_event(
         this,
         Event::WindowRestored {
-            window_id: WindowId {
-                ns_window: window_data.ns_window,
-            },
+            window_id: WindowId::new(window_data.ns_window),
         },
     );
 }
+
+extern "C" fn window_will_start_live_resize(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window_data = get_window_data(this);
+
+    self::produce_event(
+        this,
+        crate::Event::WindowStartResize {
+            window_id: WindowId::new(window_data.ns_window),
+        },
+    );
+}
+
+extern "C" fn window_did_end_live_resize(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window_data = get_window_data(this);
+
+    self::produce_event(
+        this,
+        crate::Event::WindowEndResize {
+            window_id: WindowId::new(window_data.ns_window),
+        },
+    );
+}
+
 extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
 
@@ -87,9 +100,7 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
             crate::Event::WindowResized {
                 width: (frame.size.width * backing_scale) as u32,
                 height: (frame.size.height * backing_scale) as u32,
-                window_id: WindowId {
-                    ns_window: window_data.ns_window,
-                },
+                window_id: WindowId::new(window_data.ns_window),
             },
         );
     }
@@ -115,9 +126,7 @@ extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Objec
     self::produce_event(
         this,
         crate::Event::WindowGainedFocus {
-            window_id: WindowId {
-                ns_window: window_data.ns_window,
-            },
+            window_id: WindowId::new(window_data.ns_window),
         },
     );
 }
@@ -127,9 +136,7 @@ extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Objec
     self::produce_event(
         this,
         crate::Event::WindowLostFocus {
-            window_id: WindowId {
-                ns_window: window_data.ns_window,
-            },
+            window_id: WindowId::new(window_data.ns_window),
         },
     );
 }
@@ -139,9 +146,7 @@ extern "C" fn window_should_close(this: &Object, _sel: Sel, _event: *mut Object)
     self::produce_event(
         this,
         crate::Event::WindowCloseRequested {
-            window_id: WindowId {
-                ns_window: window_data.ns_window,
-            },
+            window_id: WindowId::new(window_data.ns_window),
         },
     );
     NO // No because the program must drop its handle to close the window.
@@ -178,6 +183,15 @@ pub fn add_window_events_to_decl(decl: &mut ClassDecl) {
             sel!(windowDidResize:),
             window_did_resize as extern "C" fn(&Object, Sel, *mut Object),
         );
+        decl.add_method(
+            sel!(windowWillStartLiveResize:),
+            window_will_start_live_resize as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(windowDidEndLiveResize:),
+            window_did_end_live_resize as extern "C" fn(&Object, Sel, *mut Object),
+        );
+
         decl.add_method(
             sel!(windowDidChangeBackingProperties:),
             window_did_change_backing_properties as extern "C" fn(&Object, Sel, *mut Object),

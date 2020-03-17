@@ -17,6 +17,7 @@ fn main() {
     app.event_loop().run(move |event| match event {
         Event::WindowCloseRequested { .. } => app.quit(),
         Event::WindowResized { .. } => gl_context.update_target(), // This call updates the window backbuffer to match the new window size.
+
         Event::Draw => {
             unsafe {
                 gl.clear_color(1.0, 0.0, color, 1.0);

@@ -8,6 +8,9 @@ pub struct GLContext {
     current_window: Option<Window>,
 }
 
+// This is not ok because Window is not thread safe.
+unsafe impl Send for GLContext {}
+
 pub struct GLContextBuilder {}
 
 impl GLContextBuilder {
@@ -72,7 +75,8 @@ impl GLContext {
     // Updates the backbuffer of the target when it resizes
     pub fn update_target(&self) {
         unsafe {
-            let () = msg_send![self.gl_context, update];
+            let update = sel!(update);
+            let () = msg_send![self.gl_context, performSelectorOnMainThread:update withObject:nil waitUntilDone:YES];
         }
     }
 

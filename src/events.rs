@@ -50,6 +50,12 @@ pub enum Event {
     WindowRestored {
         window_id: WindowId,
     },
+    WindowStartResize {
+        window_id: WindowId,
+    },
+    WindowEndResize {
+        window_id: WindowId,
+    },
     WindowResized {
         width: u32,
         height: u32,
