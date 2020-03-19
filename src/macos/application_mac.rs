@@ -1,11 +1,12 @@
 use super::apple::*;
 use super::window_mac::*;
+use crate::application_message::{ApplicationMessage, ApplicationMessage::*};
+use crate::Application;
 use crate::Event;
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::rc::Rc;
-
-pub type ProgramCallback = dyn 'static + FnMut(Event);
+use std::sync::mpsc;
 
 pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
 static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
@@ -19,39 +20,27 @@ pub fn get_window_data(this: &Object) -> &mut InnerWindowData {
     }
 }
 
-#[derive(Clone)]
-pub struct Application {
-    window_class: *const objc::runtime::Class,
-    view_class: *const objc::runtime::Class,
-    run_loop_custom_event_source: CFRunLoopSourceRef,
-    application_data: Rc<RefCell<ApplicationData>>,
-}
-
-impl Application {
-    pub fn get_window_class(&self) -> *const objc::runtime::Class {
-        self.window_class
-    }
-
-    pub fn get_view_class(&self) -> *const objc::runtime::Class {
-        self.view_class
-    }
-
-    pub fn get_application_data(&self) -> &Rc<RefCell<ApplicationData>> {
-        &self.application_data
-    }
-}
-
 // Global singleton data shared by all windows and the application struct.
 pub struct ApplicationData {
+    // Used to construct a new window
+    pub window_class: *const objc::runtime::Class,
+    pub view_class: *const objc::runtime::Class,
+
+    run_loop_custom_event_source: CFRunLoopSourceRef,
+
     frame_requested: bool,
     ns_application: *mut Object,
-    pub program_callback: Option<Box<ProgramCallback>>,
+    // pub program_callback: Option<Box<ProgramCallback>>,
     pub modifier_flags: u64, // Key modifier flags
     /// This is only used if an event is produced within the program_callback.
     /// For example if a window is minimized it produces a minimized event in the same
     /// call tree.
     pub event_queue: Vec<Event>,
+    program_to_application_receive: Option<mpsc::Receiver<ApplicationMessage>>,
+    pub callback_event_channel: Option<mpsc::Sender<Event>>,
+    pub windows: Vec<Box<InnerWindowData>>,
 }
+
 pub struct ApplicationInstanceData {
     pub application_data: Rc<RefCell<ApplicationData>>,
 }
@@ -80,9 +69,121 @@ fn application_delegate_declaration() -> *const objc::runtime::Class {
     decl.register()
 }
 
-pub struct ApplicationBuilder {}
-impl ApplicationBuilder {
-    pub fn build(&self) -> Result<Application, ()> {
+fn create_run_loop_source() -> CFRunLoopSourceRef {
+    extern "C" fn event_loop_proxy_handler(_: *mut std::ffi::c_void) {}
+
+    unsafe {
+        let rl = CFRunLoopGetMain();
+        let mut context: CFRunLoopSourceContext = std::mem::zeroed();
+        context.perform = Some(event_loop_proxy_handler);
+        let source =
+            CFRunLoopSourceCreate(std::ptr::null_mut(), CFIndex::max_value() - 1, &mut context);
+        CFRunLoopAddSource(rl, source, kCFRunLoopCommonModes);
+        CFRunLoopWakeUp(rl);
+        source
+    }
+}
+
+fn initialize_application(program_to_application_receive: mpsc::Receiver<ApplicationMessage>) {}
+
+pub fn process_events(application: &Rc<RefCell<ApplicationData>>) {
+    unsafe {
+        let events = application
+            .borrow_mut()
+            .program_to_application_receive
+            .take()
+            .unwrap();
+        for event in events.try_recv() {
+            match event {
+                MinimizeWindow { window } => {
+                    let () = msg_send![window.inner_window(), miniaturize: nil];
+                }
+                SetWindowPosition { window, x, y } => {
+                    let backing_scale: CGFloat =
+                        msg_send![window.inner_window(), backingScaleFactor];
+                    let () =
+                        msg_send![window.inner_window(), setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
+                }
+                SetWindowSize {
+                    window,
+                    width,
+                    height,
+                } => {
+                    let backing_scale: CGFloat =
+                        msg_send![window.inner_window(), backingScaleFactor];
+                    let () =
+                        msg_send![window.inner_window(), setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+                }
+                MaximizeWindow { .. } => {}
+                FullscreenWindow { window } => {
+                    let () = msg_send![window.inner_window(), toggleFullScreen: nil];
+                }
+                RestoreWindow { .. } => unimplemented!(),
+                DropWindow { .. } => unimplemented!(),
+                RequestFrame { .. } => application.borrow_mut().frame_requested = true,
+                SetMousePosition { x, y } => {
+                    CGWarpMouseCursorPosition(CGPoint {
+                        x: x as f64,
+                        y: y as f64,
+                    });
+                }
+                Quit => {
+                    let ns_application = application.borrow().ns_application;
+                    let () = msg_send![ns_application, terminate: nil];
+                }
+                NewWindow {
+                    window_parameters,
+                    response_channel,
+                } => {
+                    // This won't work because the application is already borrowed as mutable.
+                    let result = super::window_mac::build(
+                        window_parameters,
+                        &mut application.borrow_mut(),
+                        application,
+                    );
+                    response_channel.send(result).unwrap();
+                }
+            }
+        }
+
+        application.borrow_mut().program_to_application_receive = Some(events);
+    }
+}
+
+// At the end of a frame produce a draw event.
+extern "C" fn control_flow_end_handler(
+    _: CFRunLoopObserverRef,
+    _: CFRunLoopActivity,
+    observer_context_info: *mut std::ffi::c_void,
+) {
+    // println!("End handler");
+    unsafe {
+        let application = &*(observer_context_info as *mut Rc<RefCell<ApplicationData>>);
+
+        // Check for events
+        process_events(&application);
+        let mut application_data = application.borrow_mut();
+
+        if application_data.frame_requested {
+            if let Some(channel) = application_data.callback_event_channel.as_mut() {
+                channel.send(Event::Draw).unwrap();
+            }
+            application_data.frame_requested = false;
+        }
+    }
+}
+
+pub struct PlatformApplication {
+    application_data: Rc<RefCell<ApplicationData>>,
+    ns_application: *mut Object,
+}
+
+impl PlatformApplication {
+    pub fn new(
+        program_to_application_receive: mpsc::Receiver<
+            crate::application_message::ApplicationMessage,
+        >,
+    ) -> Self {
         unsafe {
             // let pool: *mut Object = unsafe { msg_send![class!(NSAutoreleasePool), new] };
 
@@ -101,43 +202,19 @@ impl ApplicationBuilder {
 
             let () = msg_send![ns_application, setDelegate: ns_application_delegate];
 
-            // At the end of a frame produce a draw event.
-            extern "C" fn control_flow_end_handler(
-                _: CFRunLoopObserverRef,
-                _: CFRunLoopActivity,
-                observer_context_info: *mut std::ffi::c_void,
-            ) {
-                unsafe {
-                    // This is a little awkward, but the application_data cannot be borrowed
-                    // while the program_callback is called as it may call functions that borrow application_data
-                    let (frame_requested, mut program_callback) = {
-                        let mut application_data = (*(observer_context_info
-                            as *mut Rc<RefCell<ApplicationData>>))
-                            .borrow_mut();
-                        let frame_requested = application_data.frame_requested;
-                        application_data.frame_requested = false;
-                        (frame_requested, application_data.program_callback.take())
-                    };
-
-                    if frame_requested {
-                        if let Some(program_callback) = program_callback.as_mut() {
-                            program_callback(Event::Draw);
-                        }
-                    }
-
-                    let mut application_data = (*(observer_context_info
-                        as *mut Rc<RefCell<ApplicationData>>))
-                        .borrow_mut();
-                    application_data.program_callback = program_callback;
-                }
-            }
+            let run_loop_custom_event_source = self::create_run_loop_source();
 
             let application_data = ApplicationData {
+                window_class: window_delegate_declaration(),
+                view_class: view_delegate_declaration(),
                 frame_requested: true, // Always request an initial frame
                 ns_application,
-                program_callback: None,
                 modifier_flags: 0,
                 event_queue: Vec::new(),
+                callback_event_channel: None,
+                windows: Vec::new(),
+                run_loop_custom_event_source,
+                program_to_application_receive: Some(program_to_application_receive),
             };
 
             let application_data = Rc::new(RefCell::new(application_data));
@@ -173,109 +250,40 @@ impl ApplicationBuilder {
             );
             CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 
-            let run_loop_custom_event_source = self::create_run_loop_source();
-
-            let app = Application {
-                window_class: window_delegate_declaration(),
-                view_class: view_delegate_declaration(),
-                run_loop_custom_event_source,
+            Self {
+                ns_application,
                 application_data,
-            };
-
-            Ok(app)
-        }
-    }
-}
-
-fn create_run_loop_source() -> CFRunLoopSourceRef {
-    extern "C" fn event_loop_proxy_handler(_: *mut std::ffi::c_void) {}
-
-    unsafe {
-        let rl = CFRunLoopGetMain();
-        let mut context: CFRunLoopSourceContext = std::mem::zeroed();
-        context.perform = Some(event_loop_proxy_handler);
-        let source =
-            CFRunLoopSourceCreate(std::ptr::null_mut(), CFIndex::max_value() - 1, &mut context);
-        CFRunLoopAddSource(rl, source, kCFRunLoopCommonModes);
-        CFRunLoopWakeUp(rl);
-        source
-    }
-}
-
-impl Application {
-    pub fn new() -> ApplicationBuilder {
-        ApplicationBuilder {}
-    }
-
-    pub fn new_window<'a>(&'a mut self) -> WindowBuilder<'a> {
-        WindowBuilder::new(self)
-    }
-
-    pub fn event_loop(&mut self) -> EventLoop {
-        EventLoop {
-            application_data: Rc::clone(&self.application_data),
+            }
         }
     }
 
-    pub fn request_frame(&mut self) {
-        let mut application_data = self.application_data.borrow_mut();
-        application_data.frame_requested = true;
-
-        self.wake_run_loop();
+    pub fn flush_events(&mut self) {
+        process_events(&self.application_data);
     }
 
-    pub fn quit(&self) {
-        let ns_application = self.application_data.borrow().ns_application;
-        unsafe {
-            let () = msg_send![ns_application, terminate: nil];
-        }
-    }
-
-    pub fn set_mouse_position(&self, x: u32, y: u32) {
-        unsafe {
-            CGWarpMouseCursorPosition(CGPoint {
-                x: x as f64,
-                y: y as f64,
-            });
-        }
-    }
-
-    // Wakes up the run loop giving it a chance to send a draw event at the end of the frame.
-    fn wake_run_loop(&self) {
-        unsafe {
-            CFRunLoopSourceSignal(self.run_loop_custom_event_source); // This line may not even be necessary.
-            let run_loop = CFRunLoopGetMain();
-            CFRunLoopWakeUp(run_loop);
-        }
-    }
-}
-
-// When the application is dropped, quit the program.
-impl Drop for Application {
-    fn drop(&mut self) {
-        self.quit();
-    }
-}
-
-pub struct EventLoop {
-    application_data: Rc<RefCell<ApplicationData>>,
-}
-
-impl EventLoop {
-    pub fn run<T>(&self, callback: T)
+    pub fn run<T>(self, application: &crate::Application, mut callback: T)
     where
-        T: 'static + FnMut(crate::Event),
+        T: 'static + FnMut(&mut Application, crate::Event) + Send,
     {
-        // The mutable borrow to application_data is dropped here before
-        // the rest of the program runs.
-        let ns_application = {
-            let mut application_data = self.application_data.borrow_mut();
-            application_data.program_callback = Some(Box::new(callback));
-            application_data.ns_application
-        };
+        let (send_event, receiver_channel) = mpsc::channel();
 
+        let (program_to_application_send, main_thread_id) = application.to_parts();
+        // The PlatformApplication holds the data required to respond to events until
+        // this function is called at which point it passes the callback and receive channel
+        // to another thread.
+        std::thread::spawn(move || {
+            let mut application =
+                Application::from_parts(program_to_application_send, main_thread_id);
+            while let Ok(event) = receiver_channel.recv() {
+                (callback)(&mut application, event)
+            }
+        });
+
+        self.application_data.borrow_mut().callback_event_channel = Some(send_event);
         unsafe {
-            let () = msg_send![ns_application, run];
+            let () = msg_send![self.ns_application, run];
         }
+
+        println!("HERE");
     }
 }

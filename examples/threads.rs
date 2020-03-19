@@ -89,10 +89,9 @@ fn setup(gl: &glow::Context) {
 fn main() {
     // Create a new application with default settings.
     let mut app = Application::new().build().unwrap();
-    let mut app_main = app.clone();
     let window = app
         .new_window()
-        .dimensions(20, 20)
+        .dimensions(200, 200)
         .title("Hello")
         .build()
         .unwrap();
@@ -114,6 +113,12 @@ fn main() {
         gl_context.make_current();
         while let Ok(event) = rx.recv() {
             match event {
+                Event::KeyDown { key } => match key {
+                    Key::M => {
+                        window.minimize();
+                    }
+                    _ => {}
+                },
                 Event::WindowResized { .. } => {
                     gl_context.update_target();
                     unsafe {
@@ -124,13 +129,15 @@ fn main() {
                     gl_context.swap_buffers(); // Swaps the currently bound window. Blocks if vSync is used
                                                //app.request_frame();, // This call updates the window backbuffer to match the new window size.
                 }
-                Event::Draw => {}
+                Event::Draw => {
+                    Application::wake();
+                }
                 _ => {}
             }
         }
     });
 
-    app_main.event_loop().run(move |event| match event {
+    app.event_loop().run(move |event| match event {
         Event::WindowCloseRequested { .. } => app.quit(),
         _ => tx.send(event).unwrap(),
     });

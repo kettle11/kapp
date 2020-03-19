@@ -1,5 +1,5 @@
 use super::apple::*;
-use super::Window;
+use crate::Window;
 use std::io::Error;
 
 pub struct GLContext {
@@ -60,9 +60,9 @@ impl GLContext {
 
     pub fn set_window(&mut self, window: Option<&Window>) -> Result<(), Error> {
         if let Some(window) = window {
-            let () = unsafe {
-                msg_send![self.gl_context, setView: window.inner_window_data.borrow().ns_view]
-            };
+            let window_view: *mut Object =
+                unsafe { msg_send![window.id.inner_window(), contentView] };
+            let () = unsafe { msg_send![self.gl_context, setView: window_view] };
             self.current_window = Some(window.clone());
         } else {
             let () = unsafe { msg_send![self.gl_context, clearDrawable] };

@@ -87,7 +87,7 @@ fn setup(gl: &glow::Context) {
 
 fn main() {
     // Create a new application with default settings.
-    let mut app = Application::new().build().unwrap();
+    let mut app = Application::new();
     let window = app.new_window().title("Hello").build().unwrap();
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
 
@@ -97,16 +97,19 @@ fn main() {
     setup(&gl);
 
     // Run forever
-    app.event_loop().run(move |event| match event {
-        Event::WindowCloseRequested { .. } => app.quit(),
+    app.run(move |app, event| match event {
+        // Event::WindowCloseRequested { .. } => app.quit(),
         Event::WindowResized { .. } => gl_context.update_target(), // This call updates the window backbuffer to match the new window size.
         Event::Draw => {
+            gl_context.make_current();
+
             unsafe {
                 gl.clear_color(0.0, 0.0, 0.0, 1.0);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                 gl.draw_arrays(TRIANGLES, 0, 3);
             }
             gl_context.swap_buffers(); // Swaps the currently bound window. Blocks if vSync is used
+                                       //    app.request_frame();
             app.request_frame();
         }
         _ => {}
