@@ -62,6 +62,7 @@ impl GLContext {
         if let Some(window) = window {
             let window_view: *mut Object =
                 unsafe { msg_send![window.id.inner_window(), contentView] };
+
             let () = unsafe { msg_send![self.gl_context, setView: window_view] };
             self.current_window = Some(window.clone());
         } else {

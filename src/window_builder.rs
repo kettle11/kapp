@@ -1,7 +1,8 @@
-use crate::{application_message::ApplicationMessage, Application, Window};
+use crate::{application_message::ApplicationMessage, Application, PlatformApplication, Window};
 use std::sync::mpsc;
 pub struct WindowBuilder<'a> {
     application: &'a mut Application,
+    platform_application: Option<&'a mut PlatformApplication>,
     window_parameters: WindowParameters,
 }
 
@@ -14,9 +15,13 @@ pub struct WindowParameters {
 }
 
 impl<'a> WindowBuilder<'a> {
-    pub fn new(application: &'a mut Application) -> Self {
+    pub fn new(
+        application: &'a mut Application,
+        platform_application: Option<&'a mut PlatformApplication>,
+    ) -> Self {
         Self {
             application,
+            platform_application,
             window_parameters: WindowParameters {
                 position: None,
                 dimensions: None,
@@ -56,9 +61,13 @@ impl<'a> WindowBuilder<'a> {
                 response_channel: sender,
             })
             .unwrap();
-        self.application.flush_events();
-        let result = receiver.recv().unwrap();
 
+        // If a PlatformApplication has been passed in then build is called from the main thread.
+        // In that case the platform application events must be flushed.
+        if let Some(platform_application) = self.platform_application.as_mut() {
+            platform_application.flush_events();
+        }
+        let result = receiver.recv().unwrap();
         result.map(|id| Window::new(id, self.application.program_to_application_send.clone()))
     }
 }

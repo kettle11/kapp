@@ -98,7 +98,7 @@ fn main() {
 
     // Run forever
     app.run(move |app, event| match event {
-        // Event::WindowCloseRequested { .. } => app.quit(),
+        Event::WindowCloseRequested { .. } => app.quit(),
         Event::WindowResized { .. } => gl_context.update_target(), // This call updates the window backbuffer to match the new window size.
         Event::Draw => {
             gl_context.make_current();

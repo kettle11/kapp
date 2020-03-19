@@ -106,25 +106,21 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
     }
 }
 
-fn get_backing_scale(this: &Object) -> CGFloat {
-    unsafe { msg_send![this, backingScaleFactor] }
-}
+extern "C" fn window_did_change_backing_properties(_this: &Object, _sel: Sel, _event: *mut Object) {
+    // unsafe {
+    // let window_data = get_window_data(this);
+    // let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
+    // let new_scale: CGFloat = msg_send![this, backingScaleFactor];
 
-extern "C" fn window_did_change_backing_properties(this: &Object, _sel: Sel, _event: *mut Object) {
-    unsafe {
-        let window_data = get_window_data(this);
-        let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
-        let new_scale: CGFloat = msg_send![this, backingScaleFactor];
-
-        // The color space could have changed, not the backing scale.
-        // So check here to make sure the scale has actually changed.
-        // However the check doesn't matter as no event is sent (yet!)
-        /*
-        if old_scale != new_scale {
-            window_data.backing_scale = new_scale;
-        }
-        */
+    // The color space could have changed, not the backing scale.
+    // So check here to make sure the scale has actually changed.
+    // However the check doesn't matter as no event is sent (yet!)
+    /*
+    if old_scale != new_scale {
+        window_data.backing_scale = new_scale;
     }
+    */
+    // }
 }
 
 extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Object) {

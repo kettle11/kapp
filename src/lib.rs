@@ -22,7 +22,7 @@ pub use windows::*;
 #[cfg(all(target_os = "macos"))]
 mod macos;
 #[cfg(all(target_os = "macos"))]
-pub use macos::{GLContext, PlatformApplication, WindowId};
+pub use macos::{GLContext, PlatformApplication, PlatformApplicationWaker, WindowId};
 
 #[cfg(target_arch = "wasm32")]
 mod web;

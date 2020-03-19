@@ -1,4 +1,4 @@
-use crate::{Window, WindowId};
+use crate::WindowId;
 use std::sync::mpsc;
 
 pub enum ApplicationMessage {

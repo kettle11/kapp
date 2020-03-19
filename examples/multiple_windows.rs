@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut app = Application::new().build().unwrap();
+    let mut app = Application::new();
 
     // Each of these GLContexts has their own separate resources.
     // They are separate contexts for interacting with OpenGL,
@@ -41,7 +41,7 @@ fn main() {
     // It's unclear how bad it is and more investigation is needed.
     // Additionally using two contexts means each context has different resources.
     // What approaches could be used for sharing?
-    app.event_loop().run(move |event| match event {
+    app.run(move |app, event| match event {
         Event::WindowCloseRequested { window_id } => {
             if let Some(window) = window_red.as_ref() {
                 if window.id == window_id {
@@ -59,8 +59,9 @@ fn main() {
             }
         }
         Event::Draw => {
+            gl_context.make_current();
             if window_red.is_some() {
-                gl_context.set_window(window_red.as_ref()).unwrap();
+                //gl_context.set_window(window_red.as_ref()).unwrap();
                 unsafe {
                     gl.clear_color(1.0, 0.0, 0.0, 1.0);
                     gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
@@ -68,15 +69,16 @@ fn main() {
                 }
             }
 
-            if window_blue.is_some() {
-                gl_context.set_window(window_blue.as_ref()).unwrap();
-                unsafe {
-                    gl.clear_color(0.0, 0.0, 1.0, 1.0);
-                    gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-                    gl_context.swap_buffers();
-                }
-            }
-
+            /*
+                        if window_blue.is_some() {
+                            gl_context.set_window(window_blue.as_ref()).unwrap();
+                            unsafe {
+                                gl.clear_color(0.0, 0.0, 1.0, 1.0);
+                                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+                                gl_context.swap_buffers();
+                            }
+                        }
+            */
             println!("{}", now.elapsed().as_millis());
             now = Instant::now();
             app.request_frame();

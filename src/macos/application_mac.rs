@@ -26,8 +26,6 @@ pub struct ApplicationData {
     pub window_class: *const objc::runtime::Class,
     pub view_class: *const objc::runtime::Class,
 
-    run_loop_custom_event_source: CFRunLoopSourceRef,
-
     frame_requested: bool,
     ns_application: *mut Object,
     // pub program_callback: Option<Box<ProgramCallback>>,
@@ -84,8 +82,6 @@ fn create_run_loop_source() -> CFRunLoopSourceRef {
     }
 }
 
-fn initialize_application(program_to_application_receive: mpsc::Receiver<ApplicationMessage>) {}
-
 pub fn process_events(application: &Rc<RefCell<ApplicationData>>) {
     unsafe {
         let events = application
@@ -120,7 +116,9 @@ pub fn process_events(application: &Rc<RefCell<ApplicationData>>) {
                 }
                 RestoreWindow { .. } => unimplemented!(),
                 DropWindow { .. } => unimplemented!(),
-                RequestFrame { .. } => application.borrow_mut().frame_requested = true,
+                RequestFrame { .. } => {
+                    application.borrow_mut().frame_requested = true;
+                }
                 SetMousePosition { x, y } => {
                     CGWarpMouseCursorPosition(CGPoint {
                         x: x as f64,
@@ -176,9 +174,11 @@ extern "C" fn control_flow_end_handler(
 pub struct PlatformApplication {
     application_data: Rc<RefCell<ApplicationData>>,
     ns_application: *mut Object,
+    run_loop_custom_event_source: CFRunLoopSourceRef,
 }
 
 impl PlatformApplication {
+    /// Only call from the main thread.
     pub fn new(
         program_to_application_receive: mpsc::Receiver<
             crate::application_message::ApplicationMessage,
@@ -213,7 +213,6 @@ impl PlatformApplication {
                 event_queue: Vec::new(),
                 callback_event_channel: None,
                 windows: Vec::new(),
-                run_loop_custom_event_source,
                 program_to_application_receive: Some(program_to_application_receive),
             };
 
@@ -253,27 +252,27 @@ impl PlatformApplication {
             Self {
                 ns_application,
                 application_data,
+                run_loop_custom_event_source,
             }
         }
     }
 
+    /// Only call from the main thread.
     pub fn flush_events(&mut self) {
         process_events(&self.application_data);
     }
 
-    pub fn run<T>(self, application: &crate::Application, mut callback: T)
+    /// Only call from the main thread.
+    pub fn run<T>(self, mut application: crate::Application, mut callback: T)
     where
         T: 'static + FnMut(&mut Application, crate::Event) + Send,
     {
         let (send_event, receiver_channel) = mpsc::channel();
 
-        let (program_to_application_send, main_thread_id) = application.to_parts();
         // The PlatformApplication holds the data required to respond to events until
         // this function is called at which point it passes the callback and receive channel
         // to another thread.
         std::thread::spawn(move || {
-            let mut application =
-                Application::from_parts(program_to_application_send, main_thread_id);
             while let Ok(event) = receiver_channel.recv() {
                 (callback)(&mut application, event)
             }
@@ -285,5 +284,28 @@ impl PlatformApplication {
         }
 
         println!("HERE");
+    }
+
+    pub fn get_waker(&self) -> PlatformApplicationWaker {
+        PlatformApplicationWaker {
+            run_loop_custom_event_source: self.run_loop_custom_event_source,
+        }
+    }
+}
+
+pub struct PlatformApplicationWaker {
+    run_loop_custom_event_source: CFRunLoopSourceRef,
+}
+
+unsafe impl Send for PlatformApplicationWaker {}
+
+impl PlatformApplicationWaker {
+    /// Call from any thread
+    pub fn wake(&self) {
+        unsafe {
+            CFRunLoopSourceSignal(self.run_loop_custom_event_source); // This line may not even be necessary.
+            let run_loop = CFRunLoopGetMain();
+            CFRunLoopWakeUp(run_loop);
+        }
     }
 }

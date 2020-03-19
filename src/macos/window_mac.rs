@@ -1,7 +1,5 @@
 use super::apple::*;
 use super::application_mac::{ApplicationData, INSTANCE_DATA_IVAR_ID};
-use crate::Application;
-use crate::Window;
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::rc::Rc;
