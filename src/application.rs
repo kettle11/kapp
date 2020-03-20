@@ -68,14 +68,11 @@ impl MainApplication {
     {
         // Async and other custom scenarios may take control of the event queue.
         // In that case don't start a receiver.
-        if let Some(receiver) = self.application_to_program_receive.take() {
-            // Platform specific code to run.
-            self.platform_application
-                .start_receiver(self.inner_application, callback, receiver);
-        }
-
+        // Platform specific code to run.
         self.platform_application
-            .start_application(self.application_to_program_send);
+            .start_receiver(self.inner_application, callback);
+
+        self.platform_application.start_application();
         unreachable!()
     }
 
