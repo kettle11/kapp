@@ -1,6 +1,7 @@
 use super::keys_web;
 use super::WindowId;
 use crate::events::*;
+use crate::Application;
 use crate::Key;
 use crate::MouseButton;
 use wasm_bindgen::prelude::*;
@@ -16,12 +17,19 @@ fn request_animation_frame(f: &Closure<dyn FnMut()>) {
         .expect("should register `requestAnimationFrame` OK");
 }
 
-static mut CALLBACK: Option<Box<dyn FnMut(Event)>> = None;
+static mut CALLBACK: Option<Box<dyn FnMut(&mut Application, Event)>> = None;
+static mut APPLICATION: Option<Box<Application>> = None;
 static mut REQUEST_ANIMATION_FRAME_CLOSURE: Option<Closure<dyn FnMut()>> = None;
 
-pub fn run<T>(callback: T)
+fn send_event(event: Event) {
+    unsafe {
+        (CALLBACK.as_mut().unwrap())(APPLICATION.as_mut().unwrap(), event);
+    }
+}
+
+pub fn run<T>(application: Application, callback: T)
 where
-    T: 'static + FnMut(Event),
+    T: 'static + FnMut(&mut Application, crate::Event),
 {
     let document = web_sys::window().unwrap().document().unwrap();
     let canvas = document
@@ -34,6 +42,7 @@ where
     // An alternative approach is documented here: https://rustwasm.github.io/docs/wasm-bindgen/examples/request-animation-frame.html
     // It may be better, but for now I found the following simpler to understand and implement.
     unsafe {
+        APPLICATION = Some(Box::new(application));
         CALLBACK = Some(Box::new(Box::new(callback)));
         {
             let canvas = canvas.clone();
@@ -44,14 +53,14 @@ where
                 {
                     canvas.set_width(canvas_client_width);
                     canvas.set_height(canvas_client_height);
-                    (CALLBACK.as_mut().unwrap())(Event::WindowResized {
+                    send_event(Event::WindowResized {
                         width: canvas_client_width,
                         height: canvas_client_height,
                         window_id: WindowId {},
                     });
                 }
 
-                (CALLBACK.as_mut().unwrap())(Event::Draw);
+                send_event(Event::Draw);
                 // request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap())
             })
                 as Box<dyn FnMut()>));
@@ -59,7 +68,7 @@ where
 
         // Mouse move event
         let mouse_move = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            (CALLBACK.as_mut().unwrap())(Event::MouseMoved {
+            send_event(Event::MouseMoved {
                 x: event.client_x() as f32,
                 y: event.client_y() as f32,
             });
@@ -69,7 +78,7 @@ where
 
         // Mouse down event
         let mouse_down = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            (CALLBACK.as_mut().unwrap())(Event::MouseButtonDown {
+            send_event(Event::MouseButtonDown {
                 button: match event.button() {
                     0 => MouseButton::Left,
                     1 => MouseButton::Middle,
@@ -85,7 +94,7 @@ where
 
         // Mouse up event
         let mouse_up = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            (CALLBACK.as_mut().unwrap())(Event::MouseButtonUp {
+            send_event(Event::MouseButtonUp {
                 button: match event.button() {
                     0 => MouseButton::Left,
                     1 => MouseButton::Middle,
@@ -111,7 +120,7 @@ where
                 }
             };
 
-            (CALLBACK.as_mut().unwrap())(key_event);
+            send_event(key_event);
             event
                 .dyn_into::<web_sys::Event>()
                 .unwrap()
@@ -122,7 +131,7 @@ where
 
         // Key up event
         let keyup = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-            (CALLBACK.as_mut().unwrap())(Event::KeyUp {
+            send_event(Event::KeyUp {
                 key: keys_web::virtual_keycode_to_key(&event.code()),
             });
             event

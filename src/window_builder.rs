@@ -54,6 +54,7 @@ impl<'a> WindowBuilder<'a> {
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn build(&mut self) -> Result<Window, ()> {
         let (sender, receiver) = mpsc::channel();
         self.application
@@ -70,5 +71,13 @@ impl<'a> WindowBuilder<'a> {
         }
         let result = receiver.recv().unwrap();
         result.map(|id| Window::new(id, self.application.platform_channel.clone()))
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn build(&mut self) -> Result<Window, ()> {
+        Ok(Window::new(
+            crate::WindowId {},
+            self.application.platform_channel.clone(),
+        ))
     }
 }

@@ -47,6 +47,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     where
         T: 'static + FnMut(&mut Application, crate::Event),
     {
+        super::event_loop_web::run(application, callback);
     }
 
     /// Only call from the main thread.
@@ -69,5 +70,10 @@ impl PlatformWakerTrait for PlatformWaker {
 pub struct PlatformChannel {}
 
 impl PlatformChannelTrait for PlatformChannel {
-    fn send(&mut self, message: crate::application_message::ApplicationMessage) {}
+    fn send(&mut self, message: crate::application_message::ApplicationMessage) {
+        match message {
+            ApplicationMessage::RequestFrame => super::event_loop_web::request_frame(),
+            _ => {}
+        }
+    }
 }

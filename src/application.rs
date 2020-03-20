@@ -62,7 +62,7 @@ impl MainApplication {
 
     // Same as above but does not require Send
     #[cfg(target_arch = "wasm32")]
-    pub fn run<T>(mut self, callback: T) -> !
+    pub fn run<T>(mut self, callback: T)
     where
         T: 'static + FnMut(&mut Application, crate::Event),
     {
@@ -73,7 +73,6 @@ impl MainApplication {
             .start_receiver(self.inner_application, callback);
 
         self.platform_application.start_application();
-        unreachable!()
     }
 
     pub fn quit(&mut self) {
