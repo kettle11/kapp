@@ -1,7 +1,5 @@
-use crate::platform_traits::PlatformApplicationTrait;
-use crate::platform_traits::PlatformChannelTrait;
-use crate::{application_message::ApplicationMessage, Application, PlatformApplication, Window};
-use std::sync::mpsc;
+use crate::{Application, PlatformApplication, Window};
+
 pub struct WindowBuilder<'a> {
     application: &'a mut Application,
     platform_application: Option<&'a mut PlatformApplication>,
@@ -56,6 +54,9 @@ impl<'a> WindowBuilder<'a> {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn build(&mut self) -> Result<Window, ()> {
+        use crate::application_message::ApplicationMessage;
+        use crate::platform_traits::{PlatformApplicationTrait, PlatformChannelTrait};
+
         let (sender, receiver) = mpsc::channel();
         self.application
             .platform_channel

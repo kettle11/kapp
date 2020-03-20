@@ -1,32 +1,6 @@
-use crate::application_message::{ApplicationMessage, ApplicationMessage::*};
+use crate::application_message::ApplicationMessage::*;
 use crate::platform_traits::*;
-use crate::{Application, Event};
-use std::sync::mpsc::*;
-
-pub fn process_events(event_receiver: Receiver<ApplicationMessage>) {
-    while let Ok(event) = event_receiver.try_recv() {
-        match event {
-            MinimizeWindow { window } => {}
-            SetWindowPosition { window, x, y } => {}
-            SetWindowSize {
-                window,
-                width,
-                height,
-            } => {}
-            MaximizeWindow { .. } => {}
-            FullscreenWindow { window } => {}
-            RestoreWindow { .. } => unimplemented!(),
-            DropWindow { .. } => unimplemented!(),
-            RequestFrame { .. } => {}
-            SetMousePosition { x, y } => {}
-            Quit => {}
-            NewWindow {
-                window_parameters,
-                response_channel,
-            } => {}
-        }
-    }
-}
+use crate::Application;
 
 pub struct PlatformApplication {}
 
@@ -43,7 +17,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn flush_events(&mut self) {}
 
     /// Only call from the main thread.
-    fn start_receiver<T>(&mut self, mut application: crate::Application, mut callback: T)
+    fn start_receiver<T>(&mut self, application: crate::Application, callback: T)
     where
         T: 'static + FnMut(&mut Application, crate::Event),
     {
@@ -72,8 +46,17 @@ pub struct PlatformChannel {}
 impl PlatformChannelTrait for PlatformChannel {
     fn send(&mut self, message: crate::application_message::ApplicationMessage) {
         match message {
-            ApplicationMessage::RequestFrame => super::event_loop_web::request_frame(),
-            _ => {}
+            RequestFrame => super::event_loop_web::request_frame(),
+            SetWindowPosition { .. } => {}
+            SetWindowSize { .. } => {}
+            MinimizeWindow { .. } => {}
+            MaximizeWindow { .. } => {}
+            FullscreenWindow { .. } => super::event_loop_web::request_fullscreen(),
+            RestoreWindow { .. } => unimplemented!(),
+            DropWindow { .. } => {}
+            SetMousePosition { .. } => unimplemented!(),
+            NewWindow { .. } => {}
+            Quit => {}
         }
     }
 }

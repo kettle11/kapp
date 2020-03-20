@@ -2,7 +2,6 @@ use super::keys_web;
 use super::WindowId;
 use crate::events::*;
 use crate::Application;
-use crate::Key;
 use crate::MouseButton;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -11,15 +10,10 @@ fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
 }
 
-fn request_animation_frame(f: &Closure<dyn FnMut()>) {
-    window()
-        .request_animation_frame(f.as_ref().unchecked_ref())
-        .expect("should register `requestAnimationFrame` OK");
-}
-
 static mut CALLBACK: Option<Box<dyn FnMut(&mut Application, Event)>> = None;
 static mut APPLICATION: Option<Box<Application>> = None;
 static mut REQUEST_ANIMATION_FRAME_CLOSURE: Option<Closure<dyn FnMut()>> = None;
+static mut REQUEST_FULLSCREEN_CLOSURE: Option<Closure<dyn FnMut()>> = None;
 
 fn send_event(event: Event) {
     unsafe {
@@ -64,6 +58,11 @@ where
                 // request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap())
             })
                 as Box<dyn FnMut()>));
+
+            REQUEST_FULLSCREEN_CLOSURE =
+                Some(Closure::wrap(
+                    Box::new(move || println!("Fullscreened?")) as Box<dyn FnMut()>
+                ));
         }
 
         // Mouse move event
@@ -146,8 +145,25 @@ where
     }
 }
 
+fn request_animation_frame(f: &Closure<dyn FnMut()>) {
+    window()
+        .request_animation_frame(f.as_ref().unchecked_ref())
+        .expect("should register `requestAnimationFrame` OK");
+}
+
 pub fn request_frame() {
     unsafe {
         request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap());
     }
+}
+
+pub fn request_fullscreen() {
+    let document = web_sys::window().unwrap().document().unwrap();
+    let canvas = document
+        .get_element_by_id("canvas")
+        .unwrap()
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .unwrap();
+
+    canvas.request_fullscreen().unwrap();
 }

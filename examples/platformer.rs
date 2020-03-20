@@ -135,7 +135,7 @@ fn main() {
         gl.enable(SCISSOR_TEST);
     }
 
-    let window = app
+    let mut window = app
         .new_window()
         .dimensions(screen_width, screen_height)
         .build()
@@ -362,6 +362,7 @@ fn main() {
                         player.velocity.1 += jump_power
                     }
                 } // Jump!
+                Key::F => window.fullscreen(),
                 _ => {}
             },
             Event::KeyUp { key } => match key {
