@@ -123,7 +123,7 @@ fn rect_overlap(rect0: &Rect, rect1: &Rect) -> Option<(f32, f32)> {
 
 fn main() {
     // Create a new application with default settings.
-    let mut app = Application::new().build().unwrap();
+    let mut app = Application::new();
 
     let mut screen_width = 1200;
     let mut screen_height = 1200;
@@ -338,7 +338,7 @@ fn main() {
     let mut right_held = false;
     let mut left_held = false;
 
-    app.event_loop().run(move |event| unsafe {
+    app.run(move |app, event| unsafe {
         match event {
             Event::WindowCloseRequested { .. } => app.quit(),
             Event::WindowResized { width, height, .. } => {
@@ -370,6 +370,8 @@ fn main() {
                 _ => {}
             },
             Event::Draw => {
+                gl_context.make_current();
+
                 // First update the world
 
                 // It feels incorrect if the player can control too tightly while jumping, so change air acceleration here.
@@ -432,8 +434,8 @@ fn main() {
                 gl.clear_color(black.0, black.1, black.2, black.3);
                 gl.clear(COLOR_BUFFER_BIT);
 
-                let scale = window.backing_scale();
-                // Draw the background!
+                let scale = 1.0; //window.backing_scale();
+                                 // Draw the background!
                 for block in background_blocks.iter() {
                     draw_rect(&gl, &block.rect, &block.color, scale);
                 }

@@ -1,22 +1,19 @@
-use crate::application_message::ApplicationMessage;
 use crate::application_message::ApplicationMessage::*;
-use crate::{PlatformApplication, PlatformApplicationWaker};
-use std::sync::mpsc::*;
+use crate::platform_traits::*;
+use crate::{PlatformApplication, PlatformChannel, PlatformWaker};
 
+#[derive(Clone)]
 pub struct Application {
-    pub program_to_application_send: Sender<ApplicationMessage>,
-    pub application_waker: PlatformApplicationWaker,
+    pub platform_channel: PlatformChannel,
+    pub application_waker: PlatformWaker,
 }
 
 impl Application {
     pub fn new() -> MainApplication {
-        let (program_to_application_send, program_to_application_receive) =
-            channel::<ApplicationMessage>();
-
-        let platform_application = PlatformApplication::new(program_to_application_receive);
+        let (platform_channel, platform_application) = PlatformApplication::new();
         MainApplication {
             inner_application: Application {
-                program_to_application_send,
+                platform_channel,
                 application_waker: platform_application.get_waker(),
             },
             platform_application,
@@ -24,18 +21,16 @@ impl Application {
     }
 
     pub fn request_frame(&mut self) {
-        self.program_to_application_send.send(RequestFrame).unwrap();
+        self.platform_channel.send(RequestFrame);
         self.application_waker.wake();
     }
 
-    pub fn quit(&self) {
-        self.program_to_application_send.send(Quit).unwrap();
+    pub fn quit(&mut self) {
+        self.platform_channel.send(Quit);
     }
 
-    pub fn set_mouse_position(&self, x: u32, y: u32) {
-        self.program_to_application_send
-            .send(SetMousePosition { x, y })
-            .unwrap();
+    pub fn set_mouse_position(&mut self, x: u32, y: u32) {
+        self.platform_channel.send(SetMousePosition { x, y });
     }
 
     pub fn new_window(&mut self) -> crate::window_builder::WindowBuilder {
@@ -45,27 +40,50 @@ impl Application {
 
 /// An application handle only accessible from the main thread.
 pub struct MainApplication {
-    inner_application: Application,
-    platform_application: PlatformApplication,
+    pub inner_application: Application, // Shouldn't be public
+    pub platform_application: PlatformApplication, // Shouldn't be public
 }
 
 impl MainApplication {
-    /// This will never return.
-    pub fn run<T>(self, callback: T) -> !
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn run<T>(mut self, callback: T) -> !
     where
         T: 'static + FnMut(&mut Application, crate::Event) + Send,
     {
+        // Async and other custom scenarios may take control of the event queue.
+        // In that case don't start a receiver.
         // Platform specific code to run.
         self.platform_application
-            .run(self.inner_application, callback);
+            .start_receiver(self.inner_application, callback);
+
+        self.platform_application.start_application();
         unreachable!()
     }
 
-    pub fn quit(&self) {
+    // Same as above but does not require Send
+    #[cfg(target_arch = "wasm32")]
+    pub fn run<T>(mut self, callback: T) -> !
+    where
+        T: 'static + FnMut(&mut Application, crate::Event),
+    {
+        // Async and other custom scenarios may take control of the event queue.
+        // In that case don't start a receiver.
+        if let Some(receiver) = self.application_to_program_receive.take() {
+            // Platform specific code to run.
+            self.platform_application
+                .start_receiver(self.inner_application, callback, receiver);
+        }
+
+        self.platform_application
+            .start_application(self.application_to_program_send);
+        unreachable!()
+    }
+
+    pub fn quit(&mut self) {
         self.inner_application.quit()
     }
 
-    pub fn set_mouse_position(&self, x: u32, y: u32) {
+    pub fn set_mouse_position(&mut self, x: u32, y: u32) {
         self.inner_application.set_mouse_position(x, y)
     }
 

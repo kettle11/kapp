@@ -1,14 +1,15 @@
-//mod async_application;
 mod application;
 mod application_message;
+//mod async_application;
 mod events;
 mod keys;
 mod mouse_buttons;
+mod platform_traits;
 mod window;
 mod window_builder;
 
+pub use application::{Application, MainApplication};
 //pub use async_application::*;
-pub use application::Application;
 pub use events::*;
 pub use keys::Key;
 pub use mouse_buttons::MouseButton;
@@ -22,7 +23,7 @@ pub use windows::*;
 #[cfg(all(target_os = "macos"))]
 mod macos;
 #[cfg(all(target_os = "macos"))]
-pub use macos::{GLContext, PlatformApplication, PlatformApplicationWaker, WindowId};
+pub use macos::{GLContext, PlatformApplication, PlatformChannel, PlatformWaker, WindowId};
 
 #[cfg(target_arch = "wasm32")]
 mod web;

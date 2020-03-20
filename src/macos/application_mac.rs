@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::ffi::c_void;
 use std::rc::Rc;
 use std::sync::mpsc;
+use std::sync::mpsc::*;
 
 pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
 static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
@@ -89,7 +90,8 @@ pub fn process_events(application: &Rc<RefCell<ApplicationData>>) {
             .program_to_application_receive
             .take()
             .unwrap();
-        for event in events.try_recv() {
+
+        while let Ok(event) = events.try_recv() {
             match event {
                 MinimizeWindow { window } => {
                     let () = msg_send![window.inner_window(), miniaturize: nil];
@@ -170,23 +172,28 @@ extern "C" fn control_flow_end_handler(
         }
     }
 }
+use crate::platform_traits::{PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait};
 
 pub struct PlatformApplication {
     application_data: Rc<RefCell<ApplicationData>>,
     ns_application: *mut Object,
     run_loop_custom_event_source: CFRunLoopSourceRef,
+    event_send_channel: Sender<Event>,
+    event_receive_channel: Option<Receiver<Event>>,
+}
+#[derive(Clone)]
+pub struct PlatformWaker {
+    run_loop_custom_event_source: CFRunLoopSourceRef,
 }
 
-impl PlatformApplication {
-    /// Only call from the main thread.
-    pub fn new(
-        program_to_application_receive: mpsc::Receiver<
-            crate::application_message::ApplicationMessage,
-        >,
-    ) -> Self {
-        unsafe {
-            // let pool: *mut Object = unsafe { msg_send![class!(NSAutoreleasePool), new] };
+unsafe impl Send for PlatformWaker {}
 
+impl PlatformApplicationTrait for PlatformApplication {
+    type PlatformWaker = PlatformWaker;
+    type PlatformChannel = PlatformChannel;
+
+    fn new() -> (Self::PlatformChannel, Self) {
+        unsafe {
             let ns_application: *mut Object = msg_send![class!(NSApplication), sharedApplication];
 
             let () = msg_send![
@@ -194,6 +201,9 @@ impl PlatformApplication {
                 setActivationPolicy:
                     NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular
             ];
+
+            let (sender, receiver) = mpsc::channel();
+            let platform_channel = PlatformChannel { sender };
 
             // Setup the application delegate to handle application events.
             let ns_application_delegate_class = application_delegate_declaration();
@@ -213,7 +223,7 @@ impl PlatformApplication {
                 event_queue: Vec::new(),
                 callback_event_channel: None,
                 windows: Vec::new(),
-                program_to_application_receive: Some(program_to_application_receive),
+                program_to_application_receive: Some(receiver),
             };
 
             let application_data = Rc::new(RefCell::new(application_data));
@@ -249,63 +259,67 @@ impl PlatformApplication {
             );
             CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 
-            Self {
-                ns_application,
-                application_data,
-                run_loop_custom_event_source,
-            }
+            let (event_send_channel, event_receive_channel) = channel();
+            (
+                platform_channel,
+                Self {
+                    ns_application,
+                    application_data,
+                    run_loop_custom_event_source,
+                    event_send_channel,
+                    event_receive_channel: Some(event_receive_channel),
+                },
+            )
         }
     }
 
-    /// Only call from the main thread.
-    pub fn flush_events(&mut self) {
+    fn flush_events(&mut self) {
         process_events(&self.application_data);
     }
 
-    /// Only call from the main thread.
-    pub fn run<T>(self, mut application: crate::Application, mut callback: T)
+    fn start_receiver<T>(&mut self, mut application: crate::Application, mut callback: T)
     where
         T: 'static + FnMut(&mut Application, crate::Event) + Send,
     {
-        let (send_event, receiver_channel) = mpsc::channel();
-
-        // The PlatformApplication holds the data required to respond to events until
-        // this function is called at which point it passes the callback and receive channel
-        // to another thread.
+        let receive_channel = self.event_receive_channel.take().unwrap();
         std::thread::spawn(move || {
-            while let Ok(event) = receiver_channel.recv() {
+            while let Ok(event) = receive_channel.recv() {
                 (callback)(&mut application, event)
             }
         });
+    }
 
-        self.application_data.borrow_mut().callback_event_channel = Some(send_event);
+    fn start_application(self) {
+        self.application_data.borrow_mut().callback_event_channel = Some(self.event_send_channel);
         unsafe {
             let () = msg_send![self.ns_application, run];
         }
-
-        println!("HERE");
     }
 
-    pub fn get_waker(&self) -> PlatformApplicationWaker {
-        PlatformApplicationWaker {
+    fn get_waker(&self) -> Self::PlatformWaker {
+        Self::PlatformWaker {
             run_loop_custom_event_source: self.run_loop_custom_event_source,
         }
     }
 }
 
-pub struct PlatformApplicationWaker {
-    run_loop_custom_event_source: CFRunLoopSourceRef,
-}
-
-unsafe impl Send for PlatformApplicationWaker {}
-
-impl PlatformApplicationWaker {
-    /// Call from any thread
-    pub fn wake(&self) {
+impl PlatformWakerTrait for PlatformWaker {
+    fn wake(&self) {
         unsafe {
-            CFRunLoopSourceSignal(self.run_loop_custom_event_source); // This line may not even be necessary.
+            //CFRunLoopSourceSignal(self.run_loop_custom_event_source); // This line may not even be necessary.
             let run_loop = CFRunLoopGetMain();
             CFRunLoopWakeUp(run_loop);
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct PlatformChannel {
+    sender: Sender<ApplicationMessage>,
+}
+
+impl PlatformChannelTrait for PlatformChannel {
+    fn send(&mut self, message: crate::application_message::ApplicationMessage) {
+        self.sender.send(message).unwrap();
     }
 }

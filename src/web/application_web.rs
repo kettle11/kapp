@@ -1,90 +1,70 @@
-use std::io::Error;
+use crate::application_message::{ApplicationMessage, ApplicationMessage::*};
+use crate::{Application, Event};
+use std::sync::mpsc::*;
 
-pub struct Window {
-    pub id: WindowId,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct WindowId {}
-
-pub struct WindowBuilder<'a> {
-    _application: &'a Application,
-}
-
-impl<'a> WindowBuilder<'a> {
-    pub fn build(&self) -> Result<Window, Error> {
-        Ok(Window { id: WindowId {} })
-    }
-    pub fn title(&mut self, _title: &'a str) -> &mut Self {
-        self
-    }
-    pub fn position(&mut self, _x: u32, _y: u32) -> &mut Self {
-        self
-    }
-    pub fn dimensions(&mut self, _width: u32, _height: u32) -> &mut Self {
-        self
-    }
-}
-
-pub struct ApplicationBuilder {}
-
-impl ApplicationBuilder {
-    pub fn build(&self) -> Result<Application, Error> {
-        Ok(Application {
-            window_constructed: false,
-        })
-    }
-}
-
-// Clone should not be public
-#[derive(Clone)]
-
-pub struct Application {
-    window_constructed: bool,
-}
-
-impl Application {
-    pub fn new() -> ApplicationBuilder {
-        ApplicationBuilder {}
-    }
-
-    pub fn new_window<'a>(&'a mut self) -> WindowBuilder<'a> {
-        if self.window_constructed {
-            // Only one 'window' matters on web, should some sort of warning be issued here?
+pub fn process_events(event_receiver: Receiver<ApplicationMessage>) {
+    while let Ok(event) = event_receiver.try_recv() {
+        match event {
+            MinimizeWindow { window } => {}
+            SetWindowPosition { window, x, y } => {}
+            SetWindowSize {
+                window,
+                width,
+                height,
+            } => {}
+            MaximizeWindow { .. } => {}
+            FullscreenWindow { window } => {}
+            RestoreWindow { .. } => unimplemented!(),
+            DropWindow { .. } => unimplemented!(),
+            RequestFrame { .. } => {}
+            SetMousePosition { x, y } => {}
+            Quit => {}
+            NewWindow {
+                window_parameters,
+                response_channel,
+            } => {}
         }
-        self.window_constructed = true;
-        WindowBuilder { _application: self }
-    }
-
-    pub fn quit(&self) {}
-
-    pub fn event_loop(&mut self) -> EventLoop {
-        EventLoop {}
-    }
-
-    pub fn request_frame(&mut self) {
-        super::event_loop_web::request_frame();
     }
 }
 
-pub struct EventLoop {}
+pub struct PlatformApplication {}
 
-impl EventLoop {
-    pub fn run<T>(&self, callback: T)
-    where
-        T: 'static + FnMut(crate::Event),
+impl PlatformApplication {
+    /// Only call from the main thread.
+    pub fn new(
+        program_to_application_receive: Receiver<crate::application_message::ApplicationMessage>,
+    ) -> Self {
+        Self {}
+    }
+
+    /// Only call from the main thread.
+    pub fn flush_events(&mut self) {}
+
+    /// Only call from the main thread.
+    pub fn start_receiver<T>(
+        &self,
+        mut application: crate::Application,
+        mut callback: T,
+        receive_channel: Receiver<crate::Event>,
+    ) where
+        T: 'static + FnMut(&mut Application, crate::Event),
     {
-        super::event_loop_web::run(callback);
+    }
+
+    /// Only call from the main thread.
+    pub fn start_application(self, send_channel: Sender<crate::Event>) {
+        
+    }
+
+    pub fn get_waker(&self) -> PlatformApplicationWaker {
+        PlatformApplicationWaker {}
     }
 }
 
-impl Window {
-    /// Returns the window from a fullscreen
-    pub fn restore(&self) {
-        unimplemented!()
-    }
+#[derive(Clone)]
+pub struct PlatformApplicationWaker {}
 
-    pub fn fullscreen(&self) {
-        unimplemented!()
-    }
+impl PlatformApplicationWaker {
+    /// Call from any thread
+    pub fn wake(&self) {}
 }

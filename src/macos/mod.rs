@@ -14,5 +14,5 @@ mod gl_context;
 pub use gl_context::*;
 mod application_mac;
 
-pub use application_mac::{PlatformApplication, PlatformApplicationWaker};
+pub use application_mac::{PlatformApplication, PlatformChannel, PlatformWaker};
 pub use window_mac::WindowId;

@@ -8,4 +8,7 @@ mod keys_web;
 pub use event_loop_web::run;
 pub use gl_context_web::GLContext;
 pub mod application_web;
-pub use application_web::{Application, Window, WindowBuilder, WindowId};
+pub use application_web::{PlatformApplication, PlatformApplicationWaker};
+
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+pub struct WindowId {}

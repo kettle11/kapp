@@ -1,10 +1,13 @@
-use super::Window;
+use crate::Window;
 use std::io::Error;
 use wasm_bindgen::JsCast;
 
 pub struct GLContext {
     webgl_context: web_sys::WebGlRenderingContext,
 }
+
+// This is fine because web is single threaded.
+unsafe impl Send for GLContext {}
 
 pub struct GLContextBuilder {}
 
