@@ -52,10 +52,12 @@ impl<'a> WindowBuilder<'a> {
         self
     }
 
+    // Web doesn't require any of this more complex window building behavior.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn build(&mut self) -> Result<Window, ()> {
         use crate::application_message::ApplicationMessage;
         use crate::platform_traits::{PlatformApplicationTrait, PlatformChannelTrait};
+        use std::sync::mpsc;
 
         let (sender, receiver) = mpsc::channel();
         self.application
