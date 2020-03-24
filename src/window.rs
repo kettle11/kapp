@@ -22,7 +22,10 @@ impl Window {
             .send(MinimizeWindow { window: self.id });
     }
 
-    pub fn maximize(&mut self) {}
+    pub fn maximize(&mut self) {
+        self.platform_channel
+            .send(MaximizeWindow { window: self.id });
+    }
 
     /// Returns the window from a minimized or maximized state.
     pub fn restore(&mut self) {
