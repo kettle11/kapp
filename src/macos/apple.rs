@@ -55,7 +55,7 @@ extern "C" {
     pub fn CFRunLoopAddSource(rl: CFRunLoopRef, source: CFRunLoopSourceRef, mode: CFRunLoopMode);
     #[allow(dead_code)]
     pub fn CFRunLoopSourceInvalidate(source: CFRunLoopSourceRef);
-    pub fn CFRunLoopSourceSignal(source: CFRunLoopSourceRef);
+// pub fn CFRunLoopSourceSignal(source: CFRunLoopSourceRef);
 }
 
 #[allow(non_snake_case)]

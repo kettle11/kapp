@@ -1,11 +1,9 @@
 use super::apple::*;
 use super::window_mac::*;
 use crate::application_message::{ApplicationMessage, ApplicationMessage::*};
-use crate::Application;
 use crate::Event;
 use std::cell::RefCell;
 use std::ffi::c_void;
-use std::rc::Rc;
 use std::sync::mpsc;
 use std::sync::mpsc::*;
 
@@ -13,6 +11,8 @@ pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
 static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
 static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
 static APPLICATION_CLASS_NAME: &str = "KettlewinApplicationClass";
+
+thread_local!(pub static APPLICATION_DATA: RefCell<Option<Box<ApplicationData>>> = RefCell::new(None));
 
 pub fn get_window_data(this: &Object) -> &mut InnerWindowData {
     unsafe {
@@ -31,17 +31,9 @@ pub struct ApplicationData {
     ns_application: *mut Object,
     // pub program_callback: Option<Box<ProgramCallback>>,
     pub modifier_flags: u64, // Key modifier flags
-    /// This is only used if an event is produced within the program_callback.
-    /// For example if a window is minimized it produces a minimized event in the same
-    /// call tree.
-    pub event_queue: Vec<Event>,
     program_to_application_receive: Option<mpsc::Receiver<ApplicationMessage>>,
-    pub callback_event_channel: Option<mpsc::Sender<Event>>,
+    pub produce_event_callback: Option<Box<dyn FnMut(crate::Event)>>,
     pub windows: Vec<Box<InnerWindowData>>,
-}
-
-pub struct ApplicationInstanceData {
-    pub application_data: Rc<RefCell<ApplicationData>>,
 }
 
 fn window_delegate_declaration() -> *const objc::runtime::Class {
@@ -83,13 +75,16 @@ fn create_run_loop_source() -> CFRunLoopSourceRef {
     }
 }
 
-pub fn process_events(application: &Rc<RefCell<ApplicationData>>) {
+pub fn process_events() {
     unsafe {
-        let events = application
-            .borrow_mut()
-            .program_to_application_receive
-            .take()
-            .unwrap();
+        let events = APPLICATION_DATA.with(|d| {
+            d.borrow_mut()
+                .as_mut()
+                .unwrap()
+                .program_to_application_receive
+                .take()
+                .unwrap()
+        });
 
         while let Ok(event) = events.try_recv() {
             match event {
@@ -119,7 +114,9 @@ pub fn process_events(application: &Rc<RefCell<ApplicationData>>) {
                 RestoreWindow { .. } => unimplemented!(),
                 DropWindow { .. } => unimplemented!(),
                 RequestFrame { .. } => {
-                    application.borrow_mut().frame_requested = true;
+                    APPLICATION_DATA.with(|d| {
+                        d.borrow_mut().as_mut().unwrap().frame_requested = true;
+                    });
                 }
                 SetMousePosition { x, y } => {
                     CGWarpMouseCursorPosition(CGPoint {
@@ -128,25 +125,31 @@ pub fn process_events(application: &Rc<RefCell<ApplicationData>>) {
                     });
                 }
                 Quit => {
-                    let ns_application = application.borrow().ns_application;
+                    let ns_application =
+                        APPLICATION_DATA.with(|d| d.borrow_mut().as_mut().unwrap().ns_application);
                     let () = msg_send![ns_application, terminate: nil];
                 }
                 NewWindow {
                     window_parameters,
                     response_channel,
                 } => {
-                    // This won't work because the application is already borrowed as mutable.
-                    let result = super::window_mac::build(
-                        window_parameters,
-                        &mut application.borrow_mut(),
-                        application,
-                    );
-                    response_channel.send(result).unwrap();
+                    APPLICATION_DATA.with(|d| {
+                        let mut application_data = d.borrow_mut();
+                        let mut application_data = application_data.as_mut().unwrap();
+                        let result =
+                            super::window_mac::build(window_parameters, &mut application_data);
+                        response_channel.send(result).unwrap();
+                    });
                 }
             }
         }
 
-        application.borrow_mut().program_to_application_receive = Some(events);
+        APPLICATION_DATA.with(|d| {
+            let mut application_data = d.borrow_mut();
+            let application_data = application_data.as_mut().unwrap();
+
+            application_data.program_to_application_receive = Some(events);
+        });
     }
 }
 
@@ -154,39 +157,29 @@ pub fn process_events(application: &Rc<RefCell<ApplicationData>>) {
 extern "C" fn control_flow_end_handler(
     _: CFRunLoopObserverRef,
     _: CFRunLoopActivity,
-    observer_context_info: *mut std::ffi::c_void,
+    _: *mut std::ffi::c_void,
 ) {
-    // println!("End handler");
-    unsafe {
-        let application = &*(observer_context_info as *mut Rc<RefCell<ApplicationData>>);
-
-        // Check for events
-        process_events(&application);
-        let mut application_data = application.borrow_mut();
+    // Check for events
+    process_events();
+    APPLICATION_DATA.with(|d| {
+        let mut application_data = d.borrow_mut();
+        let mut application_data = application_data.as_mut().unwrap();
 
         if application_data.frame_requested {
-            if let Some(channel) = application_data.callback_event_channel.as_mut() {
-                channel.send(Event::Draw).unwrap();
+            if let Some(callback) = application_data.produce_event_callback.as_mut() {
+                callback(Event::Draw);
             }
             application_data.frame_requested = false;
         }
-    }
+    });
 }
 use crate::platform_traits::{PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait};
 
 pub struct PlatformApplication {
-    application_data: Rc<RefCell<ApplicationData>>,
+    // application_data: Rc<RefCell<ApplicationData>>,
     ns_application: *mut Object,
     run_loop_custom_event_source: CFRunLoopSourceRef,
-    event_send_channel: Sender<Event>,
-    event_receive_channel: Option<Receiver<Event>>,
 }
-#[derive(Clone)]
-pub struct PlatformWaker {
-    run_loop_custom_event_source: CFRunLoopSourceRef,
-}
-
-unsafe impl Send for PlatformWaker {}
 
 impl PlatformApplicationTrait for PlatformApplication {
     type PlatformWaker = PlatformWaker;
@@ -220,30 +213,21 @@ impl PlatformApplicationTrait for PlatformApplication {
                 frame_requested: true, // Always request an initial frame
                 ns_application,
                 modifier_flags: 0,
-                event_queue: Vec::new(),
-                callback_event_channel: None,
                 windows: Vec::new(),
                 program_to_application_receive: Some(receiver),
+                produce_event_callback: None,
             };
 
-            let application_data = Rc::new(RefCell::new(application_data));
+            APPLICATION_DATA.with(|d| {
+                *d.borrow_mut() = Some(Box::new(application_data));
+            });
 
-            // This allocation will persist until the program is quit.
-            let application_instance_data = Box::leak(Box::new(Rc::clone(&application_data)))
-                as *mut Rc<RefCell<ApplicationData>>
-                as *mut c_void;
-            (*ns_application_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, application_instance_data);
-
-            // This allocation will persist until the program is quit.
-            let observer_context_info = Box::leak(Box::new(Rc::clone(&application_data)))
-                as *mut Rc<RefCell<ApplicationData>>
-                as *mut c_void;
 
             // We only used this context to pass application_data to the observer
             // The values in this data structure will be copied out.
             let observer_context = CFRunLoopObserverContext {
                 copyDescription: std::ptr::null(),
-                info: observer_context_info,
+                info: std::ptr::null(),
                 release: std::ptr::null(),
                 version: 0,
                 retain: std::ptr::null(),
@@ -259,38 +243,30 @@ impl PlatformApplicationTrait for PlatformApplication {
             );
             CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 
-            let (event_send_channel, event_receive_channel) = channel();
             (
                 platform_channel,
                 Self {
                     ns_application,
-                    application_data,
+                    // application_data,
                     run_loop_custom_event_source,
-                    event_send_channel,
-                    event_receive_channel: Some(event_receive_channel),
                 },
             )
         }
     }
 
     fn flush_events(&mut self) {
-        process_events(&self.application_data);
+        process_events();
     }
 
-    fn start_receiver<T>(&mut self, mut application: crate::Application, mut callback: T)
+    fn run<T>(&mut self, callback: T)
     where
-        T: 'static + FnMut(&mut Application, crate::Event) + Send,
+        T: 'static + FnMut(crate::Event) + Send,
     {
-        let receive_channel = self.event_receive_channel.take().unwrap();
-        std::thread::spawn(move || {
-            while let Ok(event) = receive_channel.recv() {
-                (callback)(&mut application, event)
-            }
+        APPLICATION_DATA.with(|d| {
+            let mut application_data = d.borrow_mut();
+            application_data.as_mut().unwrap().produce_event_callback = Some(Box::new(callback));
         });
-    }
 
-    fn start_application(self) {
-        self.application_data.borrow_mut().callback_event_channel = Some(self.event_send_channel);
         unsafe {
             let () = msg_send![self.ns_application, run];
         }
@@ -299,9 +275,18 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn get_waker(&self) -> Self::PlatformWaker {
         Self::PlatformWaker {
             run_loop_custom_event_source: self.run_loop_custom_event_source,
+            main_thread_id: std::thread::current().id(),
         }
     }
 }
+
+#[derive(Clone)]
+pub struct PlatformWaker {
+    run_loop_custom_event_source: CFRunLoopSourceRef,
+    main_thread_id: std::thread::ThreadId,
+}
+
+unsafe impl Send for PlatformWaker {}
 
 impl PlatformWakerTrait for PlatformWaker {
     fn wake(&self) {
@@ -309,6 +294,14 @@ impl PlatformWakerTrait for PlatformWaker {
             //CFRunLoopSourceSignal(self.run_loop_custom_event_source); // This line may not even be necessary.
             let run_loop = CFRunLoopGetMain();
             CFRunLoopWakeUp(run_loop);
+        }
+    }
+
+    fn flush(&self) {
+        if std::thread::current().id() == self.main_thread_id {
+            process_events();
+        } else {
+            self.wake();
         }
     }
 }

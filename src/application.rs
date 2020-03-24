@@ -8,18 +8,21 @@ pub struct Application {
     pub application_waker: PlatformWaker,
 }
 
-impl Application {
-    pub fn new() -> MainApplication {
-        let (platform_channel, platform_application) = PlatformApplication::new();
-        MainApplication {
-            inner_application: Application {
-                platform_channel,
-                application_waker: platform_application.get_waker(),
-            },
+pub fn initialize() -> (Application, EventLoop) {
+    let (platform_channel, platform_application) = PlatformApplication::new();
+    let application_waker = platform_application.get_waker();
+    (
+        Application {
+            platform_channel,
+            application_waker,
+        },
+        EventLoop {
             platform_application,
-        }
-    }
+        },
+    )
+}
 
+impl Application {
     pub fn request_frame(&mut self) {
         self.platform_channel.send(RequestFrame);
         self.application_waker.wake();
@@ -33,67 +36,13 @@ impl Application {
         self.platform_channel.send(SetMousePosition { x, y });
     }
 
-    pub fn new_window(&mut self) -> crate::window_builder::WindowBuilder {
-        crate::window_builder::WindowBuilder::new(self, None)
-    }
-}
-
-/// An application handle only accessible from the main thread.
-pub struct MainApplication {
-    pub inner_application: Application, // Shouldn't be public
-    pub platform_application: PlatformApplication, // Shouldn't be public
-}
-
-impl MainApplication {
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn run<T>(mut self, callback: T) -> !
-    where
-        T: 'static + FnMut(&mut Application, crate::Event) + Send,
-    {
-        // Async and other custom scenarios may take control of the event queue.
-        // In that case don't start a receiver.
-        // Platform specific code to run.
-        self.platform_application
-            .start_receiver(self.inner_application, callback);
-
-        self.platform_application.start_application();
-        unreachable!()
-    }
-
-    // Same as above but does not require Send
-    #[cfg(target_arch = "wasm32")]
-    pub fn run<T>(mut self, callback: T)
-    where
-        T: 'static + FnMut(&mut Application, crate::Event),
-    {
-        // Async and other custom scenarios may take control of the event queue.
-        // In that case don't start a receiver.
-        // Platform specific code to run.
-        self.platform_application
-            .start_receiver(self.inner_application, callback);
-
-        self.platform_application.start_application();
-    }
-
-    pub fn quit(&mut self) {
-        self.inner_application.quit()
-    }
-
-    pub fn set_mouse_position(&mut self, x: u32, y: u32) {
-        self.inner_application.set_mouse_position(x, y)
+    /// Blocks until the application has processed all events sent to it.
+    pub fn flush_application_events(&mut self) {
+        self.application_waker.flush();
     }
 
     pub fn new_window(&mut self) -> crate::window_builder::WindowBuilder {
-        crate::window_builder::WindowBuilder::new(
-            &mut self.inner_application,
-            Some(&mut self.platform_application),
-        )
-    }
-
-    // Should this not be part of the public interface?
-    /// If this instance of Application is on the main thread, process all application events.
-    pub fn flush_events(&mut self) {
-        self.platform_application.flush_events();
+        crate::window_builder::WindowBuilder::new(self)
     }
 }
 
@@ -101,5 +50,49 @@ impl MainApplication {
 impl Drop for Application {
     fn drop(&mut self) {
         self.quit();
+    }
+}
+
+/// An application handle only accessible from the main thread.
+pub struct EventLoop {
+    pub platform_application: PlatformApplication, // Shouldn't be public
+}
+
+impl EventLoop {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn run<T>(mut self, mut callback: T) -> !
+    where
+        T: 'static + FnMut(crate::Event) + Send,
+    {
+        let (send, receive) = std::sync::mpsc::channel();
+
+        // When events are produced by the application send them to a channel
+        let callback_wrapper = move |event| {
+            send.send(event).unwrap();
+        };
+
+        // Receive the events from the channel and send them to the user code callback.
+        std::thread::spawn(move || {
+            while let Ok(event) = receive.recv() {
+                callback(event);
+            }
+        });
+
+        println!("Running");
+        self.platform_application.run(callback_wrapper);
+
+        unreachable!()
+    }
+
+    // Same as above but does not require Send
+    #[cfg(target_arch = "wasm32")]
+    pub fn run<T>(mut self, callback: T)
+    where
+        T: 'static + FnMut(crate::Event),
+    {
+        unimplemented!();
+        self.platform_application.start_receiver(callback);
+
+        self.platform_application.start_application();
     }
 }

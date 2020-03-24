@@ -1,8 +1,6 @@
 use super::apple::*;
 use super::application_mac::{ApplicationData, INSTANCE_DATA_IVAR_ID};
-use std::cell::RefCell;
 use std::ffi::c_void;
-use std::rc::Rc;
 
 // Not exposed outside the crate
 pub enum WindowState {
@@ -20,7 +18,6 @@ pub struct InnerWindowData {
     window_delegate: *mut Object,
     tracking_area: *mut Object,
 
-    pub application_data: Rc<RefCell<ApplicationData>>,
     //pub backing_scale: f64, // On Mac this while likely be either 2.0 or 1.0
     pub window_state: WindowState,
 }
@@ -74,7 +71,6 @@ impl std::fmt::Debug for WindowId {
 pub fn build(
     window_parameters: crate::window_builder::WindowParameters,
     application_data: &mut ApplicationData,
-    application: &Rc<RefCell<ApplicationData>>,
 ) -> Result<WindowId, ()> {
     unsafe {
         let (width, height) = window_parameters
@@ -153,7 +149,6 @@ pub fn build(
             ns_view,
             window_delegate,
             tracking_area,
-            application_data: Rc::clone(&application),
             // backing_scale,
             window_state: WindowState::Windowed,
         });

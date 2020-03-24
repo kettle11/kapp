@@ -8,7 +8,7 @@ mod platform_traits;
 mod window;
 mod window_builder;
 
-pub use application::{Application, MainApplication};
+pub use application::{initialize, Application, EventLoop};
 //pub use async_application::*;
 pub use events::*;
 pub use keys::Key;

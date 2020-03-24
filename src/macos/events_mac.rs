@@ -1,10 +1,6 @@
 use super::apple::*;
-use super::application_mac::{
-    get_window_data, ApplicationData, ApplicationInstanceData, INSTANCE_DATA_IVAR_ID,
-};
+use super::application_mac::{get_window_data, APPLICATION_DATA};
 use super::window_mac::{WindowId, WindowState};
-use std::cell::RefCell;
-use std::rc::Rc;
 
 use crate::{Event, Key, MouseButton};
 // ------------------------ Window Events --------------------------
@@ -14,79 +10,58 @@ extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
     unsafe {
         let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
         let frame: CGRect = msg_send![window_data.ns_window, frame];
-        self::produce_event(
-            this,
-            crate::Event::WindowMoved {
-                x: (frame.origin.x * backing_scale) as u32,
-                y: (frame.origin.y * backing_scale) as u32,
-                window_id: WindowId::new(window_data.ns_window),
-            },
-        );
+        self::submit_event(crate::Event::WindowMoved {
+            x: (frame.origin.x * backing_scale) as u32,
+            y: (frame.origin.y * backing_scale) as u32,
+            window_id: WindowId::new(window_data.ns_window),
+        });
     }
 }
 extern "C" fn window_did_miniaturize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Minimized;
-    self::produce_event(
-        this,
-        Event::WindowMinimized {
-            window_id: WindowId::new(window_data.ns_window),
-        },
-    );
+    self::submit_event(Event::WindowMinimized {
+        window_id: WindowId::new(window_data.ns_window),
+    });
 }
 
 extern "C" fn window_did_deminiaturize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately fullscreens?
-    self::produce_event(
-        this,
-        Event::WindowRestored {
-            window_id: WindowId::new(window_data.ns_window),
-        },
-    );
+    self::submit_event(Event::WindowRestored {
+        window_id: WindowId::new(window_data.ns_window),
+    });
 }
 
 extern "C" fn window_did_enter_fullscreen(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Fullscreen;
-    self::produce_event(
-        this,
-        Event::WindowFullscreened {
-            window_id: WindowId::new(window_data.ns_window),
-        },
-    );
+    self::submit_event(Event::WindowFullscreened {
+        window_id: WindowId::new(window_data.ns_window),
+    });
 }
 extern "C" fn window_did_exit_fullscreen(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately minimizes?
-    self::produce_event(
-        this,
-        Event::WindowRestored {
-            window_id: WindowId::new(window_data.ns_window),
-        },
-    );
+    self::submit_event(Event::WindowRestored {
+        window_id: WindowId::new(window_data.ns_window),
+    });
 }
 
 extern "C" fn window_will_start_live_resize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
 
-    self::produce_event(
-        this,
-        crate::Event::WindowStartResize {
-            window_id: WindowId::new(window_data.ns_window),
-        },
-    );
+    self::submit_event(crate::Event::WindowStartResize {
+        window_id: WindowId::new(window_data.ns_window),
+    });
 }
 
 extern "C" fn window_did_end_live_resize(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
 
-    self::produce_event(
-        this,
-        crate::Event::WindowEndResize {
-            window_id: WindowId::new(window_data.ns_window),
-        },
-    );
+    self::submit_event(crate::Event::WindowEndResize {
+        window_id: WindowId::new(window_data.ns_window),
+    });
 }
 
 extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
@@ -95,14 +70,11 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
     unsafe {
         let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
         let frame: CGRect = msg_send![window_data.ns_window, frame];
-        self::produce_event(
-            this,
-            crate::Event::WindowResized {
-                width: (frame.size.width * backing_scale) as u32,
-                height: (frame.size.height * backing_scale) as u32,
-                window_id: WindowId::new(window_data.ns_window),
-            },
-        );
+        self::submit_event(crate::Event::WindowResized {
+            width: (frame.size.width * backing_scale) as u32,
+            height: (frame.size.height * backing_scale) as u32,
+            window_id: WindowId::new(window_data.ns_window),
+        });
     }
 }
 
@@ -125,32 +97,23 @@ extern "C" fn window_did_change_backing_properties(_this: &Object, _sel: Sel, _e
 
 extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
-    self::produce_event(
-        this,
-        crate::Event::WindowGainedFocus {
-            window_id: WindowId::new(window_data.ns_window),
-        },
-    );
+    self::submit_event(crate::Event::WindowGainedFocus {
+        window_id: WindowId::new(window_data.ns_window),
+    });
 }
 
 extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
-    self::produce_event(
-        this,
-        crate::Event::WindowLostFocus {
-            window_id: WindowId::new(window_data.ns_window),
-        },
-    );
+    self::submit_event(crate::Event::WindowLostFocus {
+        window_id: WindowId::new(window_data.ns_window),
+    });
 }
 
 extern "C" fn window_should_close(this: &Object, _sel: Sel, _event: *mut Object) -> BOOL {
     let window_data = get_window_data(this);
-    self::produce_event(
-        this,
-        crate::Event::WindowCloseRequested {
-            window_id: WindowId::new(window_data.ns_window),
-        },
-    );
+    self::submit_event(crate::Event::WindowCloseRequested {
+        window_id: WindowId::new(window_data.ns_window),
+    });
     NO // No because the program must drop its handle to close the window.
 }
 
@@ -222,13 +185,11 @@ extern "C" fn application_should_terminate_after_last_window_closed(
 
 // https://developer.apple.com/documentation/appkit/nsapplicationdelegate/1428642-applicationshouldterminate?language=objc
 extern "C" fn application_should_terminate(
-    this: &Object,
+    _this: &Object,
     _sel: Sel,
     _event: *mut Object,
 ) -> NSUInteger {
-    let application_data = get_application_data(this);
-    submit_event(&(*application_data).application_data, Event::Quit);
-
+    self::submit_event(Event::Quit);
     NSTerminateNow
 }
 
@@ -248,7 +209,7 @@ pub fn add_application_events_to_decl(decl: &mut ClassDecl) {
 // ------------------------ End Application Events --------------------------
 
 // ------------------------ View Events --------------------------
-extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
         let repeat: bool = msg_send![event, isARepeat];
@@ -258,26 +219,23 @@ extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
         } else {
             crate::Event::KeyDown { key }
         };
-        self::produce_event(this, event);
+        self::submit_event(event);
     }
 }
 
-extern "C" fn key_up(this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn key_up(_this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
-        self::produce_event(
-            this,
-            crate::Event::KeyUp {
-                key: super::keys_mac::virtual_keycode_to_key(key_code),
-            },
-        );
+        self::submit_event(crate::Event::KeyUp {
+            key: super::keys_mac::virtual_keycode_to_key(key_code),
+        });
     }
 }
 
 // https://developer.apple.com/documentation/appkit/nsresponder/1527647-flagschanged?language=objc
 // This should be changed to keep track of the modifier state and only update if they were previously pressed.
 // Caps lock keyup events are only registered when the key switches to an off state.
-extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
     fn get_modifier_state(modifier_flags: u64) -> [bool; 9] {
         [
             modifier_flags & NSEventModifierFlagCapsLock == NSEventModifierFlagCapsLock,
@@ -305,9 +263,7 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
         Key::Meta,
     ];
 
-    let window_data = get_window_data(this);
-
-    let modifier_flags_old = window_data.application_data.borrow().modifier_flags;
+    let modifier_flags_old = APPLICATION_DATA.with(|d| d.borrow().as_ref().unwrap().modifier_flags);
 
     let modifier_flags_new: NSUInteger = unsafe { msg_send![event, modifierFlags] };
 
@@ -316,15 +272,17 @@ extern "C" fn flags_changed(this: &Object, _sel: Sel, event: *mut Object) {
 
     for i in 0..8 {
         if !flag_state_old[i] && flag_state_new[i] {
-            produce_event(this, crate::Event::KeyDown { key: KEYS[i] })
+            self::submit_event(crate::Event::KeyDown { key: KEYS[i] })
         }
 
         if flag_state_old[i] && !flag_state_new[i] {
-            produce_event(this, crate::Event::KeyUp { key: KEYS[i] })
+            self::submit_event(crate::Event::KeyUp { key: KEYS[i] })
         }
     }
 
-    (*window_data).application_data.borrow_mut().modifier_flags = modifier_flags_new;
+    APPLICATION_DATA.with(|d| {
+        d.borrow_mut().as_mut().unwrap().modifier_flags = modifier_flags_new;
+    });
 }
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
@@ -336,53 +294,38 @@ extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
         let x = window_point.x * backing_scale;
         let y = window_point.y * backing_scale; // Don't flip because 0 is bottom left on MacOS
 
-        self::produce_event(
-            this,
-            crate::Event::MouseMoved {
-                x: x as f32,
-                y: y as f32,
-            },
-        );
+        self::submit_event(crate::Event::MouseMoved {
+            x: x as f32,
+            y: y as f32,
+        });
     }
 }
 
-extern "C" fn mouse_down(this: &Object, _sel: Sel, _event: *mut Object) {
-    self::produce_event(
-        this,
-        crate::Event::MouseButtonDown {
-            button: MouseButton::Left,
-        },
-    );
+extern "C" fn mouse_down(_this: &Object, _sel: Sel, _event: *mut Object) {
+    self::submit_event(crate::Event::MouseButtonDown {
+        button: MouseButton::Left,
+    });
 }
 
-extern "C" fn mouse_up(this: &Object, _sel: Sel, _event: *mut Object) {
-    self::produce_event(
-        this,
-        crate::Event::MouseButtonUp {
-            button: MouseButton::Left,
-        },
-    );
+extern "C" fn mouse_up(_this: &Object, _sel: Sel, _event: *mut Object) {
+    self::submit_event(crate::Event::MouseButtonUp {
+        button: MouseButton::Left,
+    });
 }
 
-extern "C" fn right_mouse_down(this: &Object, _sel: Sel, _event: *mut Object) {
-    self::produce_event(
-        this,
-        crate::Event::MouseButtonDown {
-            button: MouseButton::Right,
-        },
-    );
+extern "C" fn right_mouse_down(_this: &Object, _sel: Sel, _event: *mut Object) {
+    self::submit_event(crate::Event::MouseButtonDown {
+        button: MouseButton::Right,
+    });
 }
 
-extern "C" fn right_mouse_up(this: &Object, _sel: Sel, _event: *mut Object) {
-    self::produce_event(
-        this,
-        crate::Event::MouseButtonUp {
-            button: MouseButton::Right,
-        },
-    );
+extern "C" fn right_mouse_up(_this: &Object, _sel: Sel, _event: *mut Object) {
+    self::submit_event(crate::Event::MouseButtonUp {
+        button: MouseButton::Right,
+    });
 }
 
-extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn other_mouse_down(_this: &Object, _sel: Sel, event: *mut Object) {
     let number: NSInteger = unsafe { msg_send![event, buttonNumber] };
     let button = match number {
         // Are these correct?
@@ -391,10 +334,10 @@ extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
         16 => MouseButton::Extra2,
         _ => MouseButton::Unknown,
     };
-    self::produce_event(this, crate::Event::MouseButtonDown { button });
+    self::submit_event(crate::Event::MouseButtonDown { button });
 }
 
-extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn other_mouse_up(_this: &Object, _sel: Sel, event: *mut Object) {
     let number: NSInteger = unsafe { msg_send![event, buttonNumber] };
     let button = match number {
         // Are these correct?
@@ -403,19 +346,16 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
         16 => MouseButton::Extra2,
         _ => MouseButton::Unknown,
     };
-    self::produce_event(this, crate::Event::MouseButtonUp { button });
+    self::submit_event(crate::Event::MouseButtonUp { button });
 }
 
 // https://developer.apple.com/documentation/appkit/nsresponder/1534192-scrollwheel?language=objc
-extern "C" fn scroll_wheel(this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn scroll_wheel(_this: &Object, _sel: Sel, event: *mut Object) {
     let delta_y: CGFloat = unsafe { msg_send![event, scrollingDeltaY] };
 
-    self::produce_event(
-        this,
-        crate::Event::ScrollWheel {
-            delta: delta_y as f32,
-        },
-    );
+    self::submit_event(crate::Event::ScrollWheel {
+        delta: delta_y as f32,
+    });
 }
 
 extern "C" fn accepts_first_responder(_this: &Object, _sel: Sel) -> BOOL {
@@ -433,13 +373,10 @@ extern "C" fn touches_began_with_event(this: &Object, _sel: Sel, event: *mut Obj
         for i in 0..count {
             let touch: *mut Object = msg_send![array, objectAtIndex: i];
             let position: NSPoint = msg_send![touch, normalizedPosition];
-            self::produce_event(
-                this,
-                crate::Event::TrackpadTouch {
-                    x: position.x as f32,
-                    y: position.y as f32,
-                },
-            );
+            self::submit_event(crate::Event::TrackpadTouch {
+                x: position.x as f32,
+                y: position.y as f32,
+            });
         }
     }
 }
@@ -455,13 +392,10 @@ extern "C" fn touches_moved_with_event(this: &Object, _sel: Sel, event: *mut Obj
         for i in 0..count {
             let touch: *mut Object = msg_send![array, objectAtIndex: i];
             let position: NSPoint = msg_send![touch, normalizedPosition];
-            self::produce_event(
-                this,
-                crate::Event::TrackpadTouch {
-                    x: position.x as f32,
-                    y: position.y as f32,
-                },
-            );
+            self::submit_event(crate::Event::TrackpadTouch {
+                x: position.x as f32,
+                y: position.y as f32,
+            });
         }
     }
 }
@@ -529,26 +463,16 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
 
 // ------------------------ End View Events --------------------------
 
-// 'this' can be either a Window delegate or a view delegate.
-// Despite being different types both have iVars attached for inner_window_data
-fn produce_event(this: &Object, event: crate::Event) {
-    let window_data = get_window_data(this);
-    submit_event(&(*window_data).application_data, event);
-}
-
-fn get_application_data(this: &Object) -> &mut ApplicationInstanceData {
-    unsafe {
-        let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
-        &mut *(data as *mut ApplicationInstanceData)
-    }
-}
-
-pub fn submit_event(application_data: &Rc<RefCell<ApplicationData>>, event: Event) {
-    application_data
-        .borrow_mut()
-        .callback_event_channel
-        .as_mut()
-        .unwrap()
-        .send(event)
-        .unwrap();
+pub fn submit_event(event: Event) {
+    &mut APPLICATION_DATA.with(|d| {
+        if let Some(callback) = d
+            .borrow_mut()
+            .as_mut()
+            .unwrap()
+            .produce_event_callback
+            .as_mut()
+        {
+            callback(event);
+        }
+    });
 }
