@@ -5,17 +5,17 @@ authors = ["Ian Kettlewell"]
 edition = "2018"
 
 [features]
-default = ["opengl_glow"]
-opengl_glow = ["glow"]
+gl_context = ["kettlewin_gl_context"]
+default = ["gl_context"]
 
 [dependencies]
-glow = {version = "0.4.0", optional = true}
+kettlewin_gl_context = { path = "./gl_context", optional = true }
+
+[dev-dependencies]
+glow = {version = "0.4.0"}
 
 [target.'cfg(target_os="macos")'.dependencies]
-objc = "0.2.7"
-libc = { version = ">= 0.1, < 0.3", default-features = false }
-[target.'cfg(target_os="windows")'.dependencies]
-winapi = { version = "0.3.8", features = ["winuser", "libloaderapi", "windowsx"] }
+kettlewin_platform_macos = { path = "./platforms/macos" }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 wasm-bindgen = "0.2.58"
@@ -31,8 +31,3 @@ features = [
     "Event",
     "WebGlContextAttributes"
 ]
-
-[[example]]
-name = "hello"
-required-features = ["opengl_glow"]
-path = "examples/hello.rs"

@@ -1,22 +1,19 @@
-extern crate kettlewin;
-use kettlewin::glow::*;
-use kettlewin::Event::*;
+use glow::*;
 use kettlewin::*;
 
 fn main() {
     // Create a new application with default settings.
     let (mut app, event_loop) = initialize();
-
     let window = app.new_window().title("Hello").build().unwrap();
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
-
     gl_context.set_window(Some(&window)).unwrap();
-    let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
+
+    let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s)); // Create a glow gl context for gl calls.
 
     // Run forever
     let mut color = 0.0;
 
-    event_loop.run(move |event| {
+    event_loop.run(Box::new(move |event| {
         match event {
             WindowCloseRequested { .. } => app.quit(),
             WindowResized { .. } => gl_context.update_target(), // This call updates the window backbuffer to match the new window size.
@@ -35,5 +32,5 @@ fn main() {
             }
             _ => {}
         }
-    });
+    }));
 }

@@ -1,7 +1,7 @@
-use crate::WindowId;
-use std::sync::mpsc;
+use crate::single_value_channel;
+use crate::window_parameters::WindowParameters;
 
-pub enum ApplicationMessage {
+pub enum ApplicationMessage<WindowId> {
     SetWindowPosition {
         window: WindowId,
         x: u32,
@@ -34,7 +34,7 @@ pub enum ApplicationMessage {
         y: u32,
     },
     NewWindow {
-        window_parameters: crate::window_builder::WindowParameters,
-        response_channel: mpsc::Sender<Result<WindowId, ()>>,
+        window_parameters: WindowParameters,
+        response_channel: single_value_channel::Sender<Result<WindowId, ()>>,
     },
 }

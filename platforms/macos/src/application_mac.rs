@@ -1,12 +1,12 @@
 use super::apple::*;
 use super::window_mac::*;
-use crate::application_message::{ApplicationMessage, ApplicationMessage::*};
-use crate::Event;
+use crate::{PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait};
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::sync::mpsc;
 use std::sync::mpsc::*;
 
+use crate::{ApplicationMessage, Event};
 pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
 static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
 static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
@@ -32,7 +32,7 @@ pub struct ApplicationData {
     // pub program_callback: Option<Box<ProgramCallback>>,
     pub modifier_flags: u64, // Key modifier flags
     program_to_application_receive: Option<mpsc::Receiver<ApplicationMessage>>,
-    pub produce_event_callback: Option<Box<dyn FnMut(crate::Event)>>,
+    pub produce_event_callback: Option<Box<dyn FnMut(Event)>>,
     pub windows: Vec<Box<InnerWindowData>>,
 }
 
@@ -88,48 +88,48 @@ pub fn process_events() {
 
         while let Ok(event) = events.try_recv() {
             match event {
-                MinimizeWindow { window } => {
-                    let () = msg_send![window.inner_window(), miniaturize: nil];
+                ApplicationMessage::MinimizeWindow { window } => {
+                    let () = msg_send![window.inner_window() as *mut Object, miniaturize: nil];
                 }
-                SetWindowPosition { window, x, y } => {
+                ApplicationMessage::SetWindowPosition { window, x, y } => {
                     let backing_scale: CGFloat =
-                        msg_send![window.inner_window(), backingScaleFactor];
+                        msg_send![window.inner_window() as *mut Object, backingScaleFactor];
                     let () =
-                        msg_send![window.inner_window(), setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
+                        msg_send![window.inner_window() as *mut Object, setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
                 }
-                SetWindowSize {
+                ApplicationMessage::SetWindowSize {
                     window,
                     width,
                     height,
                 } => {
                     let backing_scale: CGFloat =
-                        msg_send![window.inner_window(), backingScaleFactor];
+                        msg_send![window.inner_window() as *mut Object, backingScaleFactor];
                     let () =
-                        msg_send![window.inner_window(), setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+                        msg_send![window.inner_window() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
                 }
-                MaximizeWindow { .. } => {}
-                FullscreenWindow { window } => {
-                    let () = msg_send![window.inner_window(), toggleFullScreen: nil];
+                ApplicationMessage::MaximizeWindow { .. } => {}
+                ApplicationMessage::FullscreenWindow { window } => {
+                    let () = msg_send![window.inner_window() as *mut Object, toggleFullScreen: nil];
                 }
-                RestoreWindow { .. } => unimplemented!(),
-                DropWindow { .. } => unimplemented!(),
-                RequestFrame { .. } => {
+                ApplicationMessage::RestoreWindow { .. } => unimplemented!(),
+                ApplicationMessage::DropWindow { .. } => unimplemented!(),
+                ApplicationMessage::RequestFrame { .. } => {
                     APPLICATION_DATA.with(|d| {
                         d.borrow_mut().as_mut().unwrap().frame_requested = true;
                     });
                 }
-                SetMousePosition { x, y } => {
+                ApplicationMessage::SetMousePosition { x, y } => {
                     CGWarpMouseCursorPosition(CGPoint {
                         x: x as f64,
                         y: y as f64,
                     });
                 }
-                Quit => {
+                ApplicationMessage::Quit => {
                     let ns_application =
                         APPLICATION_DATA.with(|d| d.borrow_mut().as_mut().unwrap().ns_application);
                     let () = msg_send![ns_application, terminate: nil];
                 }
-                NewWindow {
+                ApplicationMessage::NewWindow {
                     window_parameters,
                     response_channel,
                 } => {
@@ -173,7 +173,6 @@ extern "C" fn control_flow_end_handler(
         }
     });
 }
-use crate::platform_traits::{PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait};
 
 pub struct PlatformApplication {
     // application_data: Rc<RefCell<ApplicationData>>,
@@ -182,10 +181,13 @@ pub struct PlatformApplication {
 }
 
 impl PlatformApplicationTrait for PlatformApplication {
-    type PlatformWaker = PlatformWaker;
-    type PlatformChannel = PlatformChannel;
+    type Waker = PlatformWaker;
+    type Channel = PlatformChannel;
+    type WindowId = crate::WindowId;
+    type ApplicationMessage = ApplicationMessage;
+    type Event = Event;
 
-    fn new() -> (Self::PlatformChannel, Self) {
+    fn new() -> (Self::Channel, Self) {
         unsafe {
             let ns_application: *mut Object = msg_send![class!(NSApplication), sharedApplication];
 
@@ -196,7 +198,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             ];
 
             let (sender, receiver) = mpsc::channel();
-            let platform_channel = PlatformChannel { sender };
+            let platform_channel = Self::Channel { sender };
 
             // Setup the application delegate to handle application events.
             let ns_application_delegate_class = application_delegate_declaration();
@@ -221,7 +223,6 @@ impl PlatformApplicationTrait for PlatformApplication {
             APPLICATION_DATA.with(|d| {
                 *d.borrow_mut() = Some(Box::new(application_data));
             });
-
 
             // We only used this context to pass application_data to the observer
             // The values in this data structure will be copied out.
@@ -258,10 +259,37 @@ impl PlatformApplicationTrait for PlatformApplication {
         process_events();
     }
 
-    fn run<T>(&mut self, callback: T)
-    where
-        T: 'static + FnMut(crate::Event) + Send,
-    {
+    fn run(&mut self, mut callback: Box<dyn FnMut(Self::Event) + Send>) {
+        // User code is run on another thread because resize and certain other events block the main
+        // thread on MacOS.
+        // This method ensures a smooth experience.
+        // 'run_raw' can be used if another method is required.
+        let (send, receive) = std::sync::mpsc::channel();
+
+        // When events are produced by the application send them to a channel
+        let callback_wrapper = move |event| {
+            send.send(event).unwrap();
+        };
+
+        // Receive the events from the channel and send them to the user code callback.
+        std::thread::spawn(move || {
+            while let Ok(event) = receive.recv() {
+                callback(event);
+            }
+        });
+
+        APPLICATION_DATA.with(|d| {
+            let mut application_data = d.borrow_mut();
+            application_data.as_mut().unwrap().produce_event_callback =
+                Some(Box::new(callback_wrapper));
+        });
+
+        unsafe {
+            let () = msg_send![self.ns_application, run];
+        }
+    }
+
+    fn run_raw(&mut self, callback: Box<dyn FnMut(Self::Event) + Send>) {
         APPLICATION_DATA.with(|d| {
             let mut application_data = d.borrow_mut();
             application_data.as_mut().unwrap().produce_event_callback = Some(Box::new(callback));
@@ -272,8 +300,8 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn get_waker(&self) -> Self::PlatformWaker {
-        Self::PlatformWaker {
+    fn get_waker(&self) -> Self::Waker {
+        Self::Waker {
             run_loop_custom_event_source: self.run_loop_custom_event_source,
             main_thread_id: std::thread::current().id(),
         }
@@ -312,7 +340,8 @@ pub struct PlatformChannel {
 }
 
 impl PlatformChannelTrait for PlatformChannel {
-    fn send(&mut self, message: crate::application_message::ApplicationMessage) {
+    type ApplicationMessage = ApplicationMessage;
+    fn send(&mut self, message: Self::ApplicationMessage) {
         self.sender.send(message).unwrap();
     }
 }

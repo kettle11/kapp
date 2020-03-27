@@ -1,22 +1,15 @@
+use crate::platform::*;
 use crate::{Application, Window};
 
 pub struct WindowBuilder<'a> {
-    application: &'a mut Application,
+    _application: &'a mut Application,
     window_parameters: WindowParameters,
 }
 
-#[derive(Clone)]
-pub struct WindowParameters {
-    pub position: Option<(u32, u32)>,
-    pub dimensions: Option<(u32, u32)>,
-    pub resizable: bool,
-    pub title: Option<String>,
-}
-
 impl<'a> WindowBuilder<'a> {
-    pub fn new(application: &'a mut Application) -> Self {
+    pub fn new(_application: &'a mut Application) -> Self {
         Self {
-            application,
+            _application,
             window_parameters: WindowParameters {
                 position: None,
                 dimensions: None,
@@ -50,21 +43,17 @@ impl<'a> WindowBuilder<'a> {
     // Web doesn't require any of this more complex window building behavior.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn build(&mut self) -> Result<Window, ()> {
-        use crate::application_message::ApplicationMessage;
-        use crate::platform_traits::PlatformChannelTrait;
-        use std::sync::mpsc;
-
-        let (sender, receiver) = mpsc::channel();
-        self.application
+        let (sender, receiver) = crate::platform::single_value_channel::channel();
+        self._application
             .platform_channel
             .send(ApplicationMessage::NewWindow {
                 window_parameters: self.window_parameters.clone(),
                 response_channel: sender,
             });
 
-        self.application.flush_application_events();
+        self._application.flush_application_events();
         let result = receiver.recv().unwrap();
-        result.map(|id| Window::new(id, self.application.platform_channel.clone()))
+        result.map(|id| Window::new(id, self._application.platform_channel.clone()))
     }
 
     #[cfg(target_arch = "wasm32")]

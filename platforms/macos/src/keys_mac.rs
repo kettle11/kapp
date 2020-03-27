@@ -1,4 +1,4 @@
-use crate::keys::{Key, Key::*};
+use crate::{Key, Key::*};
 
 pub fn virtual_keycode_to_key(key_in: u16) -> Key {
     match key_in {

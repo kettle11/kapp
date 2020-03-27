@@ -1,17 +1,16 @@
-use super::apple::*;
-use crate::Window;
+use crate::GLContextBuilder;
+use objc::runtime::{Object, YES};
+use std::ffi::c_void;
 use std::io::Error;
 
 pub struct GLContext {
     gl_context: *mut Object,
     pixel_format: *mut Object,
-    current_window: Option<Window>,
+    // current_window: Option<*mut Object>,
 }
 
 // This is not ok because Window is not thread safe.
 unsafe impl Send for GLContext {}
-
-pub struct GLContextBuilder {}
 
 impl GLContextBuilder {
     pub fn build(&self) -> Result<GLContext, ()> {
@@ -47,7 +46,7 @@ impl GLContextBuilder {
             Ok(GLContext {
                 gl_context,
                 pixel_format,
-                current_window: None,
+                // current_window: None,
             })
         }
     }
@@ -58,16 +57,16 @@ impl GLContext {
         GLContextBuilder {}
     }
 
-    pub fn set_window(&mut self, window: Option<&Window>) -> Result<(), Error> {
+    pub fn set_window(&mut self, window: Option<*mut std::ffi::c_void>) -> Result<(), Error> {
+        let window = window.map(|w| w as *mut Object);
         if let Some(window) = window {
-            let window_view: *mut Object =
-                unsafe { msg_send![window.id.inner_window(), contentView] };
+            let window_view: *mut Object = unsafe { msg_send![window, contentView] };
 
             let () = unsafe { msg_send![self.gl_context, setView: window_view] };
-            self.current_window = Some(window.clone());
+        // self.current_window = Some(window.clone());
         } else {
             let () = unsafe { msg_send![self.gl_context, clearDrawable] };
-            self.current_window = None;
+            //  self.current_window = None;
         }
 
         Ok(())
@@ -87,11 +86,6 @@ impl GLContext {
         }
     }
 
-    #[cfg(feature = "opengl_glow")]
-    pub fn glow_context(&self) -> glow::Context {
-        glow::Context::from_loader_function(|s| Self::get_proc_address(s))
-    }
-
     pub fn gl_loader_c_string(&self) -> Box<dyn FnMut(*const i8) -> *const std::ffi::c_void> {
         Box::new(move |s| unsafe {
             let name = std::ffi::CStr::from_ptr(s);
@@ -108,7 +102,7 @@ impl GLContext {
 
     // Taken from Glutin:
     // https://github.com/rust-windowing/glutin/blob/447f3526dcf90a460d52afefd0b29eb2ed7f87f3/glutin/src/platform_impl/macos/mod.rs
-    fn get_proc_address(addr: &str) -> *const core::ffi::c_void {
+    pub fn get_proc_address(addr: &str) -> *const core::ffi::c_void {
         let symbol_name = NSString::new(addr);
         let framework_name = NSString::new("com.apple.opengl");
         let framework = unsafe { CFBundleGetBundleWithIdentifier(framework_name.raw) };
@@ -125,3 +119,79 @@ impl Drop for GLContext {
         }
     }
 }
+
+// These enums are taken from the core-foundation-rs crate
+#[repr(u64)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum NSOpenGLContextParameter {
+    NSOpenGLCPSwapInterval = 222,
+}
+pub use NSOpenGLContextParameter::*;
+
+#[repr(u64)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum NSOpenGLPixelFormatAttribute {
+    NSOpenGLPFADoubleBuffer = 5,
+    NSOpenGLPFAColorSize = 8,
+
+    NSOpenGLPFAAlphaSize = 11,
+    NSOpenGLPFADepthSize = 12,
+    NSOpenGLPFAStencilSize = 13,
+    NSOpenGLPFAAccelerated = 73,
+    NSOpenGLPFAOpenGLProfile = 99,
+}
+pub use NSOpenGLPixelFormatAttribute::*;
+
+#[repr(u64)]
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum NSOpenGLPFAOpenGLProfiles {
+    //NSOpenGLProfileVersion3_2Core = 0x3200,
+    NSOpenGLProfileVersion4_1Core = 0x4100,
+}
+pub use NSOpenGLPFAOpenGLProfiles::*;
+pub struct NSString {
+    pub raw: *mut Object,
+}
+
+impl NSString {
+    pub fn new(string: &str) -> Self {
+        unsafe {
+            let raw: *mut Object = msg_send![class!(NSString), alloc];
+            let raw: *mut Object = msg_send![
+                raw,
+                initWithBytes: string.as_ptr()
+                length: string.len()
+                encoding:UTF8_ENCODING as *mut Object
+            ];
+
+            Self { raw }
+        }
+    }
+}
+
+impl Drop for NSString {
+    fn drop(&mut self) {
+        unsafe {
+            let () = msg_send![self.raw, release];
+        }
+    }
+}
+
+#[allow(non_upper_case_globals)]
+pub const nil: *mut Object = 0 as *mut Object;
+
+#[repr(C)]
+pub struct __CFBundle(c_void);
+pub type CFBundleRef = *mut __CFBundle;
+
+extern "C" {
+    pub fn CFBundleGetBundleWithIdentifier(bundleID: CFStringRef) -> CFBundleRef;
+    pub fn CFBundleGetFunctionPointerForName(
+        bundle: CFBundleRef,
+        function_name: CFStringRef,
+    ) -> *const c_void;
+}
+
+pub const UTF8_ENCODING: usize = 4;
+pub type CFStringRef = *const Object; // CFString

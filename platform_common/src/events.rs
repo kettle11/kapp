@@ -1,9 +1,8 @@
 use crate::keys::Key;
 use crate::mouse_buttons::MouseButton;
-use crate::WindowId;
 
 #[derive(Debug)]
-pub enum Event {
+pub enum Event<WindowId> {
     /// The 'Draw' event can be seen as a recommendation of when to draw. It is not an actual system event.
     Draw,
     // ------------------- Input Events  ---------------------

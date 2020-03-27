@@ -3,6 +3,7 @@ use super::application_mac::{get_window_data, APPLICATION_DATA};
 use super::window_mac::{WindowId, WindowState};
 
 use crate::{Event, Key, MouseButton};
+
 // ------------------------ Window Events --------------------------
 
 extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {

@@ -44,8 +44,8 @@ impl WindowId {
         Self { ns_window }
     }
 
-    pub unsafe fn inner_window(&self) -> *mut Object {
-        self.ns_window
+    pub unsafe fn inner_window(&self) -> *mut c_void {
+        self.ns_window as *mut c_void
     }
 }
 
@@ -69,7 +69,7 @@ impl std::fmt::Debug for WindowId {
 }
 
 pub fn build(
-    window_parameters: crate::window_builder::WindowParameters,
+    window_parameters: crate::WindowParameters,
     application_data: &mut ApplicationData,
 ) -> Result<WindowId, ()> {
     unsafe {

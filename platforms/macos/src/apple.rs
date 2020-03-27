@@ -1,6 +1,8 @@
 // This file is a bunch of stuff needed for calling into MacOS code.
 
-use libc::{c_long, c_ulong};
+pub type c_long = i64;
+pub type c_ulong = u64;
+
 use std::ffi::c_void;
 use std::os::raw::c_double;
 
@@ -205,37 +207,21 @@ impl CGRect {
     }
 }
 
+use objc::{Encode, Encoding};
+
 unsafe impl objc::Encode for CGRect {
-    fn encode() -> objc::Encoding {
-        let encoding = format!(
-            "{{CGRect={}{}}}",
-            NSPoint::encode().as_str(),
-            NSSize::encode().as_str()
-        );
-        unsafe { objc::Encoding::from_str(&encoding) }
-    }
+    const ENCODING: Encoding<'static> =
+        Encoding::Struct("CGRect", &[CGPoint::ENCODING, CGSize::ENCODING]);
 }
 
-unsafe impl objc::Encode for CGPoint {
-    fn encode() -> objc::Encoding {
-        let encoding = format!(
-            "{{CGPoint={}{}}}",
-            CGFloat::encode().as_str(),
-            CGFloat::encode().as_str()
-        );
-        unsafe { objc::Encoding::from_str(&encoding) }
-    }
+unsafe impl Encode for CGPoint {
+    const ENCODING: Encoding<'static> =
+        objc::Encoding::Struct("CGPoint", &[CGFloat::ENCODING, CGFloat::ENCODING]);
 }
 
-unsafe impl objc::Encode for CGSize {
-    fn encode() -> objc::Encoding {
-        let encoding = format!(
-            "{{CGSize={}{}}}",
-            CGFloat::encode().as_str(),
-            CGFloat::encode().as_str()
-        );
-        unsafe { objc::Encoding::from_str(&encoding) }
-    }
+unsafe impl Encode for CGSize {
+    const ENCODING: Encoding<'static> =
+        Encoding::Struct("CGSize", &[CGFloat::ENCODING, CGFloat::ENCODING]);
 }
 
 pub type NSRect = CGRect;

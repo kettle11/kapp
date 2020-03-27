@@ -1,0 +1,8 @@
+[package]
+name = "kettlewin_gl_context"
+version = "0.1.0"
+authors = ["Ian Kettlewell <ian.kettlewell@gmail.com>"]
+edition = "2018"
+
+[target.'cfg(target_os="macos")'.dependencies]
+objc = { git = "https://github.com/kettle11/rust-objc" }
