@@ -51,7 +51,7 @@ impl<'a> WindowBuilder<'a> {
                 response_channel: sender,
             });
 
-        self._application.flush_application_events();
+        self._application.flush_events();
         let result = receiver.recv().unwrap();
         result.map(|id| Window::new(id, self._application.platform_channel.clone()))
     }
@@ -59,7 +59,7 @@ impl<'a> WindowBuilder<'a> {
     #[cfg(target_arch = "wasm32")]
     pub fn build(&mut self) -> Result<Window, ()> {
         Ok(Window::new(
-            crate::WindowId {},
+            crate::WindowId::new(0 as *mut std::ptr::c_void),
             self.application.platform_channel.clone(),
         ))
     }

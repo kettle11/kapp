@@ -1,8 +1,8 @@
 use super::apple::*;
 use super::application_mac::{get_window_data, APPLICATION_DATA};
-use super::window_mac::{WindowId, WindowState};
-
-use crate::{Event, Key, MouseButton};
+use super::window_mac::WindowState;
+use crate::{Event, Key, MouseButton, WindowId};
+use std::ffi::c_void;
 
 // ------------------------ Window Events --------------------------
 
@@ -14,7 +14,7 @@ extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
         self::submit_event(crate::Event::WindowMoved {
             x: (frame.origin.x * backing_scale) as u32,
             y: (frame.origin.y * backing_scale) as u32,
-            window_id: WindowId::new(window_data.ns_window),
+            window_id: WindowId::new(window_data.ns_window as *mut c_void),
         });
     }
 }
@@ -22,7 +22,7 @@ extern "C" fn window_did_miniaturize(this: &Object, _sel: Sel, _event: *mut Obje
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Minimized;
     self::submit_event(Event::WindowMinimized {
-        window_id: WindowId::new(window_data.ns_window),
+        window_id: WindowId::new(window_data.ns_window as *mut c_void),
     });
 }
 
@@ -30,7 +30,7 @@ extern "C" fn window_did_deminiaturize(this: &Object, _sel: Sel, _event: *mut Ob
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately fullscreens?
     self::submit_event(Event::WindowRestored {
-        window_id: WindowId::new(window_data.ns_window),
+        window_id: WindowId::new(window_data.ns_window as *mut c_void),
     });
 }
 
@@ -38,14 +38,14 @@ extern "C" fn window_did_enter_fullscreen(this: &Object, _sel: Sel, _event: *mut
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Fullscreen;
     self::submit_event(Event::WindowFullscreened {
-        window_id: WindowId::new(window_data.ns_window),
+        window_id: WindowId::new(window_data.ns_window as *mut c_void),
     });
 }
 extern "C" fn window_did_exit_fullscreen(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately minimizes?
     self::submit_event(Event::WindowRestored {
-        window_id: WindowId::new(window_data.ns_window),
+        window_id: WindowId::new(window_data.ns_window as *mut c_void),
     });
 }
 
@@ -53,7 +53,7 @@ extern "C" fn window_will_start_live_resize(this: &Object, _sel: Sel, _event: *m
     let window_data = get_window_data(this);
 
     self::submit_event(crate::Event::WindowStartResize {
-        window_id: WindowId::new(window_data.ns_window),
+        window_id: WindowId::new(window_data.ns_window as *mut c_void),
     });
 }
 
@@ -61,7 +61,7 @@ extern "C" fn window_did_end_live_resize(this: &Object, _sel: Sel, _event: *mut 
     let window_data = get_window_data(this);
 
     self::submit_event(crate::Event::WindowEndResize {
-        window_id: WindowId::new(window_data.ns_window),
+        window_id: WindowId::new(window_data.ns_window as *mut c_void),
     });
 }
 
@@ -74,7 +74,7 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
         self::submit_event(crate::Event::WindowResized {
             width: (frame.size.width * backing_scale) as u32,
             height: (frame.size.height * backing_scale) as u32,
-            window_id: WindowId::new(window_data.ns_window),
+            window_id: WindowId::new(window_data.ns_window as *mut c_void),
         });
     }
 }
@@ -99,21 +99,21 @@ extern "C" fn window_did_change_backing_properties(_this: &Object, _sel: Sel, _e
 extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     self::submit_event(crate::Event::WindowGainedFocus {
-        window_id: WindowId::new(window_data.ns_window),
+        window_id: WindowId::new(window_data.ns_window as *mut c_void),
     });
 }
 
 extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _event: *mut Object) {
     let window_data = get_window_data(this);
     self::submit_event(crate::Event::WindowLostFocus {
-        window_id: WindowId::new(window_data.ns_window),
+        window_id: WindowId::new(window_data.ns_window as *mut c_void),
     });
 }
 
 extern "C" fn window_should_close(this: &Object, _sel: Sel, _event: *mut Object) -> BOOL {
     let window_data = get_window_data(this);
     self::submit_event(crate::Event::WindowCloseRequested {
-        window_id: WindowId::new(window_data.ns_window),
+        window_id: WindowId::new(window_data.ns_window as *mut c_void),
     });
     NO // No because the program must drop its handle to close the window.
 }

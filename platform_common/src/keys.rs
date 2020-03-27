@@ -4,12 +4,6 @@ pub enum Key {
     __Nonexhaustive, // More keys may be added.
 
     Unknown,
-    //----------- Mouse buttons
-    LeftMouse,
-    RightMouse,
-    MiddleMouse,
-    ExtraMouse1,
-    ExtraMouse2,
     // --------- International and IME (Input method editor) keys --------------
     KanaHangul,
     HanjaKanji,

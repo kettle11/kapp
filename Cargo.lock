@@ -47,8 +47,6 @@ dependencies = [
  "glow 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "kettlewin_gl_context 0.1.0",
  "kettlewin_platform_macos 0.1.0",
- "wasm-bindgen 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
- "web-sys 0.3.36 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

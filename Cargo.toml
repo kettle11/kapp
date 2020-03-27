@@ -17,17 +17,3 @@ glow = {version = "0.4.0"}
 [target.'cfg(target_os="macos")'.dependencies]
 kettlewin_platform_macos = { path = "./platforms/macos" }
 
-[target.'cfg(target_arch="wasm32")'.dependencies]
-wasm-bindgen = "0.2.58"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-version = "0.3.35"
-features = [
-    "console",
-    "HtmlElement",
-    "HtmlCanvasElement",
-    "MouseEvent",
-    "KeyboardEvent",
-    "Event",
-    "WebGlContextAttributes"
-]

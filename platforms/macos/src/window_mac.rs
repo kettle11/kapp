@@ -1,5 +1,6 @@
 use super::apple::*;
 use super::application_mac::{ApplicationData, INSTANCE_DATA_IVAR_ID};
+use crate::WindowId;
 use std::ffi::c_void;
 
 // Not exposed outside the crate
@@ -29,41 +30,6 @@ impl Drop for InnerWindowData {
             let () = msg_send![self.window_delegate, release];
             let () = msg_send![self.ns_view, release];
             let () = msg_send![self.tracking_area, release];
-        }
-    }
-}
-
-#[derive(Hash, Eq, PartialEq, Clone, Copy)]
-pub struct WindowId {
-    // This should not be public
-    ns_window: *mut Object, // Just use the window pointer as the ID, it's unique.
-}
-
-impl WindowId {
-    pub fn new(ns_window: *mut Object) -> Self {
-        Self { ns_window }
-    }
-
-    pub unsafe fn inner_window(&self) -> *mut c_void {
-        self.ns_window as *mut c_void
-    }
-}
-
-// Typically WindowId is unsafe to send, but the ns_window field is only used
-// as a unique id so it's ok.
-unsafe impl Send for WindowId {}
-
-impl std::fmt::Debug for WindowId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unsafe {
-            // Retrieve the window title and use that to make more legible events
-            let title: *mut Object = msg_send![self.ns_window, title];
-            let title: *const i8 = msg_send![title, UTF8String];
-            let title = std::ffi::CStr::from_ptr(title);
-            f.write_fmt(format_args!(
-                "[Title: {:?}, Pointer: {:?}]",
-                title, self.ns_window
-            ))
         }
     }
 }
@@ -162,6 +128,6 @@ pub fn build(
         (*window_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, inner_window_data_ptr as *mut c_void);
         (*ns_view).set_ivar(INSTANCE_DATA_IVAR_ID, inner_window_data_ptr as *mut c_void);
 
-        Ok(WindowId { ns_window })
+        Ok(WindowId::new(ns_window as *mut c_void))
     }
 }

@@ -4,8 +4,8 @@ extern "C" {}
 extern crate objc;
 
 use kettlewin_platform_common::{
-    Key, MouseButton, PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait,
-    WindowParameters,
+    ApplicationMessage, Event, Key, MouseButton, PlatformApplicationTrait, PlatformChannelTrait,
+    PlatformWakerTrait, WindowId, WindowParameters,
 };
 
 #[allow(
@@ -21,26 +21,14 @@ mod events_mac;
 mod keys_mac;
 mod window_mac;
 
-//pub use gl_context::GLContext;
-use window_mac::WindowId;
-
-pub type ApplicationMessage = kettlewin_platform_common::ApplicationMessage<crate::WindowId>;
-pub type Event = kettlewin_platform_common::Event<crate::WindowId>;
-
 pub mod prelude {
     pub use super::{
         application_mac::*,
         application_mac::{PlatformApplication, PlatformChannel, PlatformWaker},
-        window_mac::WindowId,
-        ApplicationMessage, Event,
     };
-
-    pub mod events {
-        pub use kettlewin_platform_common::Event::*;
-    }
-
     pub use kettlewin_platform_common::{
-        single_value_channel, Key, MouseButton, PlatformApplicationTrait, PlatformChannelTrait,
-        PlatformWakerTrait, WindowParameters,
+        single_value_channel, ApplicationMessage, Event, Key, MouseButton,
+        PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait, WindowId,
+        WindowParameters,
     };
 }

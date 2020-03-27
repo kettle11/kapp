@@ -89,13 +89,13 @@ pub fn process_events() {
         while let Ok(event) = events.try_recv() {
             match event {
                 ApplicationMessage::MinimizeWindow { window } => {
-                    let () = msg_send![window.inner_window() as *mut Object, miniaturize: nil];
+                    let () = msg_send![window.raw() as *mut Object, miniaturize: nil];
                 }
                 ApplicationMessage::SetWindowPosition { window, x, y } => {
                     let backing_scale: CGFloat =
-                        msg_send![window.inner_window() as *mut Object, backingScaleFactor];
+                        msg_send![window.raw() as *mut Object, backingScaleFactor];
                     let () =
-                        msg_send![window.inner_window() as *mut Object, setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
+                        msg_send![window.raw() as *mut Object, setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
                 }
                 ApplicationMessage::SetWindowSize {
                     window,
@@ -103,13 +103,17 @@ pub fn process_events() {
                     height,
                 } => {
                     let backing_scale: CGFloat =
-                        msg_send![window.inner_window() as *mut Object, backingScaleFactor];
+                        msg_send![window.raw() as *mut Object, backingScaleFactor];
                     let () =
-                        msg_send![window.inner_window() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+                        msg_send![window.raw() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+                }
+                ApplicationMessage::SetWindowTitle { window, title } => {
+                    let title = NSString::new(&title);
+                    let () = msg_send![window.raw() as *mut Object, setTitle: title.raw];
                 }
                 ApplicationMessage::MaximizeWindow { .. } => {}
                 ApplicationMessage::FullscreenWindow { window } => {
-                    let () = msg_send![window.inner_window() as *mut Object, toggleFullScreen: nil];
+                    let () = msg_send![window.raw() as *mut Object, toggleFullScreen: nil];
                 }
                 ApplicationMessage::RestoreWindow { .. } => unimplemented!(),
                 ApplicationMessage::DropWindow { .. } => unimplemented!(),

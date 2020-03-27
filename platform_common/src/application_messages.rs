@@ -1,7 +1,8 @@
 use crate::single_value_channel;
 use crate::window_parameters::WindowParameters;
+use crate::WindowId;
 
-pub enum ApplicationMessage<WindowId> {
+pub enum ApplicationMessage {
     SetWindowPosition {
         window: WindowId,
         x: u32,
@@ -11,6 +12,10 @@ pub enum ApplicationMessage<WindowId> {
         window: WindowId,
         width: u32,
         height: u32,
+    },
+    SetWindowTitle {
+        window: WindowId,
+        title: String,
     },
     MinimizeWindow {
         window: WindowId,

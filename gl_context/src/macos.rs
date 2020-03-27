@@ -9,9 +9,6 @@ pub struct GLContext {
     // current_window: Option<*mut Object>,
 }
 
-// This is not ok because Window is not thread safe.
-unsafe impl Send for GLContext {}
-
 impl GLContextBuilder {
     pub fn build(&self) -> Result<GLContext, ()> {
         unsafe {

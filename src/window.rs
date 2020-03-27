@@ -1,4 +1,7 @@
 use crate::platform::*;
+
+/// A handle used to control a Window.
+/// The window is closed when the Window instance is dropped.
 #[derive(Clone)]
 pub struct Window {
     pub id: WindowId,
@@ -23,17 +26,26 @@ impl Window {
             .send(ApplicationMessage::MaximizeWindow { window: self.id });
     }
 
-    /// Returns the window from a minimized or maximized state.
+    /// Returns the window from a minimized, maximized, or fullscreened state.
     pub fn restore(&mut self) {
         self.platform_channel
             .send(ApplicationMessage::RestoreWindow { window: self.id });
     }
 
+    /// On Web this must be done in response to a user event.
     pub fn fullscreen(&mut self) {
         self.platform_channel
             .send(ApplicationMessage::FullscreenWindow { window: self.id });
     }
 
+    /// Sets the title displayed at the top of the window
+    pub fn set_title(&mut self, title: &str) {
+        self.platform_channel
+            .send(ApplicationMessage::SetWindowTitle {
+                window: self.id,
+                title: title.to_string(),
+            });
+    }
     /// Set the lower left corner of the window.
     pub fn set_position(&mut self, x: u32, y: u32) {
         self.platform_channel

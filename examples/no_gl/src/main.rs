@@ -1,5 +1,4 @@
-extern crate kettlewin;
-use kettlewin::*;
+use kettlewin::{Event::*, *};
 
 fn main() {
     // Create a new window manager with default settings.
@@ -7,8 +6,9 @@ fn main() {
     let _window = app.new_window().build().unwrap();
 
     // Run forever
-    event_loop.run(Box::new(move |event| match event {
+    event_loop.run(move |event| match event {
         WindowCloseRequested { .. } => app.quit(),
-        _ => {}
-    }));
+        KeyDown { key } => println!("Key pressed: {:?}", key),
+        _ => println!("Received event: {:?}", event),
+    });
 }

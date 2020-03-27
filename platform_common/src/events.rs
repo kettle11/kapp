@@ -1,21 +1,27 @@
 use crate::keys::Key;
 use crate::mouse_buttons::MouseButton;
+use crate::WindowId;
 
+/// Input and system events
 #[derive(Debug)]
-pub enum Event<WindowId> {
-    /// The 'Draw' event can be seen as a recommendation of when to draw. It is not an actual system event.
+pub enum Event {
+    /// The 'Draw' event can be seen as a recommendation for when to draw. It is not an actual system event.
     Draw,
     // ------------------- Input Events  ---------------------
     // These are received by a window, but the window must be tracked with the 'GainedFocus' event.
+    /// A key is pressed.
     KeyDown {
         key: Key,
     },
+    /// A key is released.
     KeyUp {
         key: Key,
     },
+    /// A key is held and begins to repeat.
     KeyRepeat {
         key: Key,
     },
+    /// The mouse position has changed. Reports physical coordinates.
     MouseMoved {
         x: f32,
         y: f32,
@@ -72,8 +78,8 @@ pub enum Event<WindowId> {
     WindowLostFocus {
         window_id: WindowId,
     },
-    /// A close is requested for the WindowId. It is up to you to drop your handle to the appropriate window
-    /// to cause the window to close.
+    /// A close is requested for the WindowId.
+    /// The Window will not actually close until the associated 'Window' is dropped.
     WindowCloseRequested {
         window_id: WindowId,
     },
