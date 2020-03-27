@@ -2,7 +2,6 @@ use kettlewin::*;
 use ogl33::*;
 
 fn main() {
-    // Create a new window manager with default settings.
     let (mut app, event_loop) = initialize();
     let window = app.new_window().title("OGL33 Example").build().unwrap();
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app

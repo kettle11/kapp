@@ -1,6 +1,5 @@
 /// This is a really messy example of building a basic platformer.
-extern crate kettlewin;
-use kettlewin::glow::*;
+use glow::*;
 use kettlewin::*;
 
 #[derive(Clone, Copy)]
@@ -123,13 +122,13 @@ fn rect_overlap(rect0: &Rect, rect1: &Rect) -> Option<(f32, f32)> {
 
 fn main() {
     // Create a new application with default settings.
-    let mut app = Application::new();
+    let (mut app, event_loop) = initialize();
 
     let mut screen_width = 1200;
     let mut screen_height = 1200;
 
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
-    let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
+    let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s)); // Create a glow gl context for gl calls.
 
     unsafe {
         gl.enable(SCISSOR_TEST);
@@ -137,6 +136,7 @@ fn main() {
 
     let mut window = app
         .new_window()
+        .title("Platformer")
         .dimensions(screen_width, screen_height)
         .build()
         .unwrap();
@@ -338,7 +338,7 @@ fn main() {
     let mut right_held = false;
     let mut left_held = false;
 
-    app.run(move |app, event| unsafe {
+    event_loop.run(move |event| unsafe {
         match event {
             Event::WindowCloseRequested { .. } => app.quit(),
             Event::WindowResized { width, height, .. } => {

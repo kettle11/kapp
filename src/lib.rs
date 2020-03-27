@@ -22,7 +22,7 @@ pub use web::*;
 #[cfg(target_os = "macos")]
 use kettlewin_platform_macos::prelude as platform;
 
-pub use platform::{events::*, Event};
+pub use platform::{events::*, Event, Key, MouseButton};
 
 #[cfg(feature = "gl_context")]
 mod gl;
