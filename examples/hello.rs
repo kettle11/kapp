@@ -3,7 +3,7 @@ use kettlewin::*;
 
 fn main() {
     let (mut app, event_loop) = initialize();
-    let mut window = app.new_window().build().unwrap();
+    let window = app.new_window().build().unwrap();
 
     // Create a GLContext
     let mut gl_context = GLContext::new().build().unwrap();

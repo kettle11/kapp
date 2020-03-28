@@ -1,8 +1,6 @@
 use super::keys_web;
-use super::WindowId;
-use crate::events::*;
-use crate::Application;
-use crate::MouseButton;
+use crate::{Event, MouseButton, WindowId};
+
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -10,20 +8,19 @@ fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
 }
 
-static mut CALLBACK: Option<Box<dyn FnMut(&mut Application, Event)>> = None;
-static mut APPLICATION: Option<Box<Application>> = None;
+static mut CALLBACK: Option<Box<dyn FnMut(Event)>> = None;
 static mut REQUEST_ANIMATION_FRAME_CLOSURE: Option<Closure<dyn FnMut()>> = None;
 static mut REQUEST_FULLSCREEN_CLOSURE: Option<Closure<dyn FnMut()>> = None;
 
 fn send_event(event: Event) {
     unsafe {
-        (CALLBACK.as_mut().unwrap())(APPLICATION.as_mut().unwrap(), event);
+        (CALLBACK.as_mut().unwrap())(event);
     }
 }
 
-pub fn run<T>(application: Application, callback: T)
+pub fn run<T>(callback: T)
 where
-    T: 'static + FnMut(&mut Application, crate::Event),
+    T: 'static + FnMut(crate::Event),
 {
     let document = web_sys::window().unwrap().document().unwrap();
     let canvas = document
@@ -36,7 +33,6 @@ where
     // An alternative approach is documented here: https://rustwasm.github.io/docs/wasm-bindgen/examples/request-animation-frame.html
     // It may be better, but for now I found the following simpler to understand and implement.
     unsafe {
-        APPLICATION = Some(Box::new(application));
         CALLBACK = Some(Box::new(Box::new(callback)));
         {
             let canvas = canvas.clone();
@@ -50,7 +46,7 @@ where
                     send_event(Event::WindowResized {
                         width: canvas_client_width,
                         height: canvas_client_height,
-                        window_id: WindowId {},
+                        window_id: WindowId::new(0 as *mut std::ffi::c_void),
                     });
                 }
 

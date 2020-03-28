@@ -73,23 +73,19 @@ impl EventLoop {
     /// Run the application forever. When a new event occurs the callback passed in will be called.
     /// On MacOS the callback does not run on the main thread.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn run<T>(mut self, callback: T) -> !
+    pub fn run<T>(mut self, callback: T)
     where
         T: 'static + FnMut(Event) + Send,
     {
         self.platform_application.run(Box::new(callback));
-
-        unreachable!()
     }
 
     // Same as above but does not require Send
     #[cfg(target_arch = "wasm32")]
     pub fn run<T>(mut self, callback: T)
     where
-        T: 'static + FnMut(crate::Event),
+        T: 'static + FnMut(Event),
     {
-        unimplemented!();
-        self.platform_application.start_receiver(callback);
-        self.platform_application.start_application();
+        self.platform_application.run(Box::new(callback));
     }
 }

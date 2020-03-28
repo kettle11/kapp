@@ -6,7 +6,7 @@ edition = "2018"
 
 [features]
 gl_context = ["kettlewin_gl_context"]
-default = ["gl_context"]
+default = []
 
 [dependencies]
 kettlewin_gl_context = { path = "./gl_context", optional = true }
@@ -16,4 +16,7 @@ glow = {version = "0.4.0"}
 
 [target.'cfg(target_os="macos")'.dependencies]
 kettlewin_platform_macos = { path = "./platforms/macos" }
+
+[target.'cfg(target_arch="wasm32")'.dependencies]
+kettlewin_platform_web = { path = "./platforms/web" }
 

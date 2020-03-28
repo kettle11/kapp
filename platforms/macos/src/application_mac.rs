@@ -1,12 +1,13 @@
 use super::apple::*;
 use super::window_mac::*;
-use crate::{PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait};
+use crate::{
+    ApplicationMessage, Event, PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait,
+};
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::sync::mpsc;
 use std::sync::mpsc::*;
 
-use crate::{ApplicationMessage, Event};
 pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
 static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
 static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
@@ -187,9 +188,6 @@ pub struct PlatformApplication {
 impl PlatformApplicationTrait for PlatformApplication {
     type Waker = PlatformWaker;
     type Channel = PlatformChannel;
-    type WindowId = crate::WindowId;
-    type ApplicationMessage = ApplicationMessage;
-    type Event = Event;
 
     fn new() -> (Self::Channel, Self) {
         unsafe {
@@ -263,7 +261,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         process_events();
     }
 
-    fn run(&mut self, mut callback: Box<dyn FnMut(Self::Event) + Send>) {
+    fn run(&mut self, mut callback: Box<dyn FnMut(crate::Event) + Send>) {
         // User code is run on another thread because resize and certain other events block the main
         // thread on MacOS.
         // This method ensures a smooth experience.
@@ -293,7 +291,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn run_raw(&mut self, callback: Box<dyn FnMut(Self::Event) + Send>) {
+    fn run_raw(&mut self, callback: Box<dyn FnMut(crate::Event) + Send>) {
         APPLICATION_DATA.with(|d| {
             let mut application_data = d.borrow_mut();
             application_data.as_mut().unwrap().produce_event_callback = Some(Box::new(callback));
@@ -344,8 +342,7 @@ pub struct PlatformChannel {
 }
 
 impl PlatformChannelTrait for PlatformChannel {
-    type ApplicationMessage = ApplicationMessage;
-    fn send(&mut self, message: Self::ApplicationMessage) {
+    fn send(&mut self, message: ApplicationMessage) {
         self.sender.send(message).unwrap();
     }
 }

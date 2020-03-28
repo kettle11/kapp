@@ -12,10 +12,12 @@ wasm-bindgen = "0.2.58"
 version = "0.3.35"
 features = [
     "console",
+    "Document",
     "HtmlElement",
     "HtmlCanvasElement",
     "MouseEvent",
     "KeyboardEvent",
     "Event",
-    "WebGlContextAttributes"
+    "WebGlContextAttributes",
+    "Window"
 ]

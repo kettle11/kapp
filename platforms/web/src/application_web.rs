@@ -1,34 +1,28 @@
-use crate::application_message::ApplicationMessage::*;
-use crate::platform_traits::*;
-use crate::Application;
-
+use crate::{
+    ApplicationMessage, Event, PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait,
+};
 pub struct PlatformApplication {}
 
 impl PlatformApplicationTrait for PlatformApplication {
-    type PlatformWaker = PlatformWaker;
-    type PlatformChannel = PlatformChannel;
+    type Waker = PlatformWaker;
+    type Channel = PlatformChannel;
 
-    /// Only call from the main thread.
-    fn new() -> (Self::PlatformChannel, Self) {
-        (Self::PlatformChannel {}, Self {})
+    fn new() -> (Self::Channel, Self) {
+        (Self::Channel {}, Self {})
     }
 
-    /// Only call from the main thread.
     fn flush_events(&mut self) {}
 
-    /// Only call from the main thread.
-    fn start_receiver<T>(&mut self, application: crate::Application, callback: T)
-    where
-        T: 'static + FnMut(&mut Application, crate::Event),
-    {
-        super::event_loop_web::run(application, callback);
+    fn run(&mut self, callback: Box<dyn FnMut(Event)>) {
+        super::event_loop_web::run(callback);
     }
 
-    /// Only call from the main thread.
-    fn start_application(self) {}
+    fn run_raw(&mut self, callback: Box<dyn FnMut(Event)>) {
+        super::event_loop_web::run(callback);
+    }
 
-    fn get_waker(&self) -> PlatformWaker {
-        PlatformWaker {}
+    fn get_waker(&self) -> Self::Waker {
+        Self::Waker {}
     }
 }
 
@@ -38,25 +32,29 @@ pub struct PlatformWaker {}
 impl PlatformWakerTrait for PlatformWaker {
     /// Call from any thread
     fn wake(&self) {}
+    fn flush(&self) {}
 }
 
 #[derive(Clone)]
 pub struct PlatformChannel {}
 
 impl PlatformChannelTrait for PlatformChannel {
-    fn send(&mut self, message: crate::application_message::ApplicationMessage) {
+    fn send(&mut self, message: ApplicationMessage) {
         match message {
-            RequestFrame => super::event_loop_web::request_frame(),
-            SetWindowPosition { .. } => {}
-            SetWindowSize { .. } => {}
-            MinimizeWindow { .. } => {}
-            MaximizeWindow { .. } => {}
-            FullscreenWindow { .. } => super::event_loop_web::request_fullscreen(),
-            RestoreWindow { .. } => unimplemented!(),
-            DropWindow { .. } => {}
-            SetMousePosition { .. } => unimplemented!(),
-            NewWindow { .. } => {}
-            Quit => {}
+            ApplicationMessage::RequestFrame => super::event_loop_web::request_frame(),
+            ApplicationMessage::SetWindowPosition { .. } => {}
+            ApplicationMessage::SetWindowSize { .. } => {}
+            ApplicationMessage::SetWindowTitle { .. } => {}
+            ApplicationMessage::MinimizeWindow { .. } => {}
+            ApplicationMessage::MaximizeWindow { .. } => {}
+            ApplicationMessage::FullscreenWindow { .. } => {
+                super::event_loop_web::request_fullscreen()
+            }
+            ApplicationMessage::RestoreWindow { .. } => unimplemented!(),
+            ApplicationMessage::DropWindow { .. } => {}
+            ApplicationMessage::SetMousePosition { .. } => unimplemented!(),
+            ApplicationMessage::NewWindow { .. } => {}
+            ApplicationMessage::Quit => {}
         }
     }
 }

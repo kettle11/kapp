@@ -59,8 +59,8 @@ impl<'a> WindowBuilder<'a> {
     #[cfg(target_arch = "wasm32")]
     pub fn build(&mut self) -> Result<Window, ()> {
         Ok(Window::new(
-            crate::WindowId::new(0 as *mut std::ptr::c_void),
-            self.application.platform_channel.clone(),
+            crate::WindowId::new(0 as *mut std::ffi::c_void),
+            self._application.platform_channel.clone(),
         ))
     }
 }
