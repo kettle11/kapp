@@ -58,7 +58,7 @@
 //!     let mut gl_context = GLContext::new().build().unwrap();
 //!
 //!     // Assign the GLContext's window.
-//!     gl_context.set_window(Some(&window)).unwrap();
+//!     gl_context.set_window(Some(&window.id)).unwrap();
 //!     
 //!     // Glow is a library for accessing GL function calls from a variety of platforms
 //!     // Glow requires a cross platform way to load function pointers,
@@ -101,7 +101,7 @@ use kettlewin_platform_macos::prelude as platform;
 use kettlewin_platform_web::prelude as platform;
 
 #[cfg(feature = "gl_context")]
-mod gl;
+pub use kettlewin_gl_context::GLContext;
 
 #[cfg(target_os = "windows")]
 pub use windows::*;
@@ -110,8 +110,6 @@ pub use platform::{Event, Key, MouseButton, WindowId};
 
 pub use application::{initialize, Application, EventLoop};
 
-#[cfg(feature = "gl_context")]
-pub use gl::GLContext;
 //pub use async_application::*;
 
 pub use window::Window;

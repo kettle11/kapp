@@ -9,11 +9,15 @@ fn main() {
     let mut gl_context = GLContext::new().build().unwrap();
 
     // Assign the GLContext's window.
-    gl_context.set_window(Some(&window)).unwrap();
+    gl_context.set_window(Some(&window.id)).unwrap();
 
     // Glow is a library for accessing GL function calls from a variety of platforms
     // Glow requires a cross platform way to load function pointers,
     // which GLContext provides with get_proc_address.
+
+    #[cfg(target_arch = "wasm32")]
+    let gl = glow::Context::from_webgl1_context(gl_context.get_webgl1_context());
+    #[cfg(not(target_arch = "wasm32"))]
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
     event_loop.run(move |event| match event {

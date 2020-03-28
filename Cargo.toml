@@ -6,7 +6,7 @@ edition = "2018"
 
 [features]
 gl_context = ["kettlewin_gl_context"]
-default = []
+default = ["gl_context"]
 
 [dependencies]
 kettlewin_gl_context = { path = "./gl_context", optional = true }

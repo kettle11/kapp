@@ -1,5 +1,6 @@
 use crate::GLContextBuilder;
 use objc::runtime::{Object, YES};
+use objc::*;
 use std::ffi::c_void;
 use std::io::Error;
 
@@ -8,6 +9,7 @@ pub struct GLContext {
     pixel_format: *mut Object,
     // current_window: Option<*mut Object>,
 }
+unsafe impl Send for GLContext {}
 
 impl GLContextBuilder {
     pub fn build(&self) -> Result<GLContext, ()> {
@@ -54,7 +56,15 @@ impl GLContext {
         GLContextBuilder {}
     }
 
-    pub fn set_window(&mut self, window: Option<*mut std::ffi::c_void>) -> Result<(), Error> {
+    pub fn set_window(
+        &mut self,
+        window: Option<&kettlewin_platform_common::WindowId>,
+    ) -> Result<(), Error> {
+        let window = window.map(|w| unsafe { w.raw() } as *mut std::ffi::c_void);
+        self.set_window_raw(window)
+    }
+
+    pub fn set_window_raw(&mut self, window: Option<*mut std::ffi::c_void>) -> Result<(), Error> {
         let window = window.map(|w| w as *mut Object);
         if let Some(window) = window {
             let window_view: *mut Object = unsafe { msg_send![window, contentView] };
@@ -86,7 +96,7 @@ impl GLContext {
     pub fn gl_loader_c_string(&self) -> Box<dyn FnMut(*const i8) -> *const std::ffi::c_void> {
         Box::new(move |s| unsafe {
             let name = std::ffi::CStr::from_ptr(s);
-            Self::get_proc_address((&name).to_str().unwrap())
+            Self::get_proc_address_inner((&name).to_str().unwrap())
         })
     }
 
@@ -99,7 +109,11 @@ impl GLContext {
 
     // Taken from Glutin:
     // https://github.com/rust-windowing/glutin/blob/447f3526dcf90a460d52afefd0b29eb2ed7f87f3/glutin/src/platform_impl/macos/mod.rs
-    pub fn get_proc_address(addr: &str) -> *const core::ffi::c_void {
+    pub fn get_proc_address(&self, addr: &str) -> *const core::ffi::c_void {
+        Self::get_proc_address_inner(addr)
+    }
+
+    fn get_proc_address_inner(addr: &str) -> *const core::ffi::c_void {
         let symbol_name = NSString::new(addr);
         let framework_name = NSString::new("com.apple.opengl");
         let framework = unsafe { CFBundleGetBundleWithIdentifier(framework_name.raw) };

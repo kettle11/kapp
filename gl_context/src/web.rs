@@ -1,4 +1,4 @@
-use crate::Window;
+use crate::GLContextBuilder;
 use std::io::Error;
 use wasm_bindgen::JsCast;
 
@@ -8,8 +8,6 @@ pub struct GLContext {
 
 // This is fine because web is single threaded.
 unsafe impl Send for GLContext {}
-
-pub struct GLContextBuilder {}
 
 impl GLContextBuilder {
     pub fn build(&self) -> Result<GLContext, ()> {
@@ -50,16 +48,23 @@ impl GLContext {
         GLContextBuilder {}
     }
 
-    pub fn set_window(&self, _window: Option<&Window>) -> Result<(), Error> {
+    pub fn set_window(
+        &mut self,
+        window: Option<&kettlewin_platform_common::WindowId>,
+    ) -> Result<(), Error> {
+        let window = window.map(|w| unsafe { w.raw() } as *mut std::ffi::c_void);
+        self.set_window_raw(window)
+    }
+
+    pub fn set_window_raw(&self, _window: Option<*mut std::ffi::c_void>) -> Result<(), Error> {
         Ok(())
     }
 
     pub fn update_target(&self) {}
     pub fn make_current(&self) {}
 
-    #[cfg(feature = "opengl_glow")]
-    pub fn glow_context(&self) -> glow::Context {
-        glow::Context::from_webgl1_context(self.webgl_context.clone())
+    pub fn get_webgl1_context(&self) -> web_sys::WebGlRenderingContext {
+        self.webgl_context.clone()
     }
 
     pub fn swap_buffers(&self) {

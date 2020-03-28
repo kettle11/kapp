@@ -4,5 +4,21 @@ version = "0.1.0"
 authors = ["Ian Kettlewell <ian.kettlewell@gmail.com>"]
 edition = "2018"
 
+[dependencies]
+kettlewin_platform_common = { path = "../platform_common" }
+
 [target.'cfg(target_os="macos")'.dependencies]
 objc = { git = "https://github.com/kettle11/rust-objc" }
+
+[target.'cfg(target_arch="wasm32")'.dependencies]
+wasm-bindgen = "0.2.58"
+
+[target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
+version = "0.3.35"
+features = [
+    "Document",
+    "HtmlElement",
+    "HtmlCanvasElement",
+    "WebGlContextAttributes",
+    "Window"
+]
