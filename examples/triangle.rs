@@ -1,6 +1,6 @@
-/// Render a single triangle with OpenGL.
-extern crate kettlewin;
-use kettlewin::glow::*;
+//! Render a single triangle with OpenGL
+
+use glow::*;
 use kettlewin::*;
 
 fn new_shader(
@@ -87,17 +87,21 @@ fn setup(gl: &glow::Context) {
 
 fn main() {
     // Create a new application with default settings.
-    let mut app = Application::new();
+    let (mut app, event_loop) = initialize();
     let window = app.new_window().title("Hello").build().unwrap();
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
 
-    gl_context.set_window(Some(&window)).unwrap();
-    let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
+    gl_context.set_window(Some(&window.id)).unwrap();
+
+    #[cfg(target_arch = "wasm32")]
+    let gl = glow::Context::from_webgl1_context(gl_context.get_webgl1_context());
+    #[cfg(not(target_arch = "wasm32"))]
+    let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
     setup(&gl);
 
     // Run forever
-    app.run(move |app, event| match event {
+    event_loop.run(move |event| match event {
         Event::WindowCloseRequested { .. } => app.quit(),
         Event::WindowResized { .. } => gl_context.update_target(), // This call updates the window backbuffer to match the new window size.
         Event::Draw => {

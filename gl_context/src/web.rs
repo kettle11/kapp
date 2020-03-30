@@ -1,13 +1,10 @@
-use crate::GLContextBuilder;
 use std::io::Error;
 use wasm_bindgen::JsCast;
 
-pub struct GLContext {
-    webgl_context: web_sys::WebGlRenderingContext,
+pub struct GLContextBuilder {
+    select_webgl1: bool,
+    select_webgl2: bool,
 }
-
-// This is fine because web is single threaded.
-unsafe impl Send for GLContext {}
 
 impl GLContextBuilder {
     pub fn build(&self) -> Result<GLContext, ()> {
@@ -26,26 +23,71 @@ impl GLContextBuilder {
 
         // There should be a way to choose webgl1 or webgl2
         // Or perhaps choose automatically based on support?
-        /*
-        if let Some(canvas) = canvas.get_context("webgl2").unwrap() {
-            let webgl2_context = canvas
-                .dyn_into::<web_sys::WebGl2RenderingContext>()
+
+        let mut context = if self.select_webgl2 {
+            if let Ok(context) =
+                canvas.get_context_with_context_options("webgl2", context_attributes.as_ref())
+            {
+                let webgl2_context = context
+                    .unwrap()
+                    .dyn_into::<web_sys::WebGl2RenderingContext>()
+                    .unwrap();
+                Ok(GLContext {
+                    webgl1_context: None,
+                    webgl2_context: Some(webgl2_context),
+                })
+            } else {
+                Err(())
+            }
+        } else {
+            Err(())
+        };
+
+        if self.select_webgl1 && context.is_err() {
+            let webgl1_context = canvas
+                .get_context_with_context_options("webgl", context_attributes.as_ref())
+                .unwrap()
+                .unwrap()
+                .dyn_into::<web_sys::WebGlRenderingContext>()
                 .unwrap();
-            glow::Context::from_webgl2_context(webgl2_context)
-        } else {*/
-        let webgl_context = canvas
-            .get_context_with_context_options("webgl", context_attributes.as_ref())
-            .unwrap()
-            .unwrap()
-            .dyn_into::<web_sys::WebGlRenderingContext>()
-            .unwrap();
-        Ok(GLContext { webgl_context })
+            context = Ok(GLContext {
+                webgl1_context: Some(webgl1_context),
+                webgl2_context: None,
+            })
+        }
+
+        context
+    }
+
+    /*
+    pub fn webgl1(&mut self) -> &mut Self {
+        self.select_webgl1 = true;
+        self
+    }
+    */
+
+    /// Attempts to get a WebGL2 context first, if that doesn't work
+    /// fall back to WebGL1
+    pub fn webgl2(&mut self) -> &mut Self {
+        self.select_webgl2 = true;
+        self
     }
 }
 
+pub struct GLContext {
+    webgl1_context: Option<web_sys::WebGlRenderingContext>,
+    webgl2_context: Option<web_sys::WebGl2RenderingContext>,
+}
+
+// This is fine because web is single threaded.
+unsafe impl Send for GLContext {}
+
 impl GLContext {
     pub fn new() -> GLContextBuilder {
-        GLContextBuilder {}
+        GLContextBuilder {
+            select_webgl1: true,
+            select_webgl2: false,
+        }
     }
 
     pub fn set_window(
@@ -63,8 +105,12 @@ impl GLContext {
     pub fn update_target(&self) {}
     pub fn make_current(&self) {}
 
-    pub fn get_webgl1_context(&self) -> web_sys::WebGlRenderingContext {
-        self.webgl_context.clone()
+    pub fn webgl1_context(&self) -> Option<web_sys::WebGlRenderingContext> {
+        self.webgl1_context.clone()
+    }
+
+    pub fn webgl2_context(&self) -> Option<web_sys::WebGl2RenderingContext> {
+        self.webgl2_context.clone()
     }
 
     pub fn swap_buffers(&self) {

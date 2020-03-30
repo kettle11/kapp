@@ -88,6 +88,7 @@
 //! }
 //! ```
 mod application;
+//mod async_application;
 mod window;
 mod window_builder;
 

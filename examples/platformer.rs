@@ -128,7 +128,10 @@ fn main() {
     let mut screen_height = 1200;
 
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
-    let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s)); // Create a glow gl context for gl calls.
+    #[cfg(target_arch = "wasm32")]
+    let gl = glow::Context::from_webgl1_context(gl_context.get_webgl1_context());
+    #[cfg(not(target_arch = "wasm32"))]
+    let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
     unsafe {
         gl.enable(SCISSOR_TEST);
@@ -141,7 +144,7 @@ fn main() {
         .build()
         .unwrap();
 
-    gl_context.set_window(Some(&window)).unwrap();
+    gl_context.set_window(Some(&window.id)).unwrap();
 
     // ---------------- Level Data -------------------
     let black = (0.0, 0.0, 0.0, 1.0);
