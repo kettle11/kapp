@@ -11,6 +11,7 @@ fn window() -> web_sys::Window {
 static mut CALLBACK: Option<Box<dyn FnMut(Event)>> = None;
 static mut REQUEST_ANIMATION_FRAME_CLOSURE: Option<Closure<dyn FnMut()>> = None;
 static mut REQUEST_FULLSCREEN_CLOSURE: Option<Closure<dyn FnMut()>> = None;
+static mut CANVAS_HEIGHT: u32 = 0;
 
 fn send_event(event: Event) {
     unsafe {
@@ -41,8 +42,12 @@ where
                 let canvas_client_height = canvas.client_height() as u32;
                 if canvas_client_width != canvas.width() || canvas_client_height != canvas.height()
                 {
+                    // This may impact smoothness of resizing.
                     canvas.set_width(canvas_client_width);
                     canvas.set_height(canvas_client_height);
+
+                    CANVAS_HEIGHT = canvas_client_height;
+
                     send_event(Event::WindowResized {
                         width: canvas_client_width,
                         height: canvas_client_height,
@@ -63,19 +68,19 @@ where
 
         // Mouse move event
         let mouse_move = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            send_event(Event::MouseMoved {
-                x: event.client_x() as f32,
-                y: event.client_y() as f32,
-            });
+            let (x, y) = get_mouse_position(&event);
+            send_event(Event::MouseMoved { x, y });
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_onmousemove(Some(mouse_move.as_ref().unchecked_ref()));
         mouse_move.forget();
 
         // Mouse down event
         let mouse_down = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+            let (x, y) = get_mouse_position(&event);
+
             send_event(Event::MouseButtonDown {
-                x: event.client_x() as f32,
-                y: event.client_y() as f32,
+                x,
+                y,
                 button: match event.button() {
                     0 => MouseButton::Left,
                     1 => MouseButton::Middle,
@@ -91,9 +96,11 @@ where
 
         // Mouse up event
         let mouse_up = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+            let (x, y) = get_mouse_position(&event);
+
             send_event(Event::MouseButtonUp {
-                x: event.client_x() as f32,
-                y: event.client_y() as f32,
+                x,
+                y,
                 button: match event.button() {
                     0 => MouseButton::Left,
                     1 => MouseButton::Middle,
@@ -142,6 +149,15 @@ where
         keyup.forget();
         // Finally, start the draw loop.
         request_frame();
+    }
+}
+
+fn get_mouse_position(event: &web_sys::MouseEvent) -> (f32, f32) {
+    unsafe {
+        (
+            event.client_x() as f32,
+            (CANVAS_HEIGHT - event.client_y() as u32) as f32,
+        )
     }
 }
 
