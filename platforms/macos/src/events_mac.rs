@@ -287,6 +287,14 @@ extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
 }
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
+    let (x, y) = get_mouse_position(this, event);
+    self::submit_event(crate::Event::MouseMoved {
+        x: x as f32,
+        y: y as f32,
+    });
+}
+
+fn get_mouse_position(this: &Object, event: *mut Object) -> (f32, f32) {
     unsafe {
         let window_data = get_window_data(this);
         let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
@@ -294,39 +302,51 @@ extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
         let window_point: NSPoint = msg_send![event, locationInWindow];
         let x = window_point.x * backing_scale;
         let y = window_point.y * backing_scale; // Don't flip because 0 is bottom left on MacOS
-
-        self::submit_event(crate::Event::MouseMoved {
-            x: x as f32,
-            y: y as f32,
-        });
+        (x as f32, y as f32)
     }
 }
 
-extern "C" fn mouse_down(_this: &Object, _sel: Sel, _event: *mut Object) {
+extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
+    let (x, y) = get_mouse_position(this, event);
     self::submit_event(crate::Event::MouseButtonDown {
+        x,
+        y,
         button: MouseButton::Left,
     });
 }
 
-extern "C" fn mouse_up(_this: &Object, _sel: Sel, _event: *mut Object) {
+extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
+    let (x, y) = get_mouse_position(this, event);
     self::submit_event(crate::Event::MouseButtonUp {
+        x,
+        y,
         button: MouseButton::Left,
     });
 }
 
-extern "C" fn right_mouse_down(_this: &Object, _sel: Sel, _event: *mut Object) {
+extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
+    let (x, y) = get_mouse_position(this, event);
+
     self::submit_event(crate::Event::MouseButtonDown {
+        x,
+        y,
         button: MouseButton::Right,
     });
 }
 
-extern "C" fn right_mouse_up(_this: &Object, _sel: Sel, _event: *mut Object) {
+extern "C" fn right_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
+    let (x, y) = get_mouse_position(this, event);
+
     self::submit_event(crate::Event::MouseButtonUp {
+        x,
+        y,
         button: MouseButton::Right,
     });
 }
 
-extern "C" fn other_mouse_down(_this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
+    let (x, y) = get_mouse_position(this, event);
+
     let number: NSInteger = unsafe { msg_send![event, buttonNumber] };
     let button = match number {
         // Are these correct?
@@ -335,10 +355,10 @@ extern "C" fn other_mouse_down(_this: &Object, _sel: Sel, event: *mut Object) {
         16 => MouseButton::Extra2,
         _ => MouseButton::Unknown,
     };
-    self::submit_event(crate::Event::MouseButtonDown { button });
+    self::submit_event(crate::Event::MouseButtonDown { x, y, button });
 }
 
-extern "C" fn other_mouse_up(_this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     let number: NSInteger = unsafe { msg_send![event, buttonNumber] };
     let button = match number {
         // Are these correct?
@@ -347,7 +367,9 @@ extern "C" fn other_mouse_up(_this: &Object, _sel: Sel, event: *mut Object) {
         16 => MouseButton::Extra2,
         _ => MouseButton::Unknown,
     };
-    self::submit_event(crate::Event::MouseButtonUp { button });
+
+    let (x, y) = get_mouse_position(this, event);
+    self::submit_event(crate::Event::MouseButtonUp { x, y, button });
 }
 
 // https://developer.apple.com/documentation/appkit/nsresponder/1534192-scrollwheel?language=objc

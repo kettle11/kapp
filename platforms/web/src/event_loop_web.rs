@@ -74,6 +74,8 @@ where
         // Mouse down event
         let mouse_down = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
             send_event(Event::MouseButtonDown {
+                x: event.client_x() as f32,
+                y: event.client_y() as f32,
                 button: match event.button() {
                     0 => MouseButton::Left,
                     1 => MouseButton::Middle,
@@ -90,6 +92,8 @@ where
         // Mouse up event
         let mouse_up = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
             send_event(Event::MouseButtonUp {
+                x: event.client_x() as f32,
+                y: event.client_y() as f32,
                 button: match event.button() {
                     0 => MouseButton::Left,
                     1 => MouseButton::Middle,

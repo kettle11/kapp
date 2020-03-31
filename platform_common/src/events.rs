@@ -27,9 +27,13 @@ pub enum Event {
         y: f32,
     },
     MouseButtonDown {
+        x: f32,
+        y: f32,
         button: MouseButton,
     },
     MouseButtonUp {
+        x: f32,
+        y: f32,
         button: MouseButton,
     },
     ScrollWheel {
