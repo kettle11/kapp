@@ -70,7 +70,7 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, _event: *mut Object) {
 
     unsafe {
         let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
-        let frame: CGRect = msg_send![window_data.ns_window, frame];
+        let frame: CGRect = msg_send![window_data.ns_view, frame];
         self::submit_event(crate::Event::WindowResized {
             width: (frame.size.width * backing_scale) as u32,
             height: (frame.size.height * backing_scale) as u32,
@@ -300,6 +300,7 @@ fn get_mouse_position(this: &Object, event: *mut Object) -> (f32, f32) {
         let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
 
         let window_point: NSPoint = msg_send![event, locationInWindow];
+
         let x = window_point.x * backing_scale;
         let y = window_point.y * backing_scale; // Don't flip because 0 is bottom left on MacOS
         (x as f32, y as f32)
