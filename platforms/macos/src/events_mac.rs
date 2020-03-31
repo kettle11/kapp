@@ -373,6 +373,21 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     self::submit_event(crate::Event::MouseButtonUp { x, y, button });
 }
 
+extern "C" fn mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
+    let (x, y) = get_mouse_position(this, event);
+    self::submit_event(crate::Event::MouseMoved { x, y });
+}
+
+extern "C" fn right_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
+    let (x, y) = get_mouse_position(this, event);
+    self::submit_event(crate::Event::MouseMoved { x, y });
+}
+
+extern "C" fn other_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
+    let (x, y) = get_mouse_position(this, event);
+    self::submit_event(crate::Event::MouseMoved { x, y });
+}
+
 // https://developer.apple.com/documentation/appkit/nsresponder/1534192-scrollwheel?language=objc
 extern "C" fn scroll_wheel(_this: &Object, _sel: Sel, event: *mut Object) {
     let delta_y: CGFloat = unsafe { msg_send![event, scrollingDeltaY] };
@@ -397,6 +412,7 @@ extern "C" fn touches_began_with_event(this: &Object, _sel: Sel, event: *mut Obj
         for i in 0..count {
             let touch: *mut Object = msg_send![array, objectAtIndex: i];
             let position: NSPoint = msg_send![touch, normalizedPosition];
+
             self::submit_event(crate::Event::TrackpadTouch {
                 x: position.x as f32,
                 y: position.y as f32,
@@ -416,6 +432,7 @@ extern "C" fn touches_moved_with_event(this: &Object, _sel: Sel, event: *mut Obj
         for i in 0..count {
             let touch: *mut Object = msg_send![array, objectAtIndex: i];
             let position: NSPoint = msg_send![touch, normalizedPosition];
+
             self::submit_event(crate::Event::TrackpadTouch {
                 x: position.x as f32,
                 y: position.y as f32,
@@ -469,6 +486,18 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
         decl.add_method(
             sel!(mouseMoved:),
             mouse_moved as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(mouseDragged:),
+            mouse_dragged as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(rightMouseDragged:),
+            right_mouse_dragged as extern "C" fn(&Object, Sel, *mut Object),
+        );
+        decl.add_method(
+            sel!(otherMouseDragged:),
+            other_mouse_dragged as extern "C" fn(&Object, Sel, *mut Object),
         );
         decl.add_method(
             sel!(keyDown:),
