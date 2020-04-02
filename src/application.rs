@@ -31,13 +31,6 @@ impl Application {
         crate::window_builder::WindowBuilder::new(self)
     }
 
-    /// Requests a new 'Draw' event be sent as soon as possible.
-    /// Multiple calls will produce multiple events.
-    pub fn request_frame(&mut self) {
-        self.platform_channel.send(ApplicationMessage::RequestFrame);
-        self.application_waker.wake();
-    }
-
     /// Immediately quits the application.
     pub fn quit(&mut self) {
         self.platform_channel.send(ApplicationMessage::Quit);

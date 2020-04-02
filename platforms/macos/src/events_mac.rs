@@ -210,6 +210,10 @@ pub fn add_application_events_to_decl(decl: &mut ClassDecl) {
 // ------------------------ End Application Events --------------------------
 
 // ------------------------ View Events --------------------------
+extern "C" fn draw_rect(_this: &Object, _sel: Sel, _event: *mut Object) {
+    self::submit_event(Event::Draw);
+}
+
 extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg_send![event, keyCode];
@@ -443,6 +447,10 @@ extern "C" fn touches_moved_with_event(this: &Object, _sel: Sel, event: *mut Obj
 
 pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
+        decl.add_method(
+            sel!(drawRect:),
+            draw_rect as extern "C" fn(&Object, Sel, *mut Object),
+        );
         decl.add_method(
             sel!(touchesBeganWithEvent:),
             touches_began_with_event as extern "C" fn(&Object, Sel, *mut Object),

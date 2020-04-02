@@ -65,6 +65,11 @@ impl Window {
                 height,
             });
     }
+
+    pub fn request_redraw(&mut self) {
+        self.platform_channel
+            .send(ApplicationMessage::RequestFrame { window: self.id });
+    }
 }
 
 impl Drop for Window {

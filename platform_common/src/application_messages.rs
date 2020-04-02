@@ -32,7 +32,9 @@ pub enum ApplicationMessage {
     DropWindow {
         window: WindowId,
     },
-    RequestFrame,
+    RequestFrame {
+        window: WindowId,
+    },
     Quit,
     SetMousePosition {
         x: u32,

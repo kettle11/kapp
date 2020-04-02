@@ -118,9 +118,13 @@ pub fn process_events() {
                 }
                 ApplicationMessage::RestoreWindow { .. } => unimplemented!(),
                 ApplicationMessage::DropWindow { .. } => unimplemented!(),
-                ApplicationMessage::RequestFrame { .. } => {
+                ApplicationMessage::RequestFrame { window } => {
                     APPLICATION_DATA.with(|d| {
-                        d.borrow_mut().as_mut().unwrap().frame_requested = true;
+                        let window_view: *mut Object =
+                            msg_send![window.raw() as *mut Object, contentView];
+                        let () = msg_send![window_view, setNeedsDisplay: YES];
+
+                        // d.borrow_mut().as_mut().unwrap().frame_requested = true;
                     });
                 }
                 ApplicationMessage::SetMousePosition { x, y } => {
@@ -266,6 +270,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         // thread on MacOS.
         // This method ensures a smooth experience.
         // 'run_raw' can be used if another method is required.
+        /*
         let (send, receive) = std::sync::mpsc::channel();
 
         // When events are produced by the application send them to a channel
@@ -274,16 +279,17 @@ impl PlatformApplicationTrait for PlatformApplication {
         };
 
         // Receive the events from the channel and send them to the user code callback.
+
         std::thread::spawn(move || {
             while let Ok(event) = receive.recv() {
                 callback(event);
             }
         });
+        */
 
         APPLICATION_DATA.with(|d| {
             let mut application_data = d.borrow_mut();
-            application_data.as_mut().unwrap().produce_event_callback =
-                Some(Box::new(callback_wrapper));
+            application_data.as_mut().unwrap().produce_event_callback = Some(Box::new(callback));
         });
 
         unsafe {
