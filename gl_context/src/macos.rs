@@ -3,7 +3,9 @@ use objc::*;
 use std::ffi::c_void;
 use std::io::Error;
 
-pub struct GLContextBuilder {}
+pub struct GLContextBuilder {
+    samples: u32,
+}
 
 pub struct GLContext {
     gl_context: *mut Object,
@@ -13,6 +15,11 @@ pub struct GLContext {
 unsafe impl Send for GLContext {}
 
 impl GLContextBuilder {
+    pub fn samples(&mut self, samples: u32) -> &mut Self {
+        self.samples = samples;
+        self
+    }
+
     pub fn build(&self) -> Result<GLContext, ()> {
         unsafe {
             let attrs = [
@@ -28,6 +35,10 @@ impl GLContextBuilder {
                 8,
                 NSOpenGLPFAAccelerated as u32,
                 NSOpenGLPFADoubleBuffer as u32,
+                NSOpenGLPFASampleBuffers as u32,
+                1,
+                NSOpenGLPFASamples as u32,
+                self.samples as u32,
                 0,
             ];
 
@@ -54,7 +65,7 @@ impl GLContextBuilder {
 
 impl GLContext {
     pub fn new() -> GLContextBuilder {
-        GLContextBuilder {}
+        GLContextBuilder { samples: 2 }
     }
 
     pub fn set_window(
@@ -149,6 +160,8 @@ pub enum NSOpenGLPixelFormatAttribute {
     NSOpenGLPFAAlphaSize = 11,
     NSOpenGLPFADepthSize = 12,
     NSOpenGLPFAStencilSize = 13,
+    NSOpenGLPFASampleBuffers = 55,
+    NSOpenGLPFASamples = 56,
     NSOpenGLPFAAccelerated = 73,
     NSOpenGLPFAOpenGLProfile = 99,
 }
