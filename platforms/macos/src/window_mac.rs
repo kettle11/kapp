@@ -35,8 +35,9 @@ impl Drop for InnerWindowData {
 }
 
 pub fn build(
-    window_parameters: crate::WindowParameters,
-    application_data: &mut ApplicationData,
+    window_parameters: &crate::WindowParameters,
+    window_class: *const objc::runtime::Class,
+    view_class: *const objc::runtime::Class,
 ) -> Result<WindowId, ()> {
     unsafe {
         let (width, height) = window_parameters
@@ -78,18 +79,18 @@ pub fn build(
         // Set the window size
         let () = msg_send![ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
 
-        let title = window_parameters.title.unwrap_or("Untitled".to_string());
+        let title = window_parameters.title.as_ref().map_or("Untitled", |s| &s);
         let title = NSString::new(&title);
         let () = msg_send![ns_window, setTitle: title.raw];
         let () = msg_send![ns_window, makeKeyAndOrderFront: nil];
 
         // Setup window delegate that receives events.
         // This allocation will be released when the window is dropped.
-        let window_delegate: *mut Object = msg_send![application_data.window_class, new];
+        let window_delegate: *mut Object = msg_send![window_class, new];
 
         // Setup view
         // This allocation will be released when the window is dropped.
-        let ns_view: *mut Object = msg_send![application_data.view_class, alloc];
+        let ns_view: *mut Object = msg_send![view_class, alloc];
 
         // Apparently this defaults to YES even without this call
         let () = msg_send![ns_view, setWantsBestResolutionOpenGLSurface: YES];
@@ -119,10 +120,8 @@ pub fn build(
             window_state: WindowState::Windowed,
         });
 
+        // This is never dropped, but should be.
         let inner_window_data_ptr = Box::into_raw(inner_window_data);
-        let inner_window_data = Box::from_raw(inner_window_data_ptr);
-
-        application_data.windows.push(inner_window_data);
 
         // Give weak references to the window data to the window_delegate and ns_view_delegate.
         (*window_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, inner_window_data_ptr as *mut c_void);

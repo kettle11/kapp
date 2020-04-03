@@ -1,12 +1,9 @@
 use super::apple::*;
 use super::window_mac::*;
-use crate::{
-    ApplicationMessage, Event, PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait,
-};
+use crate::{Event, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
 use std::cell::RefCell;
 use std::ffi::c_void;
-use std::sync::mpsc;
-use std::sync::mpsc::*;
+use std::rc::Rc;
 
 pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
 static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
@@ -25,16 +22,11 @@ pub fn get_window_data(this: &Object) -> &mut InnerWindowData {
 // Global singleton data shared by all windows and the application struct.
 pub struct ApplicationData {
     // Used to construct a new window
-    pub window_class: *const objc::runtime::Class,
-    pub view_class: *const objc::runtime::Class,
-
-    frame_requested: bool,
     ns_application: *mut Object,
-    // pub program_callback: Option<Box<ProgramCallback>>,
     pub modifier_flags: u64, // Key modifier flags
-    program_to_application_receive: Option<mpsc::Receiver<ApplicationMessage>>,
     pub produce_event_callback: Option<Box<dyn FnMut(Event)>>,
-    pub windows: Vec<Box<InnerWindowData>>,
+    pub events: Rc<RefCell<Vec<Event>>>,
+    requested_redraw: Vec<WindowId>,
 }
 
 fn window_delegate_declaration() -> *const objc::runtime::Class {
@@ -76,124 +68,84 @@ fn create_run_loop_source() -> CFRunLoopSourceRef {
     }
 }
 
-pub fn process_events() {
-    unsafe {
-        let events = APPLICATION_DATA.with(|d| {
-            d.borrow_mut()
-                .as_mut()
-                .unwrap()
-                .program_to_application_receive
-                .take()
-                .unwrap()
-        });
-
-        while let Ok(event) = events.try_recv() {
-            match event {
-                ApplicationMessage::MinimizeWindow { window } => {
-                    let () = msg_send![window.raw() as *mut Object, miniaturize: nil];
-                }
-                ApplicationMessage::SetWindowPosition { window, x, y } => {
-                    let backing_scale: CGFloat =
-                        msg_send![window.raw() as *mut Object, backingScaleFactor];
-                    let () =
-                        msg_send![window.raw() as *mut Object, setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
-                }
-                ApplicationMessage::SetWindowSize {
-                    window,
-                    width,
-                    height,
-                } => {
-                    let backing_scale: CGFloat =
-                        msg_send![window.raw() as *mut Object, backingScaleFactor];
-                    let () =
-                        msg_send![window.raw() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
-                }
-                ApplicationMessage::SetWindowTitle { window, title } => {
-                    let title = NSString::new(&title);
-                    let () = msg_send![window.raw() as *mut Object, setTitle: title.raw];
-                }
-                ApplicationMessage::MaximizeWindow { .. } => {}
-                ApplicationMessage::FullscreenWindow { window } => {
-                    let () = msg_send![window.raw() as *mut Object, toggleFullScreen: nil];
-                }
-                ApplicationMessage::RestoreWindow { .. } => unimplemented!(),
-                ApplicationMessage::DropWindow { .. } => unimplemented!(),
-                ApplicationMessage::RequestFrame { window } => {
-                    APPLICATION_DATA.with(|d| {
-                        let window_view: *mut Object =
-                            msg_send![window.raw() as *mut Object, contentView];
-                        let () = msg_send![window_view, setNeedsDisplay: YES];
-
-                        // d.borrow_mut().as_mut().unwrap().frame_requested = true;
-                    });
-                }
-                ApplicationMessage::SetMousePosition { x, y } => {
-                    CGWarpMouseCursorPosition(CGPoint {
-                        x: x as f64,
-                        y: y as f64,
-                    });
-                }
-                ApplicationMessage::Quit => {
-                    let ns_application =
-                        APPLICATION_DATA.with(|d| d.borrow_mut().as_mut().unwrap().ns_application);
-                    let () = msg_send![ns_application, terminate: nil];
-                }
-                ApplicationMessage::NewWindow {
-                    window_parameters,
-                    response_channel,
-                } => {
-                    APPLICATION_DATA.with(|d| {
-                        let mut application_data = d.borrow_mut();
-                        let mut application_data = application_data.as_mut().unwrap();
-                        let result =
-                            super::window_mac::build(window_parameters, &mut application_data);
-                        response_channel.send(result).unwrap();
-                    });
-                }
-            }
-        }
-
-        APPLICATION_DATA.with(|d| {
-            let mut application_data = d.borrow_mut();
-            let application_data = application_data.as_mut().unwrap();
-
-            application_data.program_to_application_receive = Some(events);
-        });
-    }
-}
-
-// At the end of a frame produce a draw event.
 extern "C" fn control_flow_end_handler(
     _: CFRunLoopObserverRef,
     _: CFRunLoopActivity,
     _: *mut std::ffi::c_void,
 ) {
-    // Check for events
-    process_events();
+    // This is called after all events in the event loop are processed.
+    let (mut callback, events) = APPLICATION_DATA.with(|d| {
+        let mut application_data = d.borrow_mut();
+
+        (
+            application_data
+                .as_mut()
+                .unwrap()
+                .produce_event_callback
+                .take()
+                .unwrap(),
+            application_data.as_mut().unwrap().events.clone(),
+        )
+    });
+
+    // Process all queued events.
+    // The reason that events are queued is because the callback can call
+    // application calls that produce new events which would cause the
+    // callback to be called again within the same stack.
+    // This loop is structured this way so that `events` is not borrowed while
+    // the callback is called.
+    // `events` may be appended to from code within the callback.
+    let mut event = events.borrow_mut().pop();
+    while let Some(e) = event {
+        callback(e);
+        event = events.borrow_mut().pop();
+    }
+
+    // Now process all redraw request events
     APPLICATION_DATA.with(|d| {
         let mut application_data = d.borrow_mut();
-        let mut application_data = application_data.as_mut().unwrap();
 
-        if application_data.frame_requested {
-            if let Some(callback) = application_data.produce_event_callback.as_mut() {
-                callback(Event::Draw);
+        for window_id in &application_data.as_mut().unwrap().requested_redraw {
+            unsafe {
+                let window_view: *mut Object =
+                    msg_send![window_id.raw() as *mut Object, contentView];
+                let () = msg_send![window_view, setNeedsDisplay: YES];
             }
-            application_data.frame_requested = false;
         }
+
+        application_data.as_mut().unwrap().produce_event_callback = Some(callback);
     });
+}
+
+pub struct PlatformEventLoop {
+    ns_application: *mut Object,
+}
+
+impl PlatformEventLoopTrait for PlatformEventLoop {
+    fn run(&mut self, callback: Box<dyn FnMut(crate::Event)>) {
+        APPLICATION_DATA.with(|d| {
+            let mut application_data = d.borrow_mut();
+            application_data.as_mut().unwrap().produce_event_callback = Some(Box::new(callback));
+        });
+
+        unsafe {
+            let () = msg_send![self.ns_application, run];
+        }
+    }
 }
 
 pub struct PlatformApplication {
     // application_data: Rc<RefCell<ApplicationData>>,
+    window_class: *const objc::runtime::Class,
+    view_class: *const objc::runtime::Class,
     ns_application: *mut Object,
-    run_loop_custom_event_source: CFRunLoopSourceRef,
+    _run_loop_custom_event_source: CFRunLoopSourceRef,
 }
 
 impl PlatformApplicationTrait for PlatformApplication {
-    type Waker = PlatformWaker;
-    type Channel = PlatformChannel;
+    type EventLoop = PlatformEventLoop;
 
-    fn new() -> (Self::Channel, Self) {
+    fn new() -> Self {
         unsafe {
             let ns_application: *mut Object = msg_send![class!(NSApplication), sharedApplication];
 
@@ -202,9 +154,6 @@ impl PlatformApplicationTrait for PlatformApplication {
                 setActivationPolicy:
                     NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular
             ];
-
-            let (sender, receiver) = mpsc::channel();
-            let platform_channel = Self::Channel { sender };
 
             // Setup the application delegate to handle application events.
             let ns_application_delegate_class = application_delegate_declaration();
@@ -216,14 +165,11 @@ impl PlatformApplicationTrait for PlatformApplication {
             let run_loop_custom_event_source = self::create_run_loop_source();
 
             let application_data = ApplicationData {
-                window_class: window_delegate_declaration(),
-                view_class: view_delegate_declaration(),
-                frame_requested: true, // Always request an initial frame
                 ns_application,
                 modifier_flags: 0,
-                windows: Vec::new(),
-                program_to_application_receive: Some(receiver),
                 produce_event_callback: None,
+                requested_redraw: Vec::new(),
+                events: Rc::new(RefCell::new(Vec::new())),
             };
 
             APPLICATION_DATA.with(|d| {
@@ -250,105 +196,102 @@ impl PlatformApplicationTrait for PlatformApplication {
             );
             CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 
-            (
-                platform_channel,
-                Self {
-                    ns_application,
-                    // application_data,
-                    run_loop_custom_event_source,
-                },
-            )
+            Self {
+                window_class: window_delegate_declaration(),
+                view_class: view_delegate_declaration(),
+                ns_application,
+                _run_loop_custom_event_source: run_loop_custom_event_source,
+            }
         }
     }
 
-    fn flush_events(&mut self) {
-        process_events();
+    fn event_loop(&mut self) -> Self::EventLoop {
+        PlatformEventLoop {
+            ns_application: self.ns_application,
+        }
     }
 
-    fn run(&mut self, mut callback: Box<dyn FnMut(crate::Event) + Send>) {
-        // User code is run on another thread because resize and certain other events block the main
-        // thread on MacOS.
-        // This method ensures a smooth experience.
-        // 'run_raw' can be used if another method is required.
+    fn set_window_position(&mut self, window_id: &WindowId, x: u32, y: u32) {
+        unsafe {
+            let backing_scale: CGFloat =
+                msg_send![window_id.raw() as *mut Object, backingScaleFactor];
+            let () =
+                msg_send![window_id.raw() as *mut Object, setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
+        }
+    }
+    fn set_window_dimensions(&mut self, window_id: &WindowId, width: u32, height: u32) {
+        unsafe {
+            let backing_scale: CGFloat =
+                msg_send![window_id.raw() as *mut Object, backingScaleFactor];
+            let () =
+                msg_send![window_id.raw() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+        }
+    }
+    fn set_window_title(&mut self, window_id: &WindowId, title: &str) {
+        unsafe {
+            let title = NSString::new(&title);
+            let () = msg_send![window_id.raw() as *mut Object, setTitle: title.raw];
+        }
+    }
+    fn minimize_window(&mut self, window_id: &WindowId) {
+        unsafe {
+            let () = msg_send![window_id.raw() as *mut Object, miniaturize: nil];
+        }
+    }
+    fn maximize_window(&mut self, _window_id: &WindowId) {
+        // Not implemented on Mac
+        // There is no analogous behavior?
+    }
+    fn fullscreen_window(&mut self, window_id: &WindowId) {
+        unsafe {
+            let () = msg_send![window_id.raw() as *mut Object, toggleFullScreen: nil];
+        }
+    }
+    fn restore_window(&mut self, _window_id: &WindowId) {
+        unimplemented!()
+    }
+    fn close_window(&mut self, _window_id: &WindowId) {
+        unimplemented!()
+    }
+    fn redraw_window(&mut self, window_id: &WindowId) {
+        let in_live_resize: bool =
+            unsafe { msg_send![window_id.raw() as *mut Object, inLiveResize] };
+
+        // If resizing the window don't send a redraw request as it will get one
+        // anyways
+        if !in_live_resize {
+            APPLICATION_DATA.with(|d| {
+                let mut application_data = d.borrow_mut();
+                application_data
+                    .as_mut()
+                    .unwrap()
+                    .requested_redraw
+                    .push(*window_id);
+            });
+        }
+    }
+    fn set_mouse_position(&mut self, _x: u32, _y: u32) {
+        // Need to account for backing scale here!
+
         /*
-        let (send, receive) = std::sync::mpsc::channel();
-
-        // When events are produced by the application send them to a channel
-        let callback_wrapper = move |event| {
-            send.send(event).unwrap();
-        };
-
-        // Receive the events from the channel and send them to the user code callback.
-
-        std::thread::spawn(move || {
-            while let Ok(event) = receive.recv() {
-                callback(event);
-            }
+        CGWarpMouseCursorPosition(CGPoint {
+            x: x as f64,
+            y: y as f64,
         });
         */
 
-        APPLICATION_DATA.with(|d| {
-            let mut application_data = d.borrow_mut();
-            application_data.as_mut().unwrap().produce_event_callback = Some(Box::new(callback));
-        });
-
+        unimplemented!()
+    }
+    fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
+        let result =
+            super::window_mac::build(window_parameters, self.window_class, self.view_class);
+        result.unwrap()
+    }
+    fn quit(&mut self) {
         unsafe {
-            let () = msg_send![self.ns_application, run];
+            let ns_application =
+                APPLICATION_DATA.with(|d| d.borrow_mut().as_mut().unwrap().ns_application);
+            let () = msg_send![ns_application, terminate: nil];
         }
-    }
-
-    fn run_raw(&mut self, callback: Box<dyn FnMut(crate::Event) + Send>) {
-        APPLICATION_DATA.with(|d| {
-            let mut application_data = d.borrow_mut();
-            application_data.as_mut().unwrap().produce_event_callback = Some(Box::new(callback));
-        });
-
-        unsafe {
-            let () = msg_send![self.ns_application, run];
-        }
-    }
-
-    fn get_waker(&self) -> Self::Waker {
-        Self::Waker {
-            run_loop_custom_event_source: self.run_loop_custom_event_source,
-            main_thread_id: std::thread::current().id(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct PlatformWaker {
-    run_loop_custom_event_source: CFRunLoopSourceRef,
-    main_thread_id: std::thread::ThreadId,
-}
-
-unsafe impl Send for PlatformWaker {}
-
-impl PlatformWakerTrait for PlatformWaker {
-    fn wake(&self) {
-        unsafe {
-            //CFRunLoopSourceSignal(self.run_loop_custom_event_source); // This line may not even be necessary.
-            let run_loop = CFRunLoopGetMain();
-            CFRunLoopWakeUp(run_loop);
-        }
-    }
-
-    fn flush(&self) {
-        if std::thread::current().id() == self.main_thread_id {
-            process_events();
-        } else {
-            self.wake();
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct PlatformChannel {
-    sender: Sender<ApplicationMessage>,
-}
-
-impl PlatformChannelTrait for PlatformChannel {
-    fn send(&mut self, message: ApplicationMessage) {
-        self.sender.send(message).unwrap();
     }
 }

@@ -2,8 +2,8 @@ use glow::*;
 use kettlewin::*;
 
 fn main() {
-    let (mut app, event_loop) = initialize();
-    let window = app.new_window().build().unwrap();
+    let (mut app, mut event_loop) = initialize();
+    let mut window = app.new_window().build().unwrap();
 
     // Create a GLContext
     let mut gl_context = GLContext::new().build().unwrap();
@@ -20,8 +20,9 @@ fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
+    let mut windows: Vec<Window> = Vec::new();
     event_loop.run(move |event| match event {
-        Event::Draw => {
+        Event::Draw { .. } => {
             // Make the GLContext current to the thread that this callback runs on.
             gl_context.make_current();
 
@@ -35,7 +36,7 @@ fn main() {
 
             // It is not necessary for this example,
             // but calling request_frame ensures the program redraws continuously.
-            //app.request_frame();
+            window.request_redraw();
         }
         _ => {}
     });

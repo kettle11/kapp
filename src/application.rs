@@ -1,24 +1,25 @@
 use crate::platform::*;
+use crate::platform::{PlatformApplicationTrait, PlatformEventLoopTrait};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// A handle used to do things like quit,
 /// request a new frame, or create windows.
 #[derive(Clone)]
 pub struct Application {
-    pub(crate) platform_channel: PlatformChannel,
-    pub(crate) application_waker: PlatformWaker,
+    pub(crate) platform_application: Rc<RefCell<PlatformApplication>>,
 }
 
 /// Create an Application and EventLoop.
 pub fn initialize() -> (Application, EventLoop) {
-    let (platform_channel, platform_application) = PlatformApplication::new();
-    let application_waker = platform_application.get_waker();
+    let platform_application = Rc::new(RefCell::new(PlatformApplication::new()));
+    let platform_event_loop = platform_application.borrow_mut().event_loop();
     (
         Application {
-            platform_channel,
-            application_waker,
+            platform_application: platform_application.clone(),
         },
         EventLoop {
-            platform_application,
+            platform_event_loop,
         },
     )
 }
@@ -33,20 +34,15 @@ impl Application {
 
     /// Immediately quits the application.
     pub fn quit(&mut self) {
-        self.platform_channel.send(ApplicationMessage::Quit);
-        self.flush_events();
+        self.platform_application.borrow_mut().quit();
     }
 
     /// Sets the mouse position relative to the screen.
     /// Coordinates are expressed in physical coordinates.
     pub fn set_mouse_position(&mut self, x: u32, y: u32) {
-        self.platform_channel
-            .send(ApplicationMessage::SetMousePosition { x, y });
-    }
-
-    /// Blocks until the application has processed all messages sent to it.
-    pub fn flush_events(&mut self) {
-        self.application_waker.flush();
+        self.platform_application
+            .borrow_mut()
+            .set_mouse_position(x, y);
     }
 }
 
@@ -59,26 +55,15 @@ impl Drop for Application {
 
 /// Call the 'run' function on an EventLoop instance to start your program.
 pub struct EventLoop {
-    platform_application: PlatformApplication,
+    platform_event_loop: PlatformEventLoop,
 }
 
 impl EventLoop {
     /// Run the application forever. When a new event occurs the callback passed in will be called.
-    /// On MacOS the callback does not run on the main thread.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn run<T>(mut self, callback: T)
-    where
-        T: 'static + FnMut(Event) + Send,
-    {
-        self.platform_application.run(Box::new(callback));
-    }
-
-    // Same as above but does not require Send
-    #[cfg(target_arch = "wasm32")]
-    pub fn run<T>(mut self, callback: T)
+    pub fn run<T>(&mut self, callback: T)
     where
         T: 'static + FnMut(Event),
     {
-        self.platform_application.run(Box::new(callback));
+        self.platform_event_loop.run(Box::new(callback));
     }
 }

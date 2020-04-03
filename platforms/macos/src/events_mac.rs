@@ -210,8 +210,12 @@ pub fn add_application_events_to_decl(decl: &mut ClassDecl) {
 // ------------------------ End Application Events --------------------------
 
 // ------------------------ View Events --------------------------
-extern "C" fn draw_rect(_this: &Object, _sel: Sel, _event: *mut Object) {
-    self::submit_event(Event::Draw);
+extern "C" fn draw_rect(this: &Object, _sel: Sel, _event: *mut Object) {
+    let window: *mut Object = unsafe { msg_send![this, window] };
+
+    self::submit_event(Event::Draw {
+        window_id: WindowId::new(window as *mut c_void),
+    });
 }
 
 extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
@@ -525,15 +529,31 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
 // ------------------------ End View Events --------------------------
 
 pub fn submit_event(event: Event) {
-    &mut APPLICATION_DATA.with(|d| {
-        if let Some(callback) = d
-            .borrow_mut()
+    let callback = APPLICATION_DATA.with(|d| {
+        let mut application_data = d.borrow_mut();
+        application_data
             .as_mut()
             .unwrap()
             .produce_event_callback
-            .as_mut()
-        {
-            callback(event);
-        }
+            .take()
     });
+
+    if let Some(mut callback) = callback {
+        callback(event);
+
+        APPLICATION_DATA.with(|d| {
+            let mut application_data = d.borrow_mut();
+            application_data.as_mut().unwrap().produce_event_callback = Some(callback)
+        });
+    } else {
+        APPLICATION_DATA.with(|d| {
+            let mut application_data = d.borrow_mut();
+            application_data
+                .as_mut()
+                .unwrap()
+                .events
+                .borrow_mut()
+                .push(event);
+        });
+    }
 }

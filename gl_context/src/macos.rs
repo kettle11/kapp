@@ -95,8 +95,8 @@ impl GLContext {
     pub fn update_target(&self) {
         unsafe {
             let update = sel!(update);
-           // let () = msg_send![self.gl_context, update];
-            let () = msg_send![self.gl_context, performSelectorOnMainThread:update withObject:nil waitUntilDone:YES];
+            let () = msg_send![self.gl_context, update];
+            // let () = msg_send![self.gl_context, performSelectorOnMainThread:update withObject:nil waitUntilDone:YES];
         }
     }
 

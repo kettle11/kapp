@@ -1,45 +1,23 @@
+use crate::{WindowId, WindowParameters};
 pub trait PlatformApplicationTrait {
-    type Channel: PlatformChannelTrait + Send + Clone;
-    type Waker: PlatformWakerTrait + Send + Clone;
+    type EventLoop: PlatformEventLoopTrait;
 
-    fn new() -> (Self::Channel, Self);
+    fn new() -> Self;
+    fn event_loop(&mut self) -> Self::EventLoop;
+    fn set_window_position(&mut self, window_id: &WindowId, x: u32, y: u32);
+    fn set_window_dimensions(&mut self, window_id: &WindowId, width: u32, height: u32);
+    fn set_window_title(&mut self, window_id: &WindowId, title: &str);
+    fn minimize_window(&mut self, window_id: &WindowId);
+    fn maximize_window(&mut self, window_id: &WindowId);
+    fn fullscreen_window(&mut self, window_id: &WindowId);
+    fn restore_window(&mut self, window_id: &WindowId);
+    fn close_window(&mut self, window_id: &WindowId);
+    fn redraw_window(&mut self, window_id: &WindowId);
+    fn set_mouse_position(&mut self, x: u32, y: u32);
+    fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId;
+    fn quit(&mut self);
+}
 
-    /// Only call from the main thread.
-    fn flush_events(&mut self);
-
-    /// Only call from the main thread.
-    /// On Wasm the callback is not required to be Send.
-    #[cfg(not(target_arch = "wasm32"))]
-    fn run(&mut self, callback: Box<dyn FnMut(crate::Event) + Send>);
-
-    /// Only call from the main thread.
-    /// This differs from 'run' because it ensures the callback is immediately
-    /// called from whatever thread the event is produced from.
-    /// On Wasm the callback is not required to be Send.
-    #[cfg(not(target_arch = "wasm32"))]
-    fn run_raw(&mut self, callback: Box<dyn FnMut(crate::Event) + Send>);
-
-    /// Only call from the main thread.
-    /// On Wasm the callback is not required to be Send.
-    #[cfg(target_arch = "wasm32")]
+pub trait PlatformEventLoopTrait {
     fn run(&mut self, callback: Box<dyn FnMut(crate::Event)>);
-
-    /// Only call from the main thread.
-    /// On Wasm the callback is not required to be Send.
-    #[cfg(target_arch = "wasm32")]
-    fn run_raw(&mut self, callback: Box<dyn FnMut(crate::Event)>);
-
-    fn get_waker(&self) -> Self::Waker;
-}
-
-pub trait PlatformWakerTrait {
-    fn wake(&self);
-
-    /// Should block until all events sent to the application have been processed.
-    fn flush(&self);
-}
-
-/// A channel that can issue events to the main application.
-pub trait PlatformChannelTrait {
-    fn send(&mut self, message: crate::ApplicationMessage);
 }

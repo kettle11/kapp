@@ -122,7 +122,7 @@ fn rect_overlap(rect0: &Rect, rect1: &Rect) -> Option<(f32, f32)> {
 
 fn main() {
     // Create a new application with default settings.
-    let (mut app, event_loop) = initialize();
+    let (mut app, mut event_loop) = initialize();
 
     let mut screen_width = 1200;
     let mut screen_height = 1200;
@@ -402,7 +402,7 @@ fn main() {
                 Key::Right => right_held = false,
                 _ => {}
             },
-            Event::Draw => {
+            Event::Draw { .. } => {
                 gl_context.make_current();
 
                 // First update the world
@@ -488,7 +488,6 @@ fn main() {
                 // When we're done rendering swap the window buffers to display to the screen.
                 gl_context.swap_buffers();
                 window.request_redraw();
-                //app.request_frame();
             }
             _ => {}
         }

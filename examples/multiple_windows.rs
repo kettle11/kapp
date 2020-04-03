@@ -1,19 +1,15 @@
-extern crate kettlewin;
-use kettlewin::glow::*;
+use glow::*;
 use kettlewin::*;
 use std::time::{Duration, Instant};
 
 fn main() {
     // Create a new window manager with default settings.
-    let mut app = Application::new();
+    let (mut app, event_loop) = initialize();
 
-    // Each of these GLContexts has their own separate resources.
-    // They are separate contexts for interacting with OpenGL,
-    // just like how seperate programs have separate contexts for OpenGL interaction.
+    // Create a GLContext
     let mut gl_context = GLContext::new().build().unwrap();
-    //let mut gl_context_red = GLContext::new().build().unwrap();
+    let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
-    let gl = gl_context.glow_context(); // Create a glow gl context for gl calls.
     let window_red = app
         .new_window()
         .position(200, 200)
@@ -41,7 +37,7 @@ fn main() {
     // It's unclear how bad it is and more investigation is needed.
     // Additionally using two contexts means each context has different resources.
     // What approaches could be used for sharing?
-    app.run(move |app, event| match event {
+    event_loop.run(move |event| match event {
         Event::WindowCloseRequested { window_id } => {
             if let Some(window) = window_red.as_ref() {
                 if window.id == window_id {
@@ -60,13 +56,14 @@ fn main() {
         }
         Event::Draw => {
             gl_context.make_current();
-            if window_red.is_some() {
-                //gl_context.set_window(window_red.as_ref()).unwrap();
+            if let Some(window_red) = window_red.as_mut() {
+                gl_context.set_window(Some(&window_red.id));
                 unsafe {
                     gl.clear_color(1.0, 0.0, 0.0, 1.0);
                     gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                     gl_context.swap_buffers();
                 }
+                window_red.request_redraw();
             }
 
             /*
@@ -81,7 +78,6 @@ fn main() {
             */
             println!("{}", now.elapsed().as_millis());
             now = Instant::now();
-            app.request_frame();
         }
         _ => {}
     });

@@ -2,14 +2,14 @@ use crate::platform::*;
 use crate::{Application, Window};
 
 pub struct WindowBuilder<'a> {
-    _application: &'a mut Application,
+    application: &'a mut Application,
     window_parameters: WindowParameters,
 }
 
 impl<'a> WindowBuilder<'a> {
-    pub fn new(_application: &'a mut Application) -> Self {
+    pub fn new(application: &'a mut Application) -> Self {
         Self {
-            _application,
+            application,
             window_parameters: WindowParameters {
                 position: None,
                 dimensions: None,
@@ -43,17 +43,13 @@ impl<'a> WindowBuilder<'a> {
     // Web doesn't require any of this more complex window building behavior.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn build(&mut self) -> Result<Window, ()> {
-        let (sender, receiver) = crate::platform::single_value_channel::channel();
-        self._application
-            .platform_channel
-            .send(ApplicationMessage::NewWindow {
-                window_parameters: self.window_parameters.clone(),
-                response_channel: sender,
-            });
-
-        self._application.flush_events();
-        let result = receiver.recv().unwrap();
-        result.map(|id| Window::new(id, self._application.platform_channel.clone()))
+        Ok(Window::new(
+            self.application
+                .platform_application
+                .borrow_mut()
+                .new_window(&self.window_parameters),
+            self.application.platform_application.clone(),
+        ))
     }
 
     #[cfg(target_arch = "wasm32")]

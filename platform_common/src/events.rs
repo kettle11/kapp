@@ -3,10 +3,12 @@ use crate::mouse_buttons::MouseButton;
 use crate::WindowId;
 
 /// Input and system events
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Event {
     /// The 'Draw' event can be seen as a recommendation for when to draw. It is not an actual system event.
-    Draw,
+    Draw {
+        window_id: WindowId,
+    },
     // ------------------- Input Events  ---------------------
     // These are received by a window, but the window must be tracked with the 'GainedFocus' event.
     /// A key is pressed.
