@@ -2,7 +2,6 @@ pub mod events;
 pub mod keys;
 pub mod mouse_buttons;
 pub mod platform_traits;
-pub mod single_value_channel;
 pub mod window_id;
 pub mod window_parameters;
 

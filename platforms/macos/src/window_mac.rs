@@ -1,5 +1,5 @@
 use super::apple::*;
-use super::application_mac::{ApplicationData, INSTANCE_DATA_IVAR_ID};
+use super::application_mac::INSTANCE_DATA_IVAR_ID;
 use crate::WindowId;
 use std::ffi::c_void;
 

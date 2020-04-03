@@ -17,14 +17,13 @@ use kettlewin_platform_common::{
 mod apple;
 mod application_mac;
 mod events_mac;
-//mod gl_context;
 mod keys_mac;
 mod window_mac;
 
 pub mod prelude {
     pub use super::{application_mac::PlatformApplication, application_mac::*};
     pub use kettlewin_platform_common::{
-        single_value_channel, Event, Key, MouseButton, PlatformApplicationTrait,
-        PlatformEventLoopTrait, WindowId, WindowParameters,
+        Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId,
+        WindowParameters,
     };
 }
