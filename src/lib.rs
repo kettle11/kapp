@@ -88,7 +88,7 @@
 //! }
 //! ```
 mod application;
-//mod async_application;
+mod async_application;
 mod window;
 mod window_builder;
 
@@ -111,6 +111,6 @@ pub use platform::{Event, Key, MouseButton, WindowId};
 
 pub use application::{initialize, Application, EventLoop};
 
-//pub use async_application::*;
+pub use async_application::*;
 
 pub use window::Window;
