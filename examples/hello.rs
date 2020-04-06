@@ -21,7 +21,17 @@ fn main() {
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
     let mut windows: Vec<Window> = Vec::new();
+    let mut cursor_visible = true;
     event_loop.run(move |event| match event {
+        Event::KeyDown { key } => match key {
+            Key::A => {
+                app.set_cursor_visible(true);
+            }
+            Key::D => {
+                app.set_cursor_visible(false);
+            }
+            _ => {}
+        },
         Event::Draw { .. } => {
             // Make the GLContext current to the thread that this callback runs on.
             gl_context.make_current();

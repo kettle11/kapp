@@ -1,4 +1,4 @@
-use crate::{WindowId, WindowParameters};
+use crate::{Cursor, WindowId, WindowParameters};
 pub trait PlatformApplicationTrait {
     type EventLoop: PlatformEventLoopTrait;
 
@@ -16,6 +16,9 @@ pub trait PlatformApplicationTrait {
     fn set_mouse_position(&mut self, x: u32, y: u32);
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId;
     fn quit(&mut self);
+    fn set_cursor(&mut self, cursor: Cursor);
+    fn hide_cursor(&mut self);
+    fn show_cursor(&mut self);
 }
 
 pub trait PlatformEventLoopTrait {

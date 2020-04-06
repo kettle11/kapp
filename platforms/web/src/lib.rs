@@ -16,7 +16,7 @@ pub mod prelude {
         application_web::{PlatformApplication, PlatformChannel, PlatformWaker},
     };
     pub use kettlewin_platform_common::{
-        single_value_channel, ApplicationMessage, Event, Key, MouseButton,
+        single_value_channel, ApplicationMessage, Cursor, Event, Key, MouseButton,
         PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait, WindowId,
         WindowParameters,
     };

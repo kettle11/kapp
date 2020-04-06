@@ -4,7 +4,7 @@ extern "C" {}
 extern crate objc;
 
 use kettlewin_platform_common::{
-    Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId,
+    Cursor, Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId,
     WindowParameters,
 };
 
@@ -23,7 +23,7 @@ mod window_mac;
 pub mod prelude {
     pub use super::{application_mac::PlatformApplication, application_mac::*};
     pub use kettlewin_platform_common::{
-        Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId,
-        WindowParameters,
+        Cursor, Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait,
+        WindowId, WindowParameters,
     };
 }

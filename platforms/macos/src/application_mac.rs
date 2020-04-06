@@ -1,6 +1,8 @@
 use super::apple::*;
 use super::window_mac::*;
-use crate::{Event, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
+use crate::{
+    Cursor, Event, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters,
+};
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::rc::Rc;
@@ -26,6 +28,7 @@ pub struct ApplicationData {
     pub modifier_flags: u64, // Key modifier flags
     pub produce_event_callback: Option<Box<dyn FnMut(Event)>>,
     pub events: Rc<RefCell<Vec<Event>>>,
+    cursor_hidden: bool,
     requested_redraw: Vec<WindowId>,
 }
 
@@ -169,6 +172,7 @@ impl PlatformApplicationTrait for PlatformApplication {
                 modifier_flags: 0,
                 produce_event_callback: None,
                 requested_redraw: Vec::new(),
+                cursor_hidden: false,
                 events: Rc::new(RefCell::new(Vec::new())),
             };
 
@@ -287,6 +291,50 @@ impl PlatformApplicationTrait for PlatformApplication {
 
         unimplemented!()
     }
+
+    // https://developer.apple.com/documentation/appkit/nscursor?language=objc
+    fn set_cursor(&mut self, cursor: Cursor) {
+        let ns_cursor = class!(NSCursor);
+        let cursor: *mut Object = unsafe {
+            match cursor {
+                Cursor::Arrow => msg_send![ns_cursor, arrowCursor],
+                Cursor::IBeam => msg_send![ns_cursor, IBeamCursor],
+                Cursor::PointingHand => msg_send![ns_cursor, pointingHandCursor],
+                Cursor::OpenHand => msg_send![ns_cursor, openHandCursor],
+                Cursor::ClosedHand => msg_send![ns_cursor, closedHandCursor],
+            }
+        };
+        let () = unsafe { msg_send![cursor, set] };
+    }
+
+    // Calls to NSCursor hide and unhide must be balanced.
+    // So here we track their state and only call hide if the cursor is not already hidden.
+    //https://developer.apple.com/documentation/appkit/nscursor?language=objc
+    fn hide_cursor(&mut self) {
+        APPLICATION_DATA.with(|d| {
+            let mut application_data = d.borrow_mut();
+
+            if application_data.as_ref().unwrap().cursor_hidden == false {
+                let ns_cursor = class!(NSCursor);
+                let () = unsafe { msg_send![ns_cursor, hide] };
+                application_data.as_mut().unwrap().cursor_hidden = true;
+            }
+        });
+    }
+
+    //https://developer.apple.com/documentation/appkit/nscursor?language=objc
+    fn show_cursor(&mut self) {
+        APPLICATION_DATA.with(|d| {
+            let mut application_data = d.borrow_mut();
+
+            if application_data.as_ref().unwrap().cursor_hidden == true {
+                let ns_cursor = class!(NSCursor);
+                let () = unsafe { msg_send![ns_cursor, unhide] };
+                application_data.as_mut().unwrap().cursor_hidden = false;
+            }
+        });
+    }
+
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
         let result =
             super::window_mac::build(window_parameters, self.window_class, self.view_class);

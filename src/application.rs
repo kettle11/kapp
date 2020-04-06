@@ -44,6 +44,18 @@ impl Application {
             .borrow_mut()
             .set_mouse_position(x, y);
     }
+
+    pub fn set_cursor(&mut self, cursor: Cursor) {
+        self.platform_application.borrow_mut().set_cursor(cursor);
+    }
+
+    pub fn set_cursor_visible(&mut self, visible: bool) {
+        if visible {
+            self.platform_application.borrow_mut().show_cursor();
+        } else {
+            self.platform_application.borrow_mut().hide_cursor();
+        }
+    }
 }
 
 // When the application is dropped, quit the program.

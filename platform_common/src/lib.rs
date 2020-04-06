@@ -1,10 +1,12 @@
-pub mod events;
-pub mod keys;
-pub mod mouse_buttons;
-pub mod platform_traits;
-pub mod window_id;
-pub mod window_parameters;
+mod cursors;
+mod events;
+mod keys;
+mod mouse_buttons;
+mod platform_traits;
+mod window_id;
+mod window_parameters;
 
+pub use cursors::Cursor;
 pub use events::Event;
 pub use keys::Key;
 pub use mouse_buttons::MouseButton;

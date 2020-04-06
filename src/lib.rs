@@ -107,7 +107,7 @@ pub use kettlewin_gl_context::GLContext;
 #[cfg(target_os = "windows")]
 pub use windows::*;
 
-pub use platform::{Event, Key, MouseButton, WindowId};
+pub use platform::{Cursor, Event, Key, MouseButton, WindowId};
 
 pub use application::{initialize, Application, EventLoop};
 

@@ -6,7 +6,6 @@ use std::future::Future;
 use std::cell::RefCell;
 use std::pin::Pin;
 use std::rc::Rc;
-use std::sync::Arc;
 use std::task::{Context, Poll};
 
 pub struct EventFuture<'a> {
