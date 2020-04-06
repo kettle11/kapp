@@ -3,10 +3,10 @@ use kettlewin::*;
 
 fn main() {
     // Create a new application with default settings.
-    let mut app = Application::new();
-    let window = app.new_window().title("Window Controls").build().unwrap();
+    let (mut app, mut event_loop) = initialize();
+    let mut window = app.new_window().title("Window Controls").build().unwrap();
 
-    app.run(move |app, event| match event {
+    event_loop.run(move |event| match event {
         Event::KeyDown { key } => match key {
             Key::Digit1 => {
                 window.set_position(0, 0);

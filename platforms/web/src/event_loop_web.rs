@@ -153,12 +153,8 @@ where
 }
 
 fn get_mouse_position(event: &web_sys::MouseEvent) -> (f32, f32) {
-    unsafe {
-        (
-            event.client_x() as f32,
-            (CANVAS_HEIGHT - event.client_y() as u32) as f32,
-        )
-    }
+    // 0,0 is the upper left of the canvas on web, so no transformations need to be performed.
+    unsafe { (event.client_x() as f32, event.client_y() as u32 as f32) }
 }
 
 fn request_animation_frame(f: &Closure<dyn FnMut()>) {

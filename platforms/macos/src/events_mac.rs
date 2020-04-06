@@ -11,9 +11,12 @@ extern "C" fn window_did_move(this: &Object, _sel: Sel, _event: *mut Object) {
     unsafe {
         let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
         let frame: CGRect = msg_send![window_data.ns_window, frame];
+        let screen: *const Object = msg_send![window_data.ns_window, screen];
+        let screen_frame: CGRect = msg_send![screen, frame];
+
         self::submit_event(crate::Event::WindowMoved {
             x: (frame.origin.x * backing_scale) as u32,
-            y: (frame.origin.y * backing_scale) as u32,
+            y: ((screen_frame.size.height - frame.origin.y) * backing_scale) as u32, // Flip y coordinate because 0,0 is bottom left on Mac
             window_id: WindowId::new(window_data.ns_window as *mut c_void),
         });
     }
@@ -308,9 +311,10 @@ fn get_mouse_position(this: &Object, event: *mut Object) -> (f32, f32) {
         let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
 
         let window_point: NSPoint = msg_send![event, locationInWindow];
+        let frame: CGRect = msg_send![window_data.ns_view, frame];
 
         let x = window_point.x * backing_scale;
-        let y = window_point.y * backing_scale; // Don't flip because 0 is bottom left on MacOS
+        let y = (frame.size.height - window_point.y) * backing_scale; // Flip y coordinate because y is 0,0 on Mac.
         (x as f32, y as f32)
     }
 }

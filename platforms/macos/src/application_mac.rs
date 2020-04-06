@@ -213,10 +213,15 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn set_window_position(&mut self, window_id: &WindowId, x: u32, y: u32) {
         unsafe {
+            let screen: *const Object = msg_send![window_id.raw() as *mut Object, screen];
+            let screen_frame: CGRect = msg_send![screen, frame];
+
             let backing_scale: CGFloat =
                 msg_send![window_id.raw() as *mut Object, backingScaleFactor];
             let () =
-                msg_send![window_id.raw() as *mut Object, setFrameOrigin: NSPoint::new((x as f64) / backing_scale, (y as f64) / backing_scale)];
+                msg_send![
+                    window_id.raw() as *mut Object,
+                    setFrameTopLeftPoint: NSPoint::new((x as f64) / backing_scale, screen_frame.size.height - (y as f64) / backing_scale)];
         }
     }
     fn set_window_dimensions(&mut self, window_id: &WindowId, width: u32, height: u32) {
