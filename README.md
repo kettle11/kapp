@@ -1,6 +1,10 @@
 # kettlewin
 A pure Rust window and input library for MacOS and Web.
 
+Strives to be unsurprising, quick to build, and straightforward to maintain.
+
+Kettlewin is a work in progress. There are rough edges, unimplemented functions, and many bugs.
+
 ## Example
 ```rust
 use kettlewin::*;
