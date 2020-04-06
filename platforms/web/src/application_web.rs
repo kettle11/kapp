@@ -1,60 +1,57 @@
 use crate::{
-    ApplicationMessage, Event, PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait,
+    Cursor, Event, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters,
 };
 pub struct PlatformApplication {}
 
 impl PlatformApplicationTrait for PlatformApplication {
-    type Waker = PlatformWaker;
-    type Channel = PlatformChannel;
-
-    fn new() -> (Self::Channel, Self) {
-        (Self::Channel {}, Self {})
+    type EventLoop = PlatformEventLoop;
+    fn new() -> Self {
+        Self {}
     }
 
-    fn flush_events(&mut self) {}
-
-    fn run(&mut self, callback: Box<dyn FnMut(Event)>) {
-        super::event_loop_web::run(callback);
+    fn event_loop(&mut self) -> Self::EventLoop {
+        PlatformEventLoop {}
+    }
+    fn set_window_position(&mut self, window_id: &WindowId, x: u32, y: u32) {}
+    fn set_window_dimensions(&mut self, window_id: &WindowId, width: u32, height: u32) {}
+    fn set_window_title(&mut self, window_id: &WindowId, title: &str) {}
+    fn minimize_window(&mut self, window_id: &WindowId) {}
+    fn maximize_window(&mut self, window_id: &WindowId) {}
+    fn fullscreen_window(&mut self, window_id: &WindowId) {
+        super::event_loop_web::request_fullscreen()
+    }
+    fn restore_window(&mut self, window_id: &WindowId) {
+        unimplemented!()
+    }
+    fn close_window(&mut self, window_id: &WindowId) {}
+    fn redraw_window(&mut self, window_id: &WindowId) {
+        super::event_loop_web::request_frame()
     }
 
-    fn run_raw(&mut self, callback: Box<dyn FnMut(Event)>) {
-        super::event_loop_web::run(callback);
+    fn set_mouse_position(&mut self, x: u32, y: u32) {
+        unimplemented!()
     }
 
-    fn get_waker(&self) -> Self::Waker {
-        Self::Waker {}
+    fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
+        WindowId::new(0 as *mut std::ffi::c_void)
+    }
+
+    fn quit(&mut self) {}
+    fn set_cursor(&mut self, cursor: Cursor) {
+        unimplemented!();
+    }
+    fn hide_cursor(&mut self) {
+        unimplemented!()
+    }
+    fn show_cursor(&mut self) {
+        unimplemented!()
     }
 }
 
-#[derive(Clone)]
-pub struct PlatformWaker {}
+pub struct PlatformEventLoop {}
 
-impl PlatformWakerTrait for PlatformWaker {
-    /// Call from any thread
-    fn wake(&self) {}
-    fn flush(&self) {}
-}
-
-#[derive(Clone)]
-pub struct PlatformChannel {}
-
-impl PlatformChannelTrait for PlatformChannel {
-    fn send(&mut self, message: ApplicationMessage) {
-        match message {
-            ApplicationMessage::RequestFrame => super::event_loop_web::request_frame(),
-            ApplicationMessage::SetWindowPosition { .. } => {}
-            ApplicationMessage::SetWindowSize { .. } => {}
-            ApplicationMessage::SetWindowTitle { .. } => {}
-            ApplicationMessage::MinimizeWindow { .. } => {}
-            ApplicationMessage::MaximizeWindow { .. } => {}
-            ApplicationMessage::FullscreenWindow { .. } => {
-                super::event_loop_web::request_fullscreen()
-            }
-            ApplicationMessage::RestoreWindow { .. } => unimplemented!(),
-            ApplicationMessage::DropWindow { .. } => {}
-            ApplicationMessage::SetMousePosition { .. } => unimplemented!(),
-            ApplicationMessage::NewWindow { .. } => {}
-            ApplicationMessage::Quit => {}
-        }
+impl PlatformEventLoopTrait for PlatformEventLoop {
+    fn run(&mut self, callback: Box<dyn FnMut(crate::Event)>) {
+        super::event_loop_web::run(callback);
     }
 }

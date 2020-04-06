@@ -55,7 +55,9 @@ where
                     });
                 }
 
-                send_event(Event::Draw);
+                send_event(Event::Draw {
+                    window_id: WindowId::new(0 as *mut std::ffi::c_void),
+                });
                 // request_animation_frame(REQUEST_ANIMATION_FRAME_CLOSURE.as_ref().unwrap())
             })
                 as Box<dyn FnMut()>));

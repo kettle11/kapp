@@ -7,6 +7,9 @@ fn main() {
 
     event_loop.run(move |event| match event {
         Event::WindowCloseRequested { .. } => app.quit(),
+        Event::Draw { .. } => {
+            // Render something here.
+        }
         _ => {}
     });
 }

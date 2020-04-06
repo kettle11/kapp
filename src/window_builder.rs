@@ -40,8 +40,6 @@ impl<'a> WindowBuilder<'a> {
         self
     }
 
-    // Web doesn't require any of this more complex window building behavior.
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn build(&mut self) -> Result<Window, ()> {
         Ok(Window::new(
             self.application
@@ -49,14 +47,6 @@ impl<'a> WindowBuilder<'a> {
                 .borrow_mut()
                 .new_window(&self.window_parameters),
             self.application.platform_application.clone(),
-        ))
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn build(&mut self) -> Result<Window, ()> {
-        Ok(Window::new(
-            crate::WindowId::new(0 as *mut std::ffi::c_void),
-            self._application.platform_channel.clone(),
         ))
     }
 }

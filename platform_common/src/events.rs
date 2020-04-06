@@ -5,12 +5,11 @@ use crate::WindowId;
 /// Input and system events
 #[derive(Debug, Clone)]
 pub enum Event {
-    /// The 'Draw' event can be seen as a recommendation for when to draw. It is not an actual system event.
+    /// When the system recommends drawing
     Draw {
         window_id: WindowId,
     },
     // ------------------- Input Events  ---------------------
-    // These are received by a window, but the window must be tracked with the 'GainedFocus' event.
     /// A key is pressed.
     KeyDown {
         key: Key,
@@ -19,7 +18,7 @@ pub enum Event {
     KeyUp {
         key: Key,
     },
-    /// A key is held and begins to repeat.
+    /// A key is held and is repeating.
     KeyRepeat {
         key: Key,
     },
@@ -57,7 +56,7 @@ pub enum Event {
     WindowFullscreened {
         window_id: WindowId,
     },
-    /// A window is 'restored' when it returns from being minimized or maximized.
+    /// A window is 'restored' when it returns from being minimized, maximized, or fullscreened.
     WindowRestored {
         window_id: WindowId,
     },
@@ -72,7 +71,7 @@ pub enum Event {
         height: u32,
         window_id: WindowId,
     },
-    /// Reports the new x and y position for the *lower left* corner of the window.
+    /// Reports the new x and y position for the upper left corner of the window.
     WindowMoved {
         x: u32,
         y: u32,

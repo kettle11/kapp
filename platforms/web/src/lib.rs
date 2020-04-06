@@ -6,18 +6,14 @@ mod event_loop_web;
 mod keys_web;
 
 use kettlewin_platform_common::{
-    ApplicationMessage, Event, Key, MouseButton, PlatformApplicationTrait, PlatformChannelTrait,
-    PlatformWakerTrait, WindowId,
+    Cursor, Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId,
+    WindowParameters,
 };
 
 pub mod prelude {
-    pub use super::{
-        application_web::*,
-        application_web::{PlatformApplication, PlatformChannel, PlatformWaker},
-    };
+    pub use super::application_web::{PlatformApplication, PlatformEventLoop};
     pub use kettlewin_platform_common::{
-        single_value_channel, ApplicationMessage, Cursor, Event, Key, MouseButton,
-        PlatformApplicationTrait, PlatformChannelTrait, PlatformWakerTrait, WindowId,
-        WindowParameters,
+        Cursor, Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait,
+        WindowId, WindowParameters,
     };
 }

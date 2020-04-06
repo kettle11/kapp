@@ -1,29 +1,18 @@
 # kettlewin
-A pure Rust window and input library for Windows. (Don't use it yet) 
-This project is in the very early stages and is missing most features, is untested, and the code isn't great.
-That said, it has very few dependencies and builds extremely quickly. 
+A pure Rust window and input library for MacOS and Web.
 
 ## Example
 ```rust
-extern crate kettlewin;
-use kettlewin::glow::*;
 use kettlewin::*;
 
 fn main() {
-    // Create a new window manager with default settings.
-    let mut window_manager = WindowManager::new().build().unwrap();
-    let gl = window_manager.gl_context();
-    let window = window_manager.new_window().build().unwrap();
+    let (mut app, mut event_loop) = initialize();
+    let _window = app.new_window().build();
 
-    // Run forever
-    run(move |event| match event {
-        Event::Draw => {
-            unsafe {
-                gl.clear_color(0.0, 1.0, 1.0, 1.0);
-                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-            }
-            // When we're done rendering swap the window buffers to display to the screen.
-            window_manager.swap_buffers(&window);
+    event_loop.run(move |event| match event {
+        Event::WindowCloseRequested { .. } => app.quit(),
+        Event::Draw { .. } => {
+            // Render something here.
         }
         _ => {}
     });
@@ -31,7 +20,7 @@ fn main() {
 ```
 
 ## Features
-* Create multiple windows with a single shared OpenGL context
+* Create multiple windows
 * Mouse input
 * Keyboard input
-* Specify backbuffer properties
+* OpenGL context creation
