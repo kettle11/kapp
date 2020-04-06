@@ -1,3 +1,6 @@
+// Allowed because msg_send requires it much of the time.
+#![allow(clippy::let_unit_value)]
+
 #[link(name = "AppKit", kind = "framework")]
 extern "C" {}
 #[macro_use]

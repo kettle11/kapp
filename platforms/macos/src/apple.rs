@@ -113,7 +113,7 @@ pub const kCFRunLoopBeforeWaiting: CFRunLoopActivity = 1 << 5;
 // NSWindowStyleMask
 // https://developer.apple.com/documentation/appkit/nswindowstylemask?language=objc
 // pub const NSWindowStyleMaskBorderless: NSUInteger = 0;
-pub const NSWindowStyleMaskTitled: NSUInteger = 1 << 0;
+pub const NSWindowStyleMaskTitled: NSUInteger = 1;
 pub const NSWindowStyleMaskClosable: NSUInteger = 1 << 1;
 pub const NSWindowStyleMaskMiniaturizable: NSUInteger = 1 << 2;
 pub const NSWindowStyleMaskResizable: NSUInteger = 1 << 3;
@@ -207,6 +207,8 @@ impl CGRect {
     }
 }
 
+// Encoding for the upcoming version of the objc crate
+/*
 use objc::{Encode, Encoding};
 
 unsafe impl objc::Encode for CGRect {
@@ -222,6 +224,39 @@ unsafe impl Encode for CGPoint {
 unsafe impl Encode for CGSize {
     const ENCODING: Encoding<'static> =
         Encoding::Struct("CGSize", &[CGFloat::ENCODING, CGFloat::ENCODING]);
+}*/
+
+unsafe impl objc::Encode for CGRect {
+    fn encode() -> objc::Encoding {
+        let encoding = format!(
+            "{{CGRect={}{}}}",
+            NSPoint::encode().as_str(),
+            NSSize::encode().as_str()
+        );
+        unsafe { objc::Encoding::from_str(&encoding) }
+    }
+}
+
+unsafe impl objc::Encode for CGPoint {
+    fn encode() -> objc::Encoding {
+        let encoding = format!(
+            "{{CGPoint={}{}}}",
+            CGFloat::encode().as_str(),
+            CGFloat::encode().as_str()
+        );
+        unsafe { objc::Encoding::from_str(&encoding) }
+    }
+}
+
+unsafe impl objc::Encode for CGSize {
+    fn encode() -> objc::Encoding {
+        let encoding = format!(
+            "{{CGSize={}{}}}",
+            CGFloat::encode().as_str(),
+            CGFloat::encode().as_str()
+        );
+        unsafe { objc::Encoding::from_str(&encoding) }
+    }
 }
 
 pub type NSRect = CGRect;
@@ -281,7 +316,7 @@ pub const NX_DEVICERCMDKEYMASK: u64 = 0x10;
 pub const NSTerminateNow: NSUInteger = 1;
 //pub const NSTerminateCancel: NSUInteger = 0;
 
-pub const NSTouchPhaseBegan: NSUInteger = 1 << 0;
+pub const NSTouchPhaseBegan: NSUInteger = 0;
 pub const NSTouchPhaseMoved: NSUInteger = 1 << 1;
 
 #[link(name = "CoreGraphics", kind = "framework")]

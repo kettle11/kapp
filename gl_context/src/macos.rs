@@ -1,4 +1,4 @@
-use objc::runtime::{Object, NO, YES};
+use objc::runtime::{Object, YES};
 use objc::*;
 use std::ffi::c_void;
 use std::io::Error;
@@ -12,6 +12,10 @@ pub struct GLContext {
     pixel_format: *mut Object,
     // current_window: Option<*mut Object>,
 }
+
+// This isn't really true because make_current must be called after GLContext is passed to another thread.
+// A solution would be to wrap this is an object to send to another thread, and the unwrap
+// calls make_current.
 unsafe impl Send for GLContext {}
 
 impl GLContextBuilder {
@@ -95,8 +99,7 @@ impl GLContext {
     pub fn update_target(&self) {
         unsafe {
             let update = sel!(update);
-            let () = msg_send![self.gl_context, update];
-            // let () = msg_send![self.gl_context, performSelectorOnMainThread:update withObject:nil waitUntilDone:YES];
+            let () = msg_send![self.gl_context, performSelectorOnMainThread:update withObject:nil waitUntilDone:YES];
         }
     }
 

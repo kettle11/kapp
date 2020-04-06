@@ -12,9 +12,13 @@ impl WindowId {
         Self { raw_id }
     }
 
+
+    /// # Safety
+    ///
     /// Returns the raw window pointer.
     /// On MacOS this is a pointer to the NSWindow object.
-    pub unsafe fn raw(&self) -> *mut std::ffi::c_void {
+    /// On Web this is just '0'
+    pub unsafe fn raw(self) -> *mut std::ffi::c_void {
         self.raw_id
     }
 }

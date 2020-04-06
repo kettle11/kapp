@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 kettlewin_platform_common = { path = "../../platform_common" }
-objc = { git = "https://github.com/kettle11/rust-objc" }
+objc = "0.2.7"

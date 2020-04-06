@@ -14,6 +14,7 @@ static APPLICATION_CLASS_NAME: &str = "KettlewinApplicationClass";
 
 thread_local!(pub static APPLICATION_DATA: RefCell<Option<Box<ApplicationData>>> = RefCell::new(None));
 
+#[allow(clippy::mut_from_ref)]
 pub fn get_window_data(this: &Object) -> &mut InnerWindowData {
     unsafe {
         let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
@@ -215,7 +216,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn set_window_position(&mut self, window_id: &WindowId, x: u32, y: u32) {
+    fn set_window_position(&mut self, window_id: WindowId, x: u32, y: u32) {
         unsafe {
             let screen: *const Object = msg_send![window_id.raw() as *mut Object, screen];
             let screen_frame: CGRect = msg_send![screen, frame];
@@ -228,7 +229,8 @@ impl PlatformApplicationTrait for PlatformApplication {
                     setFrameTopLeftPoint: NSPoint::new((x as f64) / backing_scale, screen_frame.size.height - (y as f64) / backing_scale)];
         }
     }
-    fn set_window_dimensions(&mut self, window_id: &WindowId, width: u32, height: u32) {
+
+    fn set_window_dimensions(&mut self, window_id: WindowId, width: u32, height: u32) {
         unsafe {
             let backing_scale: CGFloat =
                 msg_send![window_id.raw() as *mut Object, backingScaleFactor];
@@ -236,33 +238,42 @@ impl PlatformApplicationTrait for PlatformApplication {
                 msg_send![window_id.raw() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
         }
     }
-    fn set_window_title(&mut self, window_id: &WindowId, title: &str) {
+
+    fn set_window_title(&mut self, window_id: WindowId, title: &str) {
         unsafe {
             let title = NSString::new(&title);
             let () = msg_send![window_id.raw() as *mut Object, setTitle: title.raw];
         }
     }
-    fn minimize_window(&mut self, window_id: &WindowId) {
+
+    fn minimize_window(&mut self, window_id: WindowId) {
         unsafe {
             let () = msg_send![window_id.raw() as *mut Object, miniaturize: nil];
         }
     }
-    fn maximize_window(&mut self, _window_id: &WindowId) {
+
+    fn maximize_window(&mut self, _window_id: WindowId) {
         // Not implemented on Mac
         // There is no analogous behavior?
     }
-    fn fullscreen_window(&mut self, window_id: &WindowId) {
+
+    fn fullscreen_window(&mut self, window_id: WindowId) {
         unsafe {
             let () = msg_send![window_id.raw() as *mut Object, toggleFullScreen: nil];
         }
     }
-    fn restore_window(&mut self, _window_id: &WindowId) {
+
+    fn restore_window(&mut self, _window_id: WindowId) {
         unimplemented!()
     }
-    fn close_window(&mut self, _window_id: &WindowId) {
-        unimplemented!()
+
+    fn close_window(&mut self, window_id: WindowId) {
+        unsafe {
+            let () = msg_send![window_id.raw() as *mut Object, close];
+        }
     }
-    fn redraw_window(&mut self, window_id: &WindowId) {
+
+    fn redraw_window(&mut self, window_id: WindowId) {
         let in_live_resize: bool =
             unsafe { msg_send![window_id.raw() as *mut Object, inLiveResize] };
 
@@ -275,7 +286,7 @@ impl PlatformApplicationTrait for PlatformApplication {
                     .as_mut()
                     .unwrap()
                     .requested_redraw
-                    .push(*window_id);
+                    .push(window_id);
             });
         }
     }
@@ -314,7 +325,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         APPLICATION_DATA.with(|d| {
             let mut application_data = d.borrow_mut();
 
-            if application_data.as_ref().unwrap().cursor_hidden == false {
+            if !application_data.as_ref().unwrap().cursor_hidden {
                 let ns_cursor = class!(NSCursor);
                 let () = unsafe { msg_send![ns_cursor, hide] };
                 application_data.as_mut().unwrap().cursor_hidden = true;
@@ -327,7 +338,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         APPLICATION_DATA.with(|d| {
             let mut application_data = d.borrow_mut();
 
-            if application_data.as_ref().unwrap().cursor_hidden == true {
+            if application_data.as_ref().unwrap().cursor_hidden {
                 let ns_cursor = class!(NSCursor);
                 let () = unsafe { msg_send![ns_cursor, unhide] };
                 application_data.as_mut().unwrap().cursor_hidden = false;

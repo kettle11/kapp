@@ -1,10 +1,10 @@
 use glow::*;
 use kettlewin::*;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 fn main() {
     // Create a new window manager with default settings.
-    let (mut app, event_loop) = initialize();
+    let (mut app, mut event_loop) = initialize();
 
     // Create a GLContext
     let mut gl_context = GLContext::new().build().unwrap();
@@ -54,28 +54,32 @@ fn main() {
                 }
             }
         }
-        Event::Draw => {
-            gl_context.make_current();
+        Event::Draw { window_id } => {
+            gl_context.make_current(); // Why is this needed?
             if let Some(window_red) = window_red.as_mut() {
-                gl_context.set_window(Some(&window_red.id));
-                unsafe {
-                    gl.clear_color(1.0, 0.0, 0.0, 1.0);
-                    gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-                    gl_context.swap_buffers();
+                if window_red.id == window_id {
+                    gl_context.set_window(Some(&window_red.id)).unwrap();
+                    unsafe {
+                        gl.clear_color(1.0, 0.0, 0.0, 1.0);
+                        gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+                        gl_context.swap_buffers();
+                    }
+                    window_red.request_redraw();
                 }
-                window_red.request_redraw();
             }
 
-            /*
-                        if window_blue.is_some() {
-                            gl_context.set_window(window_blue.as_ref()).unwrap();
-                            unsafe {
-                                gl.clear_color(0.0, 0.0, 1.0, 1.0);
-                                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-                                gl_context.swap_buffers();
-                            }
-                        }
-            */
+            if let Some(window_blue) = window_blue.as_mut() {
+                if window_blue.id == window_id {
+                    gl_context.set_window(Some(&window_blue.id)).unwrap();
+                    unsafe {
+                        gl.clear_color(0.0, 0.0, 1.0, 1.0);
+                        gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+                        gl_context.swap_buffers();
+                    }
+                    window_blue.request_redraw();
+                }
+            }
+
             println!("{}", now.elapsed().as_millis());
             now = Instant::now();
         }
