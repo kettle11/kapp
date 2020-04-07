@@ -14,13 +14,13 @@ impl<'a> WindowBuilder<'a> {
                 position: None,
                 dimensions: None,
                 resizable: true,
-                title: None,
+                title: "Untitled".to_string(),
             },
         }
     }
 
     pub fn title(&mut self, title: &str) -> &mut Self {
-        self.window_parameters.title = Some(title.to_string());
+        self.window_parameters.title = title.to_string();
         self
     }
 

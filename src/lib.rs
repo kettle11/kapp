@@ -92,8 +92,7 @@ mod async_application;
 mod window;
 mod window_builder;
 
-#[cfg(target_os = "windows")]
-mod windows;
+
 
 #[cfg(target_os = "macos")]
 use kettlewin_platform_macos::prelude as platform;
@@ -101,11 +100,11 @@ use kettlewin_platform_macos::prelude as platform;
 #[cfg(target_arch = "wasm32")]
 use kettlewin_platform_web::prelude as platform;
 
+#[cfg(target_os = "windows")]
+use kettlewin_platform_windows::prelude as platform;
+
 #[cfg(feature = "gl_context")]
 pub use kettlewin_gl_context::GLContext;
-
-#[cfg(target_os = "windows")]
-pub use windows::*;
 
 pub use platform::{Cursor, Event, Key, MouseButton, WindowId};
 
