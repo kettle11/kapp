@@ -123,12 +123,12 @@ impl GLContext {
         }
     }
 
-    // Taken from Glutin:
-    // https://github.com/rust-windowing/glutin/blob/447f3526dcf90a460d52afefd0b29eb2ed7f87f3/glutin/src/platform_impl/macos/mod.rs
     pub fn get_proc_address(&self, addr: &str) -> *const core::ffi::c_void {
         Self::get_proc_address_inner(addr)
     }
 
+    // Taken from Glutin:
+    // https://github.com/rust-windowing/glutin/blob/447f3526dcf90a460d52afefd0b29eb2ed7f87f3/glutin/src/platform_impl/macos/mod.rs
     fn get_proc_address_inner(addr: &str) -> *const core::ffi::c_void {
         let symbol_name = NSString::new(addr);
         let framework_name = NSString::new("com.apple.opengl");

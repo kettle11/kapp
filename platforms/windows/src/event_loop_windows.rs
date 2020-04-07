@@ -207,11 +207,13 @@ where
             }
 
             // Issue a draw command after all other events are parsed.
-            /*
+            // TO-DO: This needs to be sent per window
+            // TO-DO: Only send if a window requested a redraw
             if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
-                program_callback(Event::Draw);
+                program_callback(Event::Draw {
+                    window_id: WindowId::new(0 as *mut std::ffi::c_void),
+                });
             }
-            */
         }
     }
 }

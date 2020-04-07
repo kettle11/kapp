@@ -23,7 +23,7 @@ fn main() {
     event_loop.run(move |event| match event {
         Event::Draw { .. } => {
             // Make the GLContext current to the thread that this callback runs on.
-            gl_context.make_current();
+           // gl_context.make_current();
 
             // Clear the screen to a lovely shade of blue.
             unsafe {
@@ -35,7 +35,7 @@ fn main() {
 
             // It is not necessary for this example,
             // but calling request_frame ensures the program redraws continuously.
-            window.request_redraw();
+            // window.request_redraw();
         }
         _ => {}
     });

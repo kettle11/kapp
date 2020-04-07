@@ -12,7 +12,7 @@ use crate::{
     Cursor, Event, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters,
 };
 pub struct PlatformApplication {
-    class_name: Vec<u16>,
+    window_class_name: Vec<u16>,
     h_instance: minwindef::HINSTANCE,
 }
 
@@ -21,7 +21,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn new() -> Self {
         unsafe {
             // Register the window class.
-            let class_name = win32_string("windowing_rust");
+            let window_class_name = win32_string("windowing_rust");
             let h_instance = libloaderapi::GetModuleHandleW(null_mut());
 
             let window_class = winuser::WNDCLASSW {
@@ -34,12 +34,12 @@ impl PlatformApplicationTrait for PlatformApplication {
                 hCursor: null_mut(), // This may not be what is desired. Potentially this makes it annoying to change the cursor later.
                 hbrBackground: null_mut(),
                 lpszMenuName: null_mut(),
-                lpszClassName: class_name.as_ptr(),
+                lpszClassName: window_class_name.as_ptr(),
             };
             winuser::RegisterClassW(&window_class);
 
             Self {
-                class_name,
+                window_class_name,
                 h_instance,
             }
         }
@@ -119,8 +119,9 @@ impl PlatformApplicationTrait for PlatformApplication {
             winuser::CloseWindow(window_id.raw() as windef::HWND);
         }
     }
+
     fn redraw_window(&mut self, window_id: WindowId) {
-        unimplemented!()
+        // unimplemented!()
     }
 
     fn set_mouse_position(&mut self, x: u32, y: u32) {
@@ -164,7 +165,7 @@ impl PlatformApplicationTrait for PlatformApplication {
 
             let window_handle = winuser::CreateWindowExW(
                 extended_style,
-                self.class_name.as_ptr(),
+                self.window_class_name.as_ptr(),
                 title.as_ptr(),
                 window_style,
                 x as i32,
@@ -176,8 +177,6 @@ impl PlatformApplicationTrait for PlatformApplication {
                 self.h_instance,
                 null_mut(),
             );
-            let window_device = winuser::GetDC(window_handle);
-            error_if_null(window_device, false).unwrap();
 
             WindowId::new(window_handle as *mut std::ffi::c_void)
         }

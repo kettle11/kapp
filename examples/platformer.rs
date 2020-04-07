@@ -124,8 +124,8 @@ fn main() {
     // Create a new application with default settings.
     let (mut app, mut event_loop) = initialize();
 
-    let mut screen_width = 1200;
-    let mut screen_height = 1200;
+    let mut screen_width = 500;
+    let mut screen_height = 500;
 
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
     #[cfg(target_arch = "wasm32")]
@@ -403,7 +403,7 @@ fn main() {
                 _ => {}
             },
             Event::Draw { .. } => {
-                gl_context.make_current();
+                // gl_context.make_current();
 
                 // First update the world
 

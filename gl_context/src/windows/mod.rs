@@ -1,18 +1,175 @@
-use super::utils_windows::*;
 use std::io::Error;
 use std::mem::size_of;
 use std::os::raw::{c_float, c_int, c_uint, c_void};
 use std::ptr::null_mut;
-use winapi::shared::minwindef::{FALSE, HINSTANCE, TRUE};
+
+use winapi::shared::minwindef;
+use winapi::shared::minwindef::{FALSE, HINSTANCE, HMODULE, TRUE};
 use winapi::shared::windef;
+use winapi::um::libloaderapi;
 use winapi::um::wingdi;
 use winapi::um::winuser;
+mod utils_windows;
+use utils_windows::*;
 
-#[derive(Clone)]
-pub struct OpenGLContext {
-    pub context_ptr: windef::HGLRC,
-    pub pixel_format_id: i32,
-    pub pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR,
+pub struct GLContextBuilder {
+    samples: u8,
+    color_bits: u8,
+    alpha_bits: u8,
+    depth_bits: u8,
+    stencil_bits: u8,
+    srgb: bool,
+}
+
+pub struct GLContext {
+    context_ptr: windef::HGLRC,
+    pixel_format_id: i32,
+    pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR,
+    opengl_module: HMODULE,
+    current_window: Option<windef::HWND>,
+}
+
+// This isn't really true because make_current must be called after GLContext is passed to another thread.
+// A solution would be to wrap this is an object to send to another thread, and the unwrap
+// calls make_current.
+unsafe impl Send for GLContext {}
+
+impl GLContextBuilder {
+    pub fn samples(&mut self, samples: u8) -> &mut Self {
+        self.samples = samples;
+        self
+    }
+
+    pub fn build(&self) -> Result<GLContext, ()> {
+        Ok(new_opengl_context(
+            self.color_bits,
+            self.alpha_bits,
+            self.depth_bits,
+            self.stencil_bits,
+            self.samples,
+            self.srgb,
+            true,
+        )
+        .unwrap())
+    }
+}
+
+impl GLContext {
+    pub fn new() -> GLContextBuilder {
+        GLContextBuilder {
+            samples: 2,
+            color_bits: 24,
+            alpha_bits: 0,
+            depth_bits: 8,
+            stencil_bits: 0,
+            srgb: false,
+        }
+    }
+
+    pub fn set_window(
+        &mut self,
+        window: Option<&kettlewin_platform_common::WindowId>,
+    ) -> Result<(), Error> {
+        unsafe {
+            self.set_window_raw(window.map(|w| w.raw() as *mut std::ffi::c_void))?;
+        }
+        Ok(())
+    }
+
+    pub fn set_window_raw(&mut self, window: Option<*mut std::ffi::c_void>) -> Result<(), Error> {
+        let window_handle = window.unwrap_or(null_mut()) as windef::HWND;
+        unsafe {
+            let window_device_context = winuser::GetDC(window_handle);
+            let pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR = std::mem::zeroed();
+
+            // This will error if the window was previously set with an incompatible
+            // pixel format.
+            error_if_false(
+                wingdi::SetPixelFormat(
+                    window_device_context,
+                    self.pixel_format_id,
+                    &pixel_format_descriptor,
+                ),
+                false,
+            )?;
+
+            error_if_false(
+                wingdi::wglMakeCurrent(window_device_context, self.context_ptr),
+                false,
+            )?;
+        }
+        self.current_window = Some(window_handle);
+        Ok(())
+    }
+
+    // Updates the backbuffer of the target when it resizes
+    pub fn update_target(&self) {
+        unimplemented!()
+    }
+
+    // Is this behavior correct? Does it really work if called from another thread?
+    pub fn make_current(&self) {
+        if let Some(window) = self.current_window {
+            unsafe {
+                let window_device_context = winuser::GetDC(window);
+                error_if_false(
+                    wingdi::wglMakeCurrent(window_device_context, self.context_ptr),
+                    false,
+                )
+                .unwrap();
+            }
+        }
+    }
+
+    pub fn gl_loader_c_string(&self) -> Box<dyn FnMut(*const i8) -> *const std::ffi::c_void> {
+        let opengl_module = self.opengl_module;
+        Box::new(move |s| unsafe {
+            let name = std::ffi::CStr::from_ptr(s);
+            Self::get_proc_address_inner(opengl_module, (&name).to_str().unwrap())
+        })
+    }
+
+    pub fn swap_buffers(&self) {
+        unsafe {
+            if let Some(window_handle) = self.current_window {
+                let window_device_context = winuser::GetDC(window_handle);
+                wingdi::SwapBuffers(window_device_context);
+                winuser::ReleaseDC(window_handle, window_device_context);
+            }
+        }
+    }
+
+    pub fn get_proc_address(&self, address: &str) -> *const core::ffi::c_void {
+        Self::get_proc_address_inner(self.opengl_module, address)
+    }
+
+    fn get_proc_address_inner(opengl_module: HMODULE, address: &str) -> *const core::ffi::c_void {
+        unsafe {
+            let name = std::ffi::CString::new(address).unwrap();
+            let mut result =
+                wingdi::wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
+            if result.is_null() {
+                // Functions that were part of OpenGL1 need to be loaded differently.
+                result = libloaderapi::GetProcAddress(opengl_module, name.as_ptr() as *const i8)
+                    as *const std::ffi::c_void;
+            }
+
+            /*
+            if result.is_null() {
+                println!("FAILED TO LOAD: {}", address);
+            } else {
+                println!("Loaded: {} {:?}", address, result);
+            }
+            */
+            result
+        }
+    }
+}
+
+impl Drop for GLContext {
+    fn drop(&mut self) {
+        unimplemented!()
+    }
 }
 
 /// Creates an OpenGL context.
@@ -28,16 +185,37 @@ pub fn new_opengl_context(
     msaa_samples: u8,
     srgb: bool,
     panic_if_fail: bool,
-) -> Result<OpenGLContext, Error> {
+) -> Result<GLContext, Error> {
     // This function performs the following steps:
-    // * First creates a dummy_window ...
+    // * First register the window class.
+    // * Then create a dummy_window with that class ...
     // * Which is used to setup a dummy OpenGL context ...
     // * Which is used to load OpenGL extensions ...
     // * Which are used to set more specific pixel formats and specify an OpenGL version ...
     // * Which is used to create another dummy window ...
     // * Which is used to create the final OpenGL context!
     unsafe {
-        let dummy_window = create_dummy_window(h_instance, class_name);
+        // Register the window class.
+        let window_class_name = win32_string("kettlewin_gl_window");
+        let h_instance = libloaderapi::GetModuleHandleW(null_mut());
+
+        let window_class = winuser::WNDCLASSW {
+            style: 0,
+            lpfnWndProc: Some(kettlewin_gl_window_callback),
+            cbClsExtra: 0,
+            cbWndExtra: 0,
+            hInstance: h_instance,
+            hIcon: null_mut(),
+            hCursor: null_mut(), // This may not be what is desired. Potentially this makes it annoying to change the cursor later.
+            hbrBackground: null_mut(),
+            lpszMenuName: null_mut(),
+            lpszClassName: window_class_name.as_ptr(),
+        };
+        winuser::RegisterClassW(&window_class);
+
+        // Then create a dummy window
+        let h_instance = libloaderapi::GetModuleHandleA(null_mut());
+        let dummy_window = create_dummy_window(h_instance, &window_class_name);
         error_if_null(dummy_window, panic_if_fail)?;
 
         // DC stands for 'device context'
@@ -83,7 +261,7 @@ pub fn new_opengl_context(
             wgl_get_proc_address("wglCreateContextAttribsARB", panic_if_fail)?;
 
         // Create the second dummy window.
-        let dummy_window2 = create_dummy_window(h_instance, class_name);
+        let dummy_window2 = create_dummy_window(h_instance, &window_class_name);
         error_if_null(dummy_window2, panic_if_fail)?;
 
         // DC is 'device context'
@@ -197,22 +375,47 @@ pub fn new_opengl_context(
             true,
         )?;
 
-        Ok(OpenGLContext {
+        let opengl_module =
+            libloaderapi::LoadLibraryA(std::ffi::CString::new("opengl32.dll").unwrap().as_ptr());
+
+        // Load swap interval for Vsync
+        let function_pointer = wingdi::wglGetProcAddress(
+            std::ffi::CString::new("wglSwapIntervalEXT")
+                .unwrap()
+                .as_ptr() as *const i8,
+        );
+
+        println!("HERE HERE");
+        if function_pointer.is_null() {
+            println!("Could not find wglSwapIntervalEXT");
+            return Err(Error::last_os_error());
+        } else {
+            wglSwapIntervalEXT_ptr = function_pointer as *const std::ffi::c_void;
+        }
+
+        // Default to Vsync enabled
+        if !wglSwapIntervalEXT(1) {
+            return Err(Error::last_os_error());
+        }
+
+        Ok(GLContext {
             context_ptr: opengl_context,
             pixel_format_id,
             pixel_format_descriptor: pfd,
+            opengl_module,
+            current_window: None,
         })
     }
 }
 
-fn create_dummy_window(h_instance: HINSTANCE) -> windef::HWND {
-    let title = win32_string("Dummy");
+fn create_dummy_window(h_instance: HINSTANCE, class_name: &Vec<u16>) -> windef::HWND {
+    let title = win32_string("Kettlewin Placeholder");
 
     unsafe {
         // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexw
         winuser::CreateWindowExW(
             0,                                                   // extended style Is this ok?
-            title.as_ptr(),                                      // A class created by RegisterClass
+            class_name.as_ptr(),                                 // A class created by RegisterClass
             title.as_ptr(),                                      // window title
             winuser::WS_CLIPSIBLINGS | winuser::WS_CLIPCHILDREN, // style
             0,                                                   // x position
@@ -226,7 +429,16 @@ fn create_dummy_window(h_instance: HINSTANCE) -> windef::HWND {
         )
     }
 }
-// The following is a bunch of scary code hand written to load some functions needed for our OpenGL context.
+
+pub unsafe extern "system" fn kettlewin_gl_window_callback(
+    hwnd: windef::HWND,
+    u_msg: minwindef::UINT,
+    w_param: minwindef::WPARAM,
+    l_param: minwindef::LPARAM,
+) -> minwindef::LRESULT {
+    // DefWindowProcW is the default Window event handler.
+    winuser::DefWindowProcW(hwnd, u_msg, w_param, l_param)
+}
 
 fn wgl_get_proc_address(name: &str, panic_if_fail: bool) -> Result<*const c_void, Error> {
     let name = std::ffi::CString::new(name).unwrap();
@@ -312,3 +524,16 @@ static WGL_CONTEXT_PROFILE_MASK_ARB: c_int = 0x9126;
 static WGL_CONTEXT_CORE_PROFILE_BIT_ARB: c_int = 0x00000001;
 // static WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB: c_int = 0x00000002;
 static WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB: c_int = 0x20A9;
+
+// This is a C extension function requested on load.
+#[allow(non_upper_case_globals)]
+static mut wglSwapIntervalEXT_ptr: *const std::ffi::c_void = std::ptr::null();
+#[allow(non_upper_case_globals)]
+#[allow(non_snake_case)]
+fn wglSwapIntervalEXT(i: std::os::raw::c_int) -> bool {
+    unsafe {
+        std::mem::transmute::<_, extern "system" fn(std::os::raw::c_int) -> bool>(
+            wglSwapIntervalEXT_ptr,
+        )(i)
+    }
+}

@@ -5,11 +5,14 @@ use crate::WindowId;
 /// Input and system events
 #[derive(Debug, Clone)]
 pub enum Event {
-    /// When the system recommends drawing
+    /// A recommendation for when to draw. 
+    /// On MacOS Draw is triggered by a system event.
+    /// On Web Draw is triggered by requestAnimationFrame
+    /// On Windows Draw is sent at the end of the event loop.
     Draw {
         window_id: WindowId,
     },
-    // ------------------- Input Events  ---------------------
+    // ------------------- Input Events ---------------------
     /// A key is pressed.
     KeyDown {
         key: Key,

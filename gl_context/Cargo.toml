@@ -10,6 +10,9 @@ kettlewin_platform_common = { path = "../platform_common" }
 [target.'cfg(target_os="macos")'.dependencies]
 objc = "0.2.7"
 
+[target.'cfg(target_os="windows")'.dependencies]
+winapi = { version = "0.3.8", features = ["winuser", "libloaderapi", "windowsx"] }
+
 [target.'cfg(target_arch="wasm32")'.dependencies]
 wasm-bindgen = "0.2.58"
 

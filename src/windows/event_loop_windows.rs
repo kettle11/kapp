@@ -2,8 +2,8 @@
 use super::keys_windows::virtual_keycode_to_key;
 use super::WindowId;
 use crate::events::*;
-use crate::MouseButton;
 use crate::Key;
+use crate::MouseButton;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LRESULT, UINT, WPARAM};
 use winapi::shared::windef::HWND;
@@ -26,18 +26,28 @@ pub unsafe extern "system" fn window_callback(
         winuser::WM_SIZE => {
             let (width, height) = get_width_height(l_param);
             // First send the resize event
-            produce_event(Event::WindowResized { width, height, window_id: WindowId {handle: hwnd}});
+            produce_event(Event::WindowResized {
+                width,
+                height,
+                window_id: WindowId { handle: hwnd },
+            });
 
             // Then send more specific events.
             match w_param {
-                winuser::SIZE_MAXIMIZED => produce_event(Event::WindowMaximized{window_id: WindowId {handle: hwnd}}),
-                winuser::SIZE_MINIMIZED => produce_event(Event::WindowMinimized{window_id: WindowId {handle: hwnd}}),
+                winuser::SIZE_MAXIMIZED => produce_event(Event::WindowMaximized {
+                    window_id: WindowId { handle: hwnd },
+                }),
+                winuser::SIZE_MINIMIZED => produce_event(Event::WindowMinimized {
+                    window_id: WindowId { handle: hwnd },
+                }),
                 winuser::SIZE_RESTORED => {
                     /* Quote from the docs: "The window has been resized, but
                     neither the SIZE_MINIMIZED nor SIZE_MAXIMIZED value applies" */
                     // While resizing the OS directly calls window_callback and does not call the typical event loop.
                     // To redraw the window smoothly Event::Draw is passed in here.
-                    produce_event(Event::WindowRestored {window_id: WindowId {handle: hwnd}})
+                    produce_event(Event::WindowRestored {
+                        window_id: WindowId { handle: hwnd },
+                    })
                     // produce_event(Event::Draw);
                 }
                 _ => {}
@@ -76,7 +86,11 @@ pub unsafe extern "system" fn window_callback(
                 _ => unreachable!(),
             },
         }),
+
         winuser::WM_MOUSEMOVE => produce_event(process_mouse_move_event(hwnd, l_param)),
+        winuser::WM_PAINT => {
+            println!("Paint requested");
+        }
         _ => {}
     }
     // DefWindowProcW is the default Window event handler.
@@ -147,7 +161,9 @@ where
 
             // Issue a draw command after all other events are parsed.
             if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
-                program_callback(Event::Draw);
+                program_callback(Event::Draw {
+                    window_id: WindowId { handle: 0 },
+                });
             }
         }
     }

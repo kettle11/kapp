@@ -12,7 +12,7 @@ pub struct Window {
     #[allow(dead_code)]
     handle: windef::HWND,
     device: windef::HDC,
-    pub id: WindowId
+    pub id: WindowId,
 }
 
 #[derive(Hash, Eq, PartialEq, Clone, Copy, Debug)]
@@ -21,9 +21,8 @@ pub struct WindowId {
     pub handle: windef::HWND, // Just use the window pointer as the ID, it's unique.
 }
 
-
 pub struct WindowBuilder<'a> {
-    class_name: Vec<u16>,
+    window_class_name: Vec<u16>,
     h_instance: minwindef::HINSTANCE,
     x: Option<u32>,
     y: Option<u32>,
@@ -81,7 +80,7 @@ impl<'a> WindowBuilder<'a> {
 
             let window_handle = winuser::CreateWindowExW(
                 extended_style,
-                self.class_name.as_ptr(),
+                self.window_class_name.as_ptr(),
                 title.as_ptr(),
                 window_style,
                 x,
@@ -100,15 +99,14 @@ impl<'a> WindowBuilder<'a> {
                 handle: window_handle,
                 device: window_device,
                 id: WindowId {
-                    handle: window_handle
-                }
+                    handle: window_handle,
+                },
             })
         }
     }
 }
 
-pub struct ApplicationBuilder {
-}
+pub struct ApplicationBuilder {}
 
 impl ApplicationBuilder {
     pub fn build(&self) -> Result<Application, Error> {
@@ -116,7 +114,6 @@ impl ApplicationBuilder {
             // Register the window class.
             let class_name = win32_string("windowing_rust");
             let h_instance = libloaderapi::GetModuleHandleW(null_mut());
-
 
             let window_class = winuser::WNDCLASSW {
                 style: 0,
@@ -140,8 +137,8 @@ impl ApplicationBuilder {
     }
 }
 
-// This probably shouldn't be possible to clone. 
-#[derive( Clone)]
+// This probably shouldn't be possible to clone.
+#[derive(Clone)]
 pub struct Application {
     class_name: Vec<u16>,
     h_instance: minwindef::HINSTANCE,
@@ -149,9 +146,7 @@ pub struct Application {
 
 impl Application {
     pub fn new() -> ApplicationBuilder {
-        ApplicationBuilder {
-         
-        }
+        ApplicationBuilder {}
     }
 
     pub fn new_window<'a>(&mut self) -> WindowBuilder<'a> {
@@ -166,10 +161,8 @@ impl Application {
         }
     }
 
-    
     pub fn event_loop(&mut self) -> EventLoop {
-        EventLoop {
-        }
+        EventLoop {}
     }
 
     pub fn request_frame(&mut self) {
@@ -181,15 +174,13 @@ impl Application {
     }
 }
 
-pub struct EventLoop {
-   
-}
+pub struct EventLoop {}
 
 impl EventLoop {
     pub fn run<T>(&self, callback: T)
     where
         T: 'static + FnMut(crate::Event),
     {
-       super::event_loop_windows::run(callback);
+        super::event_loop_windows::run(callback);
     }
 }
