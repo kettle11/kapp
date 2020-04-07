@@ -19,11 +19,14 @@ fn main() {
     let gl = glow::Context::from_webgl1_context(gl_context.get_webgl1_context());
     #[cfg(not(target_arch = "wasm32"))]
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
+    let mut now = std::time::Instant::now();
 
     event_loop.run(move |event| match event {
         Event::Draw { .. } => {
+            //  gl_context.set_window(Some(&window.id)).unwrap();
+
             // Make the GLContext current to the thread that this callback runs on.
-           // gl_context.make_current();
+            //gl_context.make_current();
 
             // Clear the screen to a lovely shade of blue.
             unsafe {
@@ -36,6 +39,9 @@ fn main() {
             // It is not necessary for this example,
             // but calling request_frame ensures the program redraws continuously.
             // window.request_redraw();
+            
+            println!("{}", now.elapsed().as_millis());
+            now = std::time::Instant::now();
         }
         _ => {}
     });

@@ -131,7 +131,8 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
         unsafe {
             let extended_style = winuser::WS_EX_APPWINDOW;
-            let window_style = winuser::WS_OVERLAPPEDWINDOW | winuser::WS_VISIBLE;
+            let window_style =
+                winuser::WS_OVERLAPPEDWINDOW | winuser::WS_VISIBLE | winuser::CS_OWNDC;
             let title = win32_string(&window_parameters.title);
 
             let (x, y) = if let Some(position) = window_parameters.position {

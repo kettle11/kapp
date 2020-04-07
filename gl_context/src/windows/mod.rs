@@ -27,6 +27,7 @@ pub struct GLContext {
     pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR,
     opengl_module: HMODULE,
     current_window: Option<windef::HWND>,
+    window_device_context: Option<windef::HDC>,
 }
 
 // This isn't really true because make_current must be called after GLContext is passed to another thread.
@@ -78,6 +79,13 @@ impl GLContext {
 
     pub fn set_window_raw(&mut self, window: Option<*mut std::ffi::c_void>) -> Result<(), Error> {
         let window_handle = window.unwrap_or(null_mut()) as windef::HWND;
+
+        if let Some(device_context) = self.window_device_context {
+            unsafe {
+                winuser::ReleaseDC(self.current_window.unwrap(), device_context);
+            }
+        }
+
         unsafe {
             let window_device_context = winuser::GetDC(window_handle);
             let pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR = std::mem::zeroed();
@@ -97,26 +105,34 @@ impl GLContext {
                 wingdi::wglMakeCurrent(window_device_context, self.context_ptr),
                 false,
             )?;
+
+            wglSwapIntervalEXT(1); // Everytime a device context is requested, vsync must be updated.
+            self.window_device_context = Some(window_device_context);
         }
+
         self.current_window = Some(window_handle);
         Ok(())
     }
 
     // Updates the backbuffer of the target when it resizes
     pub fn update_target(&self) {
-        unimplemented!()
+        //unimplemented!()
     }
 
     // Is this behavior correct? Does it really work if called from another thread?
     pub fn make_current(&self) {
-        if let Some(window) = self.current_window {
+        if let Some(window_device_context) = self.window_device_context {
             unsafe {
-                let window_device_context = winuser::GetDC(window);
-                error_if_false(
-                    wingdi::wglMakeCurrent(window_device_context, self.context_ptr),
-                    false,
-                )
-                .unwrap();
+                // This check may only be masking an issue that occurs if wglMakeCurrent is called
+                // too frequently.
+                // Is there some sort of race condition with wglMakeCurrent?
+                if wingdi::wglGetCurrentContext() != self.context_ptr {
+                    error_if_false(
+                        wingdi::wglMakeCurrent(window_device_context, self.context_ptr),
+                        false,
+                    )
+                    .unwrap();
+                }
             }
         }
     }
@@ -131,10 +147,8 @@ impl GLContext {
 
     pub fn swap_buffers(&self) {
         unsafe {
-            if let Some(window_handle) = self.current_window {
-                let window_device_context = winuser::GetDC(window_handle);
+            if let Some(window_device_context) = self.window_device_context {
                 wingdi::SwapBuffers(window_device_context);
-                winuser::ReleaseDC(window_handle, window_device_context);
             }
         }
     }
@@ -163,6 +177,10 @@ impl GLContext {
             */
             result
         }
+    }
+
+    pub fn get_swap_interval(&self) -> i32 {
+        wglGetSwapIntervalEXT()
     }
 }
 
@@ -296,12 +314,7 @@ pub fn new_opengl_context(
             WGL_SAMPLES_ARB,
             msaa_samples as i32,
             WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB,
-            if srgb {
-                TRUE
-            } else {
-                println!("DISABLING SRGB");
-                FALSE
-            },
+            if srgb { TRUE } else { FALSE },
             0,
         ];
 
@@ -359,17 +372,11 @@ pub fn new_opengl_context(
         // Clean up all of our resources
         // It's bad that these calls only occur if all the prior steps were succesful.
         // If a program were to recover from a failure to setup an OpenGL context these resources would be leaked.
-        wingdi::wglMakeCurrent(null_mut(), null_mut());
+        wingdi::wglMakeCurrent(dummy_window_dc, null_mut());
         wingdi::wglDeleteContext(dummy_opengl_context);
         winuser::ReleaseDC(dummy_window, dummy_window_dc);
         winuser::DestroyWindow(dummy_window);
 
-        // These resources are leaked because a window is needed to make the opengl_context current.
-        // Will the dummy window be rendererd to if no other window is made current?
-        // winuser::ReleaseDC(dummy_window2, dummy_window_dc2);
-        // winuser::DestroyWindow(dummy_window2);
-
-        // This dummy_window should be destroyed when the context is dropped.
         error_if_false(
             wingdi::wglMakeCurrent(dummy_window_dc2, opengl_context),
             true,
@@ -385,7 +392,6 @@ pub fn new_opengl_context(
                 .as_ptr() as *const i8,
         );
 
-        println!("HERE HERE");
         if function_pointer.is_null() {
             println!("Could not find wglSwapIntervalEXT");
             return Err(Error::last_os_error());
@@ -398,12 +404,24 @@ pub fn new_opengl_context(
             return Err(Error::last_os_error());
         }
 
+        // Will the dummy window be rendererd to if no other window is made current?
+        winuser::ReleaseDC(dummy_window2, dummy_window_dc2);
+        winuser::DestroyWindow(dummy_window2);
+
+        // Disconnects from current window
+        // Uncommenting this line can cause intermittment crashes
+        // It's unclear why, as this should just disconnect the dummy window context
+        // However leaving this commented should be harmless.
+        // Actually, it just improves the situation, but doesn't prevent it.
+        //wingdi::wglMakeCurrent(dummy_window_dc2, null_mut());
+
         Ok(GLContext {
             context_ptr: opengl_context,
             pixel_format_id,
             pixel_format_descriptor: pfd,
             opengl_module,
             current_window: None,
+            window_device_context: None,
         })
     }
 }
@@ -535,5 +553,18 @@ fn wglSwapIntervalEXT(i: std::os::raw::c_int) -> bool {
         std::mem::transmute::<_, extern "system" fn(std::os::raw::c_int) -> bool>(
             wglSwapIntervalEXT_ptr,
         )(i)
+    }
+}
+
+// This is a C extension function requested on load.
+#[allow(non_upper_case_globals)]
+static mut wglGetSwapIntervalEXT_ptr: *const std::ffi::c_void = std::ptr::null();
+#[allow(non_upper_case_globals)]
+#[allow(non_snake_case)]
+fn wglGetSwapIntervalEXT() -> std::os::raw::c_int {
+    unsafe {
+        std::mem::transmute::<_, extern "system" fn() -> std::os::raw::c_int>(
+            wglGetSwapIntervalEXT_ptr,
+        )()
     }
 }
