@@ -24,7 +24,7 @@ pub struct GLContextBuilder {
 pub struct GLContext {
     context_ptr: windef::HGLRC,
     pixel_format_id: i32,
-    pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR,
+    _pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR,
     opengl_module: HMODULE,
     current_window: Option<windef::HWND>,
     window_device_context: Option<windef::HDC>,
@@ -58,11 +58,11 @@ impl GLContextBuilder {
 impl GLContext {
     pub fn new() -> GLContextBuilder {
         GLContextBuilder {
-            samples: 2,
+            samples: 1,
             color_bits: 24,
-            alpha_bits: 0,
-            depth_bits: 8,
-            stencil_bits: 0,
+            alpha_bits: 8,
+            depth_bits: 24,
+            stencil_bits: 8,
             srgb: false,
         }
     }
@@ -418,7 +418,7 @@ pub fn new_opengl_context(
         Ok(GLContext {
             context_ptr: opengl_context,
             pixel_format_id,
-            pixel_format_descriptor: pfd,
+            _pixel_format_descriptor: pfd,
             opengl_module,
             current_window: None,
             window_device_context: None,

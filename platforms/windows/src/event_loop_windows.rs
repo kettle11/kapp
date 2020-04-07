@@ -5,7 +5,7 @@ use crate::Event;
 use crate::Key;
 use crate::MouseButton;
 use std::ptr::null_mut;
-use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LRESULT, UINT, WPARAM};
+use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LRESULT, TRUE, UINT, WPARAM};
 use winapi::shared::windef::HWND;
 use winapi::shared::windowsx::{GET_X_LPARAM, GET_Y_LPARAM};
 use winapi::um::winuser;
@@ -23,37 +23,30 @@ pub unsafe extern "system" fn window_callback(
     match u_msg {
         winuser::WM_KEYDOWN => produce_event(process_key_down(w_param, l_param)),
         winuser::WM_KEYUP => produce_event(process_key_up(w_param, l_param)),
-        winuser::WM_SIZE => {
-            let (width, height) = get_width_height(l_param);
-            // First send the resize event
-            produce_event(Event::WindowResized {
-                width,
-                height,
-                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
-            });
-
-            // Then send more specific events.
-            match w_param {
-                winuser::SIZE_MAXIMIZED => produce_event(Event::WindowMaximized {
-                    window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
-                }),
-                winuser::SIZE_MINIMIZED => produce_event(Event::WindowMinimized {
-                    window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
-                }),
-                winuser::SIZE_RESTORED => {
-                    /* Quote from the docs: "The window has been resized, but
-                    neither the SIZE_MINIMIZED nor SIZE_MAXIMIZED value applies" */
-                    // While resizing the OS directly calls window_callback and does not call the typical event loop.
-                    // To redraw the window smoothly Event::Draw is passed in here.
-                    produce_event(Event::WindowRestored {
-                        window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
-                    })
-                    // produce_event(Event::Draw);
-                }
-                _ => {}
+        winuser::WM_SIZING => return TRUE as isize,
+        winuser::WM_SETCURSOR => {
+            // Give the OS a chance to set the cursor first, and don't override it if it sets it.
+            // The OS will not set the cursor within a window as the default cursor
+            // for a window is set to null.
+            if winuser::DefWindowProcW(hwnd, u_msg, w_param, l_param) == 0 {
+                winuser::SetCursor(super::application_windows::CURRENT_CURSOR);
             }
+            return 0;
         }
-
+        winuser::WM_ENTERSIZEMOVE => {
+            return 0;
+        }
+        winuser::WM_EXITSIZEMOVE => {
+            return 0;
+        }
+        winuser::WM_SIZE => {
+            resize_event(hwnd, l_param, w_param);
+            produce_event(Event::Draw {
+                window_id: WindowId::new(0 as *mut std::ffi::c_void),
+            });
+            return 0;
+        }
+        winuser::WM_PAINT => {}
         winuser::WM_LBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
@@ -144,6 +137,46 @@ pub unsafe extern "system" fn window_callback(
     winuser::DefWindowProcW(hwnd, u_msg, w_param, l_param)
 }
 
+// https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-mousemove
+fn resize_event(hwnd: HWND, l_param: LPARAM, w_param: WPARAM) {
+    let (width, height) = get_width_height(l_param);
+    // First send the resize event
+    produce_event(Event::WindowResized {
+        width,
+        height,
+        window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
+    });
+
+    // Then send more specific events.
+    match w_param {
+        winuser::SIZE_MAXIMIZED => produce_event(Event::WindowMaximized {
+            window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
+        }),
+        winuser::SIZE_MINIMIZED => produce_event(Event::WindowMinimized {
+            window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
+        }),
+        winuser::SIZE_RESTORED => {
+            /* Quote from the docs: "The window has been resized, but
+            neither the SIZE_MINIMIZED nor SIZE_MAXIMIZED value applies" */
+            // While resizing the OS directly calls window_callback and does not call the typical event loop.
+            // To redraw the window smoothly Event::Draw is passed in here.
+            produce_event(Event::WindowRestored {
+                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
+            });
+            produce_event(Event::Draw {
+                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
+            });
+        }
+        _ => {}
+    }
+
+    /*
+    produce_event(Event::Draw {
+        window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
+    });
+    */
+}
+
 fn produce_event(event: Event) {
     unsafe {
         if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
@@ -170,7 +203,7 @@ fn get_width_height(l_param: LPARAM) -> (u32, u32) {
 }
 
 fn process_key_down(w_param: WPARAM, l_param: LPARAM) -> Event {
-    let (scancode, key, repeat) = process_key_event(w_param, l_param);
+    let (_scancode, key, repeat) = process_key_event(w_param, l_param);
 
     if repeat {
         Event::KeyRepeat { key }
@@ -180,7 +213,7 @@ fn process_key_down(w_param: WPARAM, l_param: LPARAM) -> Event {
 }
 
 fn process_key_up(w_param: WPARAM, l_param: LPARAM) -> Event {
-    let (scancode, key, _repeat) = process_key_event(w_param, l_param);
+    let (_scancode, key, _repeat) = process_key_event(w_param, l_param);
     Event::KeyUp { key }
 }
 
@@ -209,6 +242,7 @@ where
             // Issue a draw command after all other events are parsed.
             // TO-DO: This needs to be sent per window
             // TO-DO: Only send if a window requested a redraw
+
             if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
                 program_callback(Event::Draw {
                     window_id: WindowId::new(0 as *mut std::ffi::c_void),

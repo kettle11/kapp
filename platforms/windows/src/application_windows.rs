@@ -2,15 +2,14 @@ use std::ptr::null_mut;
 use winapi::shared::minwindef;
 use winapi::shared::windef;
 use winapi::um::libloaderapi;
-use winapi::um::wingdi;
 use winapi::um::winuser;
 
 use crate::utils_windows::*;
 use minwindef::{FALSE, TRUE};
 
-use crate::{
-    Cursor, Event, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters,
-};
+use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
+
+pub static mut CURRENT_CURSOR: windef::HCURSOR = null_mut();
 pub struct PlatformApplication {
     window_class_name: Vec<u16>,
     h_instance: minwindef::HINSTANCE,
@@ -36,6 +35,8 @@ impl PlatformApplicationTrait for PlatformApplication {
                 lpszMenuName: null_mut(),
                 lpszClassName: window_class_name.as_ptr(),
             };
+
+            CURRENT_CURSOR = winuser::LoadCursorW(null_mut(), winuser::IDC_ARROW);
             winuser::RegisterClassW(&window_class);
 
             Self {
@@ -106,7 +107,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             winuser::ShowWindow(window_id.raw() as windef::HWND, winuser::SW_MAXIMIZE);
         }
     }
-    fn fullscreen_window(&mut self, window_id: WindowId) {
+    fn fullscreen_window(&mut self, _window_id: WindowId) {
         unimplemented!()
     }
     fn restore_window(&mut self, window_id: WindowId) {
@@ -120,11 +121,11 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn redraw_window(&mut self, window_id: WindowId) {
+    fn redraw_window(&mut self, _window_id: WindowId) {
         // unimplemented!()
     }
 
-    fn set_mouse_position(&mut self, x: u32, y: u32) {
+    fn set_mouse_position(&mut self, _x: u32, _y: u32) {
         unimplemented!()
     }
 
@@ -204,7 +205,17 @@ impl PlatformApplicationTrait for PlatformApplication {
                 // There's no default for this on Windows
                 Cursor::ClosedHand => winuser::LoadCursorW(null_mut(), winuser::IDC_HAND),
             };
-            winuser::SetCursor(cursor);
+
+            winuser::SetCursor(super::application_windows::CURRENT_CURSOR);
+
+            // This is a workaround.
+            // The cursor doesn't immediately update because the WM_SETCURSOR event isn't
+            // sent immediately. By setting the position here, the mouse moves and WM_SETCURSOR is sent.
+            let mut position = windef::POINT { x: 0, y: 0 };
+            winuser::GetCursorPos(&mut position);
+            winuser::SetCursorPos(position.x, position.y);
+
+            CURRENT_CURSOR = cursor;
         }
     }
     fn hide_cursor(&mut self) {

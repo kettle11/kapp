@@ -88,7 +88,12 @@ fn setup(gl: &glow::Context) {
 fn main() {
     // Create a new application with default settings.
     let (mut app, mut event_loop) = initialize();
-    let mut window = app.new_window().title("Hello").build().unwrap();
+    let mut window = app
+        .new_window()
+        .dimensions(400, 400)
+        .title("Hello")
+        .build()
+        .unwrap();
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
 
     gl_context.set_window(Some(&window.id)).unwrap();
@@ -99,17 +104,24 @@ fn main() {
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
     setup(&gl);
+
+    unsafe {
+        gl.viewport(0, 0, 400 as i32, 400 as i32);
+    }
     // let mut now = std::time::Instant::now();
 
     // Run forever
     event_loop.run(move |event| match event {
         Event::WindowCloseRequested { .. } => app.quit(),
+        Event::WindowResized { width, height, .. } => unsafe {
+            gl.viewport(0, 0, width as i32, height as i32);
+        },
         //  Event::WindowResized { .. } => gl_context.update_target(), // This call updates the window backbuffer to match the new window size.
         Event::Draw { .. } => {
             //gl_context.make_current();
 
             unsafe {
-                gl.clear_color(0.0, 1.0, 0.0, 1.0);
+                gl.clear_color(0.5, 1.0, 0.0, 1.0);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                 gl.draw_arrays(TRIANGLES, 0, 3);
             }
