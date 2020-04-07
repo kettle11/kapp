@@ -20,9 +20,9 @@ fn new_shader(
         gl.compile_shader(shader);
 
         if !gl.get_shader_compile_status(shader) {
-            println!("Type: {:?}", shader_type);
-            println!("{}", source);
-            panic!(gl.get_shader_info_log(shader));
+            log!("Type: {:?}", shader_type);
+            log!("{}", source);
+            log!("{}", gl.get_shader_info_log(shader));
         }
 
         shader
@@ -44,7 +44,7 @@ fn new_shader_program(
         gl.link_program(shader_program);
 
         if !gl.get_program_link_status(shader_program) {
-            panic!(gl.get_program_info_log(shader_program));
+            log!("{}", gl.get_program_info_log(shader_program));
         }
         shader_program
     }
@@ -94,19 +94,19 @@ fn main() {
     gl_context.set_window(Some(&window.id)).unwrap();
 
     #[cfg(target_arch = "wasm32")]
-    let gl = glow::Context::from_webgl1_context(gl_context.get_webgl1_context());
+    let gl = glow::Context::from_webgl2_context(gl_context.webgl2_context().unwrap());
     #[cfg(not(target_arch = "wasm32"))]
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
     setup(&gl);
-    let mut now = std::time::Instant::now();
+    // let mut now = std::time::Instant::now();
 
     // Run forever
     event_loop.run(move |event| match event {
         Event::WindowCloseRequested { .. } => app.quit(),
         //  Event::WindowResized { .. } => gl_context.update_target(), // This call updates the window backbuffer to match the new window size.
         Event::Draw { .. } => {
-            gl_context.make_current();
+            //gl_context.make_current();
 
             unsafe {
                 gl.clear_color(0.0, 1.0, 0.0, 1.0);
@@ -116,9 +116,19 @@ fn main() {
             gl_context.swap_buffers(); // Swaps the currently bound window. Blocks if vSync is used
             window.request_redraw();
 
-            println!("{}", now.elapsed().as_millis());
-            now = std::time::Instant::now();
+            // println!("{}", now.elapsed().as_millis());
+            // now = std::time::Instant::now();
         }
         _ => {}
     });
+}
+
+#[macro_export]
+macro_rules! log {
+    ( $( $arg:tt )* ) => {
+        #[cfg(target_arch = "wasm32")]
+        $crate::web_sys::console::log_1(&format!( $( $arg )* ).into());
+        #[cfg(not(target_arch = "wasm32"))]
+        println!("{}", &format!( $( $arg )* ));
+    }
 }
