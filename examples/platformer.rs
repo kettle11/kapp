@@ -340,6 +340,7 @@ fn main() {
 
     let mut right_held = false;
     let mut left_held = false;
+    let mut now = std::time::Instant::now();
 
     event_loop.run(move |event| unsafe {
         match event {
@@ -394,6 +395,15 @@ fn main() {
                         player.velocity.1 += jump_power
                     }
                 } // Jump!
+                Key::V => {
+                    gl_context.set_vsync(VSync::On);
+                }
+                Key::A => {
+                    gl_context.set_vsync(VSync::Adaptive);
+                }
+                Key::O => {
+                    gl_context.set_vsync(VSync::Off).unwrap();
+                }
                 Key::F => window.fullscreen(),
                 _ => {}
             },
@@ -403,6 +413,7 @@ fn main() {
                 _ => {}
             },
             Event::Draw { .. } => {
+                println!("VSYNC AT DRAW: {:?}", gl_context.get_vsync());
                 // gl_context.make_current();
 
                 // First update the world
@@ -485,9 +496,14 @@ fn main() {
                 for block in foreground_blocks.iter() {
                     draw_rect(&gl, &block.rect, &block.color, scale);
                 }
+
                 // When we're done rendering swap the window buffers to display to the screen.
                 gl_context.swap_buffers();
+
                 window.request_redraw();
+
+                println!("{}", now.elapsed().as_millis());
+                now = std::time::Instant::now();
             }
             _ => {}
         }

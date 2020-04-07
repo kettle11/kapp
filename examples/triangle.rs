@@ -108,7 +108,7 @@ fn main() {
     unsafe {
         gl.viewport(0, 0, 400 as i32, 400 as i32);
     }
-    // let mut now = std::time::Instant::now();
+    let mut now = std::time::Instant::now();
 
     // Run forever
     event_loop.run(move |event| match event {
@@ -128,8 +128,8 @@ fn main() {
             gl_context.swap_buffers(); // Swaps the currently bound window. Blocks if vSync is used
             window.request_redraw();
 
-            // println!("{}", now.elapsed().as_millis());
-            // now = std::time::Instant::now();
+            println!("{}", now.elapsed().as_millis());
+            now = std::time::Instant::now();
         }
         _ => {}
     });

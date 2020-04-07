@@ -15,3 +15,11 @@ pub use windows::{GLContext, GLContextBuilder};
 
 #[cfg(target_arch = "wasm32")]
 pub use web::{GLContext, GLContextBuilder};
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum VSync {
+    On,
+    Off,
+    Adaptive,
+    Other(i32),
+}

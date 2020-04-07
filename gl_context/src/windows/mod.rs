@@ -12,6 +12,8 @@ use winapi::um::winuser;
 mod utils_windows;
 use utils_windows::*;
 
+use crate::VSync;
+
 pub struct GLContextBuilder {
     samples: u8,
     color_bits: u8,
@@ -28,6 +30,7 @@ pub struct GLContext {
     opengl_module: HMODULE,
     current_window: Option<windef::HWND>,
     window_device_context: Option<windef::HDC>,
+    vsync: VSync,
 }
 
 // This isn't really true because make_current must be called after GLContext is passed to another thread.
@@ -106,7 +109,7 @@ impl GLContext {
                 false,
             )?;
 
-            wglSwapIntervalEXT(1); // Everytime a device context is requested, vsync must be updated.
+            self.set_vsync(self.vsync).unwrap(); // Everytime a device context is requested, vsync must be updated.
             self.window_device_context = Some(window_device_context);
         }
 
@@ -137,6 +140,34 @@ impl GLContext {
         }
     }
 
+    // Should return an error if it fails
+    pub fn set_vsync(&mut self, vsync: VSync) -> Result<(), Error> {
+        if match vsync {
+            VSync::Off => wglSwapIntervalEXT(0),
+            VSync::On => wglSwapIntervalEXT(1),
+            VSync::Adaptive => wglSwapIntervalEXT(-1),
+            VSync::Other(i) => wglSwapIntervalEXT(i),
+        } == false
+        {
+            Err(Error::last_os_error())
+        } else {
+            println!("Last error: {:?}", Error::last_os_error());
+            println!("Actual vsync: {:?}", self.get_vsync());
+
+            self.vsync = vsync;
+            Ok(())
+        }
+    }
+
+    pub fn get_vsync(&self) -> VSync {
+        match wglGetSwapIntervalEXT() {
+            0 => VSync::Off,
+            1 => VSync::On,
+            -1 => VSync::Adaptive,
+            i => VSync::Other(i),
+        }
+    }
+
     pub fn gl_loader_c_string(&self) -> Box<dyn FnMut(*const i8) -> *const std::ffi::c_void> {
         let opengl_module = self.opengl_module;
         Box::new(move |s| unsafe {
@@ -145,9 +176,19 @@ impl GLContext {
         })
     }
 
-    pub fn swap_buffers(&self) {
+    pub fn swap_buffers(&mut self) {
         unsafe {
             if let Some(window_device_context) = self.window_device_context {
+                // On a 2016 Macbook with an integrated Intel GPU
+                // VSync settings wouldn't stick unless set here.
+                // But why is this necessary?
+                // What is the overhead of these calls?
+                // Additionally setting adaptive VSync on that Macbook
+                // always reports success but then is reset to 'On' sometime later.
+                let vsync = self.get_vsync();
+                if vsync != self.vsync {
+                    self.set_vsync(self.vsync).unwrap();
+                }
                 wingdi::SwapBuffers(window_device_context);
             }
         }
@@ -177,10 +218,6 @@ impl GLContext {
             */
             result
         }
-    }
-
-    pub fn get_swap_interval(&self) -> i32 {
-        wglGetSwapIntervalEXT()
     }
 }
 
@@ -399,6 +436,19 @@ pub fn new_opengl_context(
             wglSwapIntervalEXT_ptr = function_pointer as *const std::ffi::c_void;
         }
 
+        let function_pointer = wingdi::wglGetProcAddress(
+            std::ffi::CString::new("wglGetSwapIntervalEXT")
+                .unwrap()
+                .as_ptr() as *const i8,
+        );
+
+        if function_pointer.is_null() {
+            println!("Could not find wglGetSwapIntervalEXT");
+            return Err(Error::last_os_error());
+        } else {
+            wglGetSwapIntervalEXT_ptr = function_pointer as *const std::ffi::c_void;
+        }
+
         // Default to Vsync enabled
         if !wglSwapIntervalEXT(1) {
             return Err(Error::last_os_error());
@@ -422,6 +472,7 @@ pub fn new_opengl_context(
             opengl_module,
             current_window: None,
             window_device_context: None,
+            vsync: VSync::On,
         })
     }
 }
