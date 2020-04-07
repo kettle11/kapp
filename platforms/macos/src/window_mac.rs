@@ -79,8 +79,7 @@ pub fn build(
         // Set the window size
         let () = msg_send![ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
 
-        let title = window_parameters.title.as_ref().map_or("Untitled", |s| &s);
-        let title = NSString::new(&title);
+        let title = NSString::new(&window_parameters.title);
         let () = msg_send![ns_window, setTitle: title.raw];
         let () = msg_send![ns_window, makeKeyAndOrderFront: nil];
 
