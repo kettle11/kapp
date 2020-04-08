@@ -10,18 +10,9 @@ use winapi::um::libloaderapi;
 use winapi::um::wingdi;
 use winapi::um::winuser;
 mod utils_windows;
-use crate::VSync;
-use kettlewin_platform_common::WindowId;
 use utils_windows::*;
 
-pub struct GLContextBuilder {
-    samples: u8,
-    color_bits: u8,
-    alpha_bits: u8,
-    depth_bits: u8,
-    stencil_bits: u8,
-    srgb: bool,
-}
+use crate::common::*;
 
 pub struct GLContext {
     context_ptr: windef::HGLRC,
@@ -29,118 +20,120 @@ pub struct GLContext {
     _pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR,
     opengl_module: HMODULE,
     current_window: Option<windef::HWND>,
-    window_device_context: Option<windef::HDC>,
+    device_context: Option<windef::HDC>,
     vsync: VSync,
-}
-
-// This isn't really true because make_current must be called after GLContext is passed to another thread.
-// A solution would be to wrap this is an object to send to another thread, and the unwrap
-// calls make_current.
-unsafe impl Send for GLContext {}
-
-impl GLContextBuilder {
-    pub fn samples(&mut self, samples: u8) -> &mut Self {
-        self.samples = samples;
-        self
-    }
-
-    pub fn build(&self) -> Result<GLContext, ()> {
-        Ok(new_opengl_context(
-            self.color_bits,
-            self.alpha_bits,
-            self.depth_bits,
-            self.stencil_bits,
-            self.samples,
-            self.srgb,
-            true,
-        )
-        .unwrap())
-    }
 }
 
 impl GLContext {
     pub fn new() -> GLContextBuilder {
         GLContextBuilder {
-            samples: 1,
-            color_bits: 24,
-            alpha_bits: 8,
-            depth_bits: 24,
-            stencil_bits: 8,
-            srgb: false,
+            gl_attributes: GLContextAttributes {
+                version_major: 3,
+                version_minor: 3,
+                msaa_samples: 1,
+                color_bits: 24,
+                alpha_bits: 8,
+                depth_bits: 24,
+                stencil_bits: 8,
+            },
         }
     }
+}
 
-    pub fn set_window(&mut self, window: &WindowId) -> Result<(), Error> {
+impl GLContextTrait for GLContext {
+    fn get_attributes(&self) -> GLContextAttributes {
+        unimplemented!()
+    }
+    fn set_window(&mut self, window: Option<&impl WindowTrait>) -> Result<(), SetWindowError> {
         unsafe {
-            let window_handle = window.raw() as windef::HWND;
+            let window_device_context = if let Some(window) = window {
+                let window_handle = window.raw_handle() as windef::HWND;
 
-            let window_device_context = window.device_context() as windef::HDC;
+                if let Some(current_device_context) = self.device_context {
+                    winuser::ReleaseDC(window_handle, current_device_context);
+                }
+
+                let device_context = winuser::GetDC(window_handle);
+                self.device_context = Some(device_context);
+                device_context
+            } else {
+                std::ptr::null_mut() as windef::HDC
+            };
+
             let pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR = std::mem::zeroed();
 
             // This will error if the window was previously set with an incompatible
             // pixel format.
-            error_if_false(
-                wingdi::SetPixelFormat(
-                    window_device_context,
-                    self.pixel_format_id,
-                    &pixel_format_descriptor,
-                ),
-                false,
-            )?;
+            if wingdi::SetPixelFormat(
+                window_device_context,
+                self.pixel_format_id,
+                &pixel_format_descriptor,
+            ) == 0
+            {
+                return Err(SetWindowError::MismatchedPixelFormat);
+            }
 
-            error_if_false(
-                wingdi::wglMakeCurrent(window_device_context, self.context_ptr),
-                false,
-            )?;
+            error_if_false(wingdi::wglMakeCurrent(
+                window_device_context,
+                self.context_ptr,
+            ))
+            .unwrap();
 
-            self.set_vsync(self.vsync).unwrap(); // Everytime a device context is requested, vsync must be updated.
-            self.window_device_context = Some(window_device_context);
-            self.current_window = Some(window_handle);
+            // self.set_vsync(self.vsync).unwrap(); // Everytime a device context is requested, vsync must be updated.
+            self.current_window = if let Some(window) = window {
+                Some(window.raw_handle() as windef::HWND)
+            } else {
+                None
+            };
+
+            self.set_vsync(self.vsync).unwrap();
         }
 
         Ok(())
     }
 
-    // Updates the backbuffer of the target when it resizes
-    pub fn update_target(&self) {
-        //unimplemented!()
+    // Is this behavior correct? Does it really work if called from another thread?
+    fn make_current(&mut self) -> Result<(), std::io::Error> {
+        unsafe {
+            let window_device_context = self
+                .current_window
+                .map_or(std::ptr::null_mut(), |w| winuser::GetDC(w));
+            error_if_false(wingdi::wglMakeCurrent(
+                window_device_context,
+                self.context_ptr,
+            ))
+        }
     }
 
-    // Is this behavior correct? Does it really work if called from another thread?
-    pub fn make_current(&self) {
-        if let Some(window_device_context) = self.window_device_context {
+    fn swap_buffers(&mut self) {
+        if let Some(device_context) = self.device_context {
             unsafe {
-                // This check may only be masking an issue that occurs if wglMakeCurrent is called
-                // too frequently.
-                // Is there some sort of race condition with wglMakeCurrent?
-                if wingdi::wglGetCurrentContext() != self.context_ptr {
-                    error_if_false(
-                        wingdi::wglMakeCurrent(window_device_context, self.context_ptr),
-                        false,
-                    )
-                    .unwrap();
-                }
+                wingdi::SwapBuffers(device_context);
             }
         }
     }
 
     // wglSwapIntervalEXT sets VSync for the window bound to the current context.
-    pub fn set_vsync(&mut self, vsync: VSync) -> Result<(), Error> {
-        if match vsync {
-            VSync::Off => wglSwapIntervalEXT(0),
-            VSync::On => wglSwapIntervalEXT(1),
-            VSync::Adaptive => wglSwapIntervalEXT(-1),
-            VSync::Other(i) => wglSwapIntervalEXT(i),
-        } == false
-        {
-            Err(Error::last_os_error())
+    fn set_vsync(&mut self, vsync: VSync) -> Result<(), Error> {
+        if self.current_window.is_some() {
+            if match vsync {
+                VSync::Off => wglSwapIntervalEXT(0),
+                VSync::On => wglSwapIntervalEXT(1),
+                VSync::Adaptive => wglSwapIntervalEXT(-1),
+                VSync::Other(i) => wglSwapIntervalEXT(i),
+            } == false
+            {
+                Err(Error::last_os_error())
+            } else {
+                self.vsync = vsync;
+                Ok(())
+            }
         } else {
-            self.vsync = vsync;
-            Ok(())
+            Ok(()) // Nothing happens, should an error be returned?
         }
     }
 
-    pub fn get_vsync(&self) -> VSync {
+    fn get_vsync(&self) -> VSync {
         match wglGetSwapIntervalEXT() {
             0 => VSync::Off,
             1 => VSync::On,
@@ -149,61 +142,49 @@ impl GLContext {
         }
     }
 
-    pub fn gl_loader_c_string(&self) -> Box<dyn FnMut(*const i8) -> *const std::ffi::c_void> {
-        let opengl_module = self.opengl_module;
-        Box::new(move |s| unsafe {
-            let name = std::ffi::CStr::from_ptr(s);
-            Self::get_proc_address_inner(opengl_module, (&name).to_str().unwrap())
-        })
-    }
-
-    pub fn swap_window_buffer(&mut self, window: &WindowId) {
-        unsafe {
-            // On a 2016 Macbook with an integrated Intel GPU
-            // VSync settings wouldn't stick unless set here.
-            // It seems that this works simply because it calls set_vsync multiple times
-            // And eventually it works. Why?
-            // What is the overhead of these calls?
-            // Additionally setting adaptive VSync on that Macbook
-            // always reports success but then is reset to 'On' sometime later.
-            let vsync = self.get_vsync();
-            if vsync != self.vsync {
-                self.set_vsync(self.vsync).unwrap();
-            }
-            wingdi::SwapBuffers(window.device_context() as windef::HDC);
-        }
-    }
-
-    pub fn get_proc_address(&self, address: &str) -> *const core::ffi::c_void {
-        Self::get_proc_address_inner(self.opengl_module, address)
-    }
-
-    fn get_proc_address_inner(opengl_module: HMODULE, address: &str) -> *const core::ffi::c_void {
-        unsafe {
-            let name = std::ffi::CString::new(address).unwrap();
-            let mut result =
-                wingdi::wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
-            if result.is_null() {
-                // Functions that were part of OpenGL1 need to be loaded differently.
-                result = libloaderapi::GetProcAddress(opengl_module, name.as_ptr() as *const i8)
-                    as *const std::ffi::c_void;
-            }
-
-            /*
-            if result.is_null() {
-                println!("FAILED TO LOAD: {}", address);
-            } else {
-                println!("Loaded: {} {:?}", address, result);
-            }
-            */
-            result
-        }
+    fn get_proc_address(&self, address: &str) -> *const core::ffi::c_void {
+        get_proc_address_inner(self.opengl_module, address)
     }
 }
 
+fn get_proc_address_inner(opengl_module: HMODULE, address: &str) -> *const core::ffi::c_void {
+    unsafe {
+        let name = std::ffi::CString::new(address).unwrap();
+        let mut result =
+            wingdi::wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
+        if result.is_null() {
+            // Functions that were part of OpenGL1 need to be loaded differently.
+            result = libloaderapi::GetProcAddress(opengl_module, name.as_ptr() as *const i8)
+                as *const std::ffi::c_void;
+        }
+
+        /*
+        if result.is_null() {
+            println!("FAILED TO LOAD: {}", address);
+        } else {
+            println!("Loaded: {} {:?}", address, result);
+        }
+        */
+        result
+    }
+}
 impl Drop for GLContext {
     fn drop(&mut self) {
         unimplemented!()
+    }
+}
+
+impl GLContextBuilder {
+    pub fn build(&self) -> Result<GLContext, ()> {
+        Ok(new_opengl_context(
+            self.gl_attributes.color_bits,
+            self.gl_attributes.alpha_bits,
+            self.gl_attributes.depth_bits,
+            self.gl_attributes.stencil_bits,
+            self.gl_attributes.msaa_samples,
+            false,
+        )
+        .unwrap())
     }
 }
 
@@ -219,7 +200,6 @@ pub fn new_opengl_context(
     stencil_bits: u8,
     msaa_samples: u8,
     srgb: bool,
-    panic_if_fail: bool,
 ) -> Result<GLContext, Error> {
     // This function performs the following steps:
     // * First register the window class.
@@ -251,13 +231,13 @@ pub fn new_opengl_context(
         // Then create a dummy window
         let h_instance = libloaderapi::GetModuleHandleA(null_mut());
         let dummy_window = create_dummy_window(h_instance, &window_class_name);
-        error_if_null(dummy_window, panic_if_fail)?;
+        error_if_null(dummy_window)?;
 
         // DC stands for 'device context'
         // Definition of a device context:
         // https://docs.microsoft.com/en-us/windows/win32/gdi/device-contexts
         let dummy_window_dc = winuser::GetDC(dummy_window);
-        error_if_null(dummy_window_dc, panic_if_fail)?;
+        error_if_null(dummy_window_dc)?;
         // Create a dummy PIXELFORMATDESCRIPTOR (PFD).
         // This PFD is based on the recommendations from here:
         // https://www.khronos.org/opengl/wiki/Creating_an_OpenGL_Context_(WGL)#Create_a_False_Context
@@ -273,35 +253,34 @@ pub fn new_opengl_context(
 
         let dummy_pixel_format_id = wingdi::ChoosePixelFormat(dummy_window_dc, &dummy_pfd);
 
-        error_if_false(dummy_pixel_format_id, panic_if_fail)?;
+        error_if_false(dummy_pixel_format_id)?;
 
-        error_if_false(
-            wingdi::SetPixelFormat(dummy_window_dc, dummy_pixel_format_id, &dummy_pfd),
-            panic_if_fail,
-        )?;
+        error_if_false(wingdi::SetPixelFormat(
+            dummy_window_dc,
+            dummy_pixel_format_id,
+            &dummy_pfd,
+        ))?;
 
         // Create the dummy OpenGL context.
         let dummy_opengl_context = wingdi::wglCreateContext(dummy_window_dc);
-        error_if_null(dummy_opengl_context, panic_if_fail)?;
-        error_if_false(
-            wingdi::wglMakeCurrent(dummy_window_dc, dummy_opengl_context),
-            panic_if_fail,
-        )?;
+        error_if_null(dummy_opengl_context)?;
+        error_if_false(wingdi::wglMakeCurrent(
+            dummy_window_dc,
+            dummy_opengl_context,
+        ))?;
 
         // Load the function to choose a pixel format.
-        wglChoosePixelFormatARB_ptr =
-            wgl_get_proc_address("wglChoosePixelFormatARB", panic_if_fail)?;
+        wglChoosePixelFormatARB_ptr = wgl_get_proc_address("wglChoosePixelFormatARB")?;
         // Load the function to create an OpenGL context with extra attributes.
-        wglCreateContextAttribsARB_ptr =
-            wgl_get_proc_address("wglCreateContextAttribsARB", panic_if_fail)?;
+        wglCreateContextAttribsARB_ptr = wgl_get_proc_address("wglCreateContextAttribsARB")?;
 
         // Create the second dummy window.
         let dummy_window2 = create_dummy_window(h_instance, &window_class_name);
-        error_if_null(dummy_window2, panic_if_fail)?;
+        error_if_null(dummy_window2)?;
 
         // DC is 'device context'
         let dummy_window_dc2 = winuser::GetDC(dummy_window2);
-        error_if_null(dummy_window_dc2, panic_if_fail)?;
+        error_if_null(dummy_window_dc2)?;
 
         // Setup the actual pixel format we'll use.
         // Later this is where we'll specify pixel format parameters.
@@ -337,18 +316,15 @@ pub fn new_opengl_context(
 
         let mut pixel_format_id = 0;
         let mut number_of_formats = 0;
-        error_if_false(
-            wglChoosePixelFormatARB(
-                dummy_window_dc2,
-                pixel_attributes.as_ptr(),
-                null_mut(),
-                1,
-                &mut pixel_format_id,
-                &mut number_of_formats,
-            ),
-            panic_if_fail,
-        )?;
-        error_if_false(number_of_formats as i32, panic_if_fail)?; // error_if_false just errors if the argument is 0, which is what we need here
+        error_if_false(wglChoosePixelFormatARB(
+            dummy_window_dc2,
+            pixel_attributes.as_ptr(),
+            null_mut(),
+            1,
+            &mut pixel_format_id,
+            &mut number_of_formats,
+        ))?;
+        error_if_false(number_of_formats as i32)?; // error_if_false just errors if the argument is 0, which is what we need here
 
         // PFD stands for 'pixel format descriptor'
         // It's unclear why this call to DescribePixelFormat is needed?
@@ -384,7 +360,7 @@ pub fn new_opengl_context(
             context_attributes.as_ptr(),
         );
 
-        error_if_null(opengl_context, panic_if_fail)?;
+        error_if_null(opengl_context)?;
 
         // Clean up all of our resources
         // It's bad that these calls only occur if all the prior steps were succesful.
@@ -394,10 +370,7 @@ pub fn new_opengl_context(
         winuser::ReleaseDC(dummy_window, dummy_window_dc);
         winuser::DestroyWindow(dummy_window);
 
-        error_if_false(
-            wingdi::wglMakeCurrent(dummy_window_dc2, opengl_context),
-            true,
-        )?;
+        error_if_false(wingdi::wglMakeCurrent(dummy_window_dc2, opengl_context))?;
 
         let opengl_module =
             libloaderapi::LoadLibraryA(std::ffi::CString::new("opengl32.dll").unwrap().as_ptr());
@@ -451,8 +424,8 @@ pub fn new_opengl_context(
             _pixel_format_descriptor: pfd,
             opengl_module,
             current_window: None,
-            window_device_context: None,
             vsync: VSync::On,
+            device_context: None,
         })
     }
 }
@@ -489,10 +462,10 @@ pub unsafe extern "system" fn kettlewin_gl_window_callback(
     winuser::DefWindowProcW(hwnd, u_msg, w_param, l_param)
 }
 
-fn wgl_get_proc_address(name: &str, panic_if_fail: bool) -> Result<*const c_void, Error> {
+fn wgl_get_proc_address(name: &str) -> Result<*const c_void, Error> {
     let name = std::ffi::CString::new(name).unwrap();
     let result = unsafe { wingdi::wglGetProcAddress(name.as_ptr() as *const i8) as *const c_void };
-    error_if_null(result, panic_if_fail)?;
+    error_if_null(result)?;
     Ok(result)
 }
 

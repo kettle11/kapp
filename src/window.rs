@@ -80,3 +80,10 @@ impl Drop for Window {
         println!("Dropping window");
     }
 }
+
+#[cfg(feature = "gl_context")]
+impl crate::WindowTrait for Window {
+    fn raw_handle(&self) -> *mut std::ffi::c_void {
+        unsafe { self.id.raw() }
+    }
+}

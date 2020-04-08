@@ -144,7 +144,7 @@ fn main() {
         .build()
         .unwrap();
 
-    gl_context.set_window(&window.id).unwrap();
+    gl_context.set_window(Some(&window)).unwrap();
 
     // ---------------- Level Data -------------------
     let black = (0.0, 0.0, 0.0, 1.0);
@@ -346,7 +346,7 @@ fn main() {
         match event {
             Event::WindowCloseRequested { .. } => app.quit(),
             Event::WindowResized { width, height, .. } => {
-                gl_context.update_target(); // Resizes the window buffer
+                // gl_context.update_target(); // Resizes the window buffer
                 screen_width = width;
                 screen_height = height;
 

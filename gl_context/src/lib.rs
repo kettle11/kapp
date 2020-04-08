@@ -1,3 +1,5 @@
+mod common;
+
 #[cfg(target_os = "macos")]
 mod macos;
 
@@ -11,15 +13,12 @@ mod web;
 pub use macos::{GLContext, GLContextBuilder};
 
 #[cfg(target_os = "windows")]
-pub use windows::{GLContext, GLContextBuilder};
+pub use windows::GLContext;
 
 #[cfg(target_arch = "wasm32")]
 pub use web::{GLContext, GLContextBuilder};
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum VSync {
-    On,
-    Off,
-    Adaptive,
-    Other(i32),
+pub mod prelude {
+    pub use super::common::{GLContextBuilder, GLContextTrait, SetWindowError, VSync, WindowTrait};
+    pub use super::GLContext;
 }

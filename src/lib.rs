@@ -102,7 +102,7 @@ use kettlewin_platform_web::prelude as platform;
 use kettlewin_platform_windows::prelude as platform;
 
 #[cfg(feature = "gl_context")]
-pub use kettlewin_gl_context::{GLContext, VSync};
+pub use kettlewin_gl_context::prelude::*;
 
 pub use platform::{Cursor, Event, Key, MouseButton, WindowId};
 

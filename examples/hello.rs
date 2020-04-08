@@ -9,7 +9,7 @@ fn main() {
     let mut gl_context = GLContext::new().build().unwrap();
 
     // Assign the GLContext's window.
-    gl_context.set_window(Some(&window.id)).unwrap();
+    gl_context.set_window(&window.id).unwrap();
 
     // Glow is a library for accessing GL function calls from a variety of platforms
     // Glow requires a cross platform way to load function pointers,
