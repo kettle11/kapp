@@ -31,7 +31,8 @@ fn main() {
 
     gl_context.make_current();
 
-    let mut now = Instant::now();
+    let mut now_red = Instant::now();
+    let mut now_blue = Instant::now();
 
     // This method of multi-window rendering is perhaps suboptimal with vSync.
     // It's unclear how bad it is and more investigation is needed.
@@ -43,45 +44,54 @@ fn main() {
                 if window.id == window_id {
                     window_red.take();
                     // The gl_context holds a reference to the window preventing it from being dropped.
-                    gl_context.set_window(None).unwrap();
+                    // gl_context.set_window(None).unwrap();
                 }
             }
             if let Some(window) = window_blue.as_ref() {
+                println!("HERE");
                 if window.id == window_id {
                     window_blue.take();
                     // The gl_context holds a reference to the window preventing it from being dropped.
-                    gl_context.set_window(None).unwrap();
+                    // gl_context.set_window(None).unwrap();
                 }
             }
         }
         Event::Draw { window_id } => {
-            gl_context.make_current(); // Why is this needed?
             if let Some(window_red) = window_red.as_mut() {
                 if window_red.id == window_id {
-                    gl_context.set_window(Some(&window_red.id)).unwrap();
+                    gl_context.set_window(&window_red.id).unwrap();
                     unsafe {
-                        gl.clear_color(1.0, 0.0, 0.0, 1.0);
-                        gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-                        gl_context.swap_buffers();
+                        //   gl.clear_color(1.0, 0.0, 0.0, 1.0);
+                        // gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                     }
-                    window_red.request_redraw();
                 }
             }
 
             if let Some(window_blue) = window_blue.as_mut() {
-                if window_blue.id == window_id {
-                    gl_context.set_window(Some(&window_blue.id)).unwrap();
-                    unsafe {
-                        gl.clear_color(0.0, 0.0, 1.0, 1.0);
-                        gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-                        gl_context.swap_buffers();
-                    }
-                    window_blue.request_redraw();
+                // if window_blue.id == window_id {
+                gl_context.set_window(&window_blue.id).unwrap();
+                unsafe {
+                    //    gl.clear_color(0.0, 0.0, 1.0, 1.0);
+                    //  gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                 }
+
+                //  println!("Blue: {}", now_blue.elapsed().as_millis());
+                // now_blue = Instant::now();
+                //  }
             }
 
-            println!("{}", now.elapsed().as_millis());
-            now = Instant::now();
+            if let Some(window_red) = window_red.as_mut() {
+                gl_context.swap_window_buffer(&window_red.id);
+            }
+
+            if let Some(window_blue) = window_blue.as_mut() {
+                gl_context.swap_window_buffer(&window_blue.id);
+            }
+            println!("{}", now_red.elapsed().as_millis());
+
+            window_red.as_mut().unwrap().request_redraw();
+
+            now_red = Instant::now();
         }
         _ => {}
     });

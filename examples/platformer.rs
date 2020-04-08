@@ -144,7 +144,7 @@ fn main() {
         .build()
         .unwrap();
 
-    gl_context.set_window(Some(&window.id)).unwrap();
+    gl_context.set_window(&window.id).unwrap();
 
     // ---------------- Level Data -------------------
     let black = (0.0, 0.0, 0.0, 1.0);
@@ -413,7 +413,6 @@ fn main() {
                 _ => {}
             },
             Event::Draw { .. } => {
-                println!("VSYNC AT DRAW: {:?}", gl_context.get_vsync());
                 // gl_context.make_current();
 
                 // First update the world

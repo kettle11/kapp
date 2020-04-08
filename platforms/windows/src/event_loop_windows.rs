@@ -233,20 +233,27 @@ where
         PROGRAM_CALLBACK = Some(Box::new(callback));
 
         let mut message: MSG = std::mem::zeroed();
+
+        let mut temp_draw_request_buffer = Vec::new();
         while message.message != WM_QUIT {
             while winuser::PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
                 winuser::TranslateMessage(&message as *const MSG);
                 winuser::DispatchMessageW(&message as *const MSG);
             }
 
-            // Issue a draw command after all other events are parsed.
-            // TO-DO: This needs to be sent per window
-            // TO-DO: Only send if a window requested a redraw
+            // The draw request buffer cannot be the same as the one read below
+            // because otherwise requesting a draw creates an infinite loop.
+            std::mem::swap(
+                &mut temp_draw_request_buffer,
+                &mut super::application_windows::WINDOWS_TO_REDRAW,
+            );
 
             if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
-                program_callback(Event::Draw {
-                    window_id: WindowId::new(0 as *mut std::ffi::c_void),
-                });
+                while let Some(window_id) = &temp_draw_request_buffer.pop() {
+                    program_callback(Event::Draw {
+                        window_id: *window_id,
+                    });
+                }
             }
         }
     }

@@ -10,9 +10,9 @@ use winapi::um::libloaderapi;
 use winapi::um::wingdi;
 use winapi::um::winuser;
 mod utils_windows;
-use utils_windows::*;
-
 use crate::VSync;
+use kettlewin_platform_common::WindowId;
+use utils_windows::*;
 
 pub struct GLContextBuilder {
     samples: u8,
@@ -70,27 +70,11 @@ impl GLContext {
         }
     }
 
-    pub fn set_window(
-        &mut self,
-        window: Option<&kettlewin_platform_common::WindowId>,
-    ) -> Result<(), Error> {
+    pub fn set_window(&mut self, window: &WindowId) -> Result<(), Error> {
         unsafe {
-            self.set_window_raw(window.map(|w| w.raw() as *mut std::ffi::c_void))?;
-        }
-        Ok(())
-    }
+            let window_handle = window.raw() as windef::HWND;
 
-    pub fn set_window_raw(&mut self, window: Option<*mut std::ffi::c_void>) -> Result<(), Error> {
-        let window_handle = window.unwrap_or(null_mut()) as windef::HWND;
-
-        if let Some(device_context) = self.window_device_context {
-            unsafe {
-                winuser::ReleaseDC(self.current_window.unwrap(), device_context);
-            }
-        }
-
-        unsafe {
-            let window_device_context = winuser::GetDC(window_handle);
+            let window_device_context = window.device_context() as windef::HDC;
             let pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR = std::mem::zeroed();
 
             // This will error if the window was previously set with an incompatible
@@ -111,9 +95,9 @@ impl GLContext {
 
             self.set_vsync(self.vsync).unwrap(); // Everytime a device context is requested, vsync must be updated.
             self.window_device_context = Some(window_device_context);
+            self.current_window = Some(window_handle);
         }
 
-        self.current_window = Some(window_handle);
         Ok(())
     }
 
@@ -140,7 +124,7 @@ impl GLContext {
         }
     }
 
-    // Should return an error if it fails
+    // wglSwapIntervalEXT sets VSync for the window bound to the current context.
     pub fn set_vsync(&mut self, vsync: VSync) -> Result<(), Error> {
         if match vsync {
             VSync::Off => wglSwapIntervalEXT(0),
@@ -151,9 +135,6 @@ impl GLContext {
         {
             Err(Error::last_os_error())
         } else {
-            println!("Last error: {:?}", Error::last_os_error());
-            println!("Actual vsync: {:?}", self.get_vsync());
-
             self.vsync = vsync;
             Ok(())
         }
@@ -176,21 +157,20 @@ impl GLContext {
         })
     }
 
-    pub fn swap_buffers(&mut self) {
+    pub fn swap_window_buffer(&mut self, window: &WindowId) {
         unsafe {
-            if let Some(window_device_context) = self.window_device_context {
-                // On a 2016 Macbook with an integrated Intel GPU
-                // VSync settings wouldn't stick unless set here.
-                // But why is this necessary?
-                // What is the overhead of these calls?
-                // Additionally setting adaptive VSync on that Macbook
-                // always reports success but then is reset to 'On' sometime later.
-                let vsync = self.get_vsync();
-                if vsync != self.vsync {
-                    self.set_vsync(self.vsync).unwrap();
-                }
-                wingdi::SwapBuffers(window_device_context);
+            // On a 2016 Macbook with an integrated Intel GPU
+            // VSync settings wouldn't stick unless set here.
+            // It seems that this works simply because it calls set_vsync multiple times
+            // And eventually it works. Why?
+            // What is the overhead of these calls?
+            // Additionally setting adaptive VSync on that Macbook
+            // always reports success but then is reset to 'On' sometime later.
+            let vsync = self.get_vsync();
+            if vsync != self.vsync {
+                self.set_vsync(self.vsync).unwrap();
             }
+            wingdi::SwapBuffers(window.device_context() as windef::HDC);
         }
     }
 

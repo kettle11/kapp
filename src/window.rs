@@ -76,9 +76,7 @@ impl Window {
 
 impl Drop for Window {
     fn drop(&mut self) {
-        self.platform_application
-            .borrow_mut()
-            .close_window(self.id);
+        self.platform_application.borrow_mut().close_window(self.id);
         println!("Dropping window");
     }
 }

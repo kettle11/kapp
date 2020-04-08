@@ -96,7 +96,7 @@ fn main() {
         .unwrap();
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
 
-    gl_context.set_window(Some(&window.id)).unwrap();
+    gl_context.set_window(&window.id).unwrap();
 
     #[cfg(target_arch = "wasm32")]
     let gl = glow::Context::from_webgl2_context(gl_context.webgl2_context().unwrap());

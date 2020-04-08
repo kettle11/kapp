@@ -9,7 +9,10 @@ use minwindef::{FALSE, TRUE};
 
 use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
 
+// These should be made into something safe.
 pub static mut CURRENT_CURSOR: windef::HCURSOR = null_mut();
+pub static mut WINDOWS_TO_REDRAW: Vec<WindowId> = Vec::new();
+
 pub struct PlatformApplication {
     window_class_name: Vec<u16>,
     h_instance: minwindef::HINSTANCE,
@@ -121,8 +124,12 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn redraw_window(&mut self, _window_id: WindowId) {
-        // unimplemented!()
+    fn redraw_window(&mut self, window_id: WindowId) {
+        unsafe {
+            if !WINDOWS_TO_REDRAW.contains(&window_id) {
+                WINDOWS_TO_REDRAW.push(window_id);
+            }
+        }
     }
 
     fn set_mouse_position(&mut self, _x: u32, _y: u32) {
@@ -180,7 +187,13 @@ impl PlatformApplicationTrait for PlatformApplication {
                 null_mut(),
             );
 
-            WindowId::new(window_handle as *mut std::ffi::c_void)
+            let device_context = winuser::GetDC(window_handle);
+            let window_id = WindowId::new_with_device_context(
+                window_handle as *mut std::ffi::c_void,
+                device_context as *mut std::ffi::c_void,
+            );
+            WINDOWS_TO_REDRAW.push(window_id); // Send the window an initial Draw event.
+            window_id
         }
     }
 
