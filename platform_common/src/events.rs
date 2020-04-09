@@ -92,7 +92,11 @@ pub enum Event {
         window_id: WindowId,
     },
     // ------------------- Application Events  ---------------------
+    /// The application is going to quit immediately after this event is processed.
+    /// Perform any final cleanup that's necessary. The quit cannot be cancelled.
     Quit,
+    /// A quit is requested, but it is up to the program to call quit().
+    QuitRequested,
     #[doc(hidden)]
     __Nonexhaustive, // More events will be added
 }

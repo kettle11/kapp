@@ -396,13 +396,13 @@ fn main() {
                     }
                 } // Jump!
                 Key::V => {
-                    gl_context.set_vsync(VSync::On);
+                    //gl_context.set_vsync(VSync::On);
                 }
                 Key::A => {
-                    gl_context.set_vsync(VSync::Adaptive);
+                   // gl_context.set_vsync(VSync::Adaptive);
                 }
                 Key::O => {
-                    gl_context.set_vsync(VSync::Off).unwrap();
+                   // gl_context.set_vsync(VSync::Off).unwrap();
                 }
                 Key::F => window.fullscreen(),
                 _ => window.fullscreen(),

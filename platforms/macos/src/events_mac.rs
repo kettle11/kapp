@@ -184,7 +184,7 @@ extern "C" fn application_should_terminate_after_last_window_closed(
     _sel: Sel,
     _event: *mut Object,
 ) -> BOOL {
-    YES // Close when all windows close.
+    NO // Do not close when all windows close.
 }
 
 // https://developer.apple.com/documentation/appkit/nsapplicationdelegate/1428642-applicationshouldterminate?language=objc
@@ -193,8 +193,23 @@ extern "C" fn application_should_terminate(
     _sel: Sel,
     _event: *mut Object,
 ) -> NSUInteger {
+    println!("application_should_terminate");
+    if APPLICATION_DATA.with(|d| d.borrow().actually_terminate) {
+        println!("NSTerminateNow");
+        NSTerminateNow
+    } else {
+        println!("NSTerminateCancel");
+        self::submit_event(Event::QuitRequested);
+        NSTerminateCancel
+    }
+}
+
+extern "C" fn application_will_terminate(
+    _this: &Object,
+    _sel: Sel,
+    _event: *mut Object,
+) {
     self::submit_event(Event::Quit);
-    NSTerminateNow
 }
 
 pub fn add_application_events_to_decl(decl: &mut ClassDecl) {
@@ -207,6 +222,10 @@ pub fn add_application_events_to_decl(decl: &mut ClassDecl) {
         decl.add_method(
             sel!(applicationShouldTerminate:),
             application_should_terminate as extern "C" fn(&Object, Sel, *mut Object) -> NSUInteger,
+        );
+        decl.add_method(
+            sel!(applicationWillTerminate:),
+            application_will_terminate as extern "C" fn(&Object, Sel, *mut Object),
         );
     }
 }
@@ -275,7 +294,7 @@ extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
         Key::Meta,
     ];
 
-    let modifier_flags_old = APPLICATION_DATA.with(|d| d.borrow().as_ref().unwrap().modifier_flags);
+    let modifier_flags_old = APPLICATION_DATA.with(|d| d.borrow().modifier_flags);
 
     let modifier_flags_new: NSUInteger = unsafe { msg_send![event, modifierFlags] };
 
@@ -293,7 +312,7 @@ extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
     }
 
     APPLICATION_DATA.with(|d| {
-        d.borrow_mut().as_mut().unwrap().modifier_flags = modifier_flags_new;
+        d.borrow_mut().modifier_flags = modifier_flags_new;
     });
 }
 
@@ -531,33 +550,6 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
 }
 
 // ------------------------ End View Events --------------------------
-
 pub fn submit_event(event: Event) {
-    let callback = APPLICATION_DATA.with(|d| {
-        let mut application_data = d.borrow_mut();
-        application_data
-            .as_mut()
-            .unwrap()
-            .produce_event_callback
-            .take()
-    });
-
-    if let Some(mut callback) = callback {
-        callback(event);
-
-        APPLICATION_DATA.with(|d| {
-            let mut application_data = d.borrow_mut();
-            application_data.as_mut().unwrap().produce_event_callback = Some(callback)
-        });
-    } else {
-        APPLICATION_DATA.with(|d| {
-            let mut application_data = d.borrow_mut();
-            application_data
-                .as_mut()
-                .unwrap()
-                .events
-                .borrow_mut()
-                .push(event);
-        });
-    }
+    kettlewin_platform_common::event_receiver::send_event(event);
 }

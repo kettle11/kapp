@@ -1,7 +1,6 @@
 use objc::runtime::{Object, YES};
 use objc::*;
 use std::ffi::c_void;
-use std::io::Error;
 use crate::common::*;
 pub struct GLContext {
     gl_context: *mut Object,

@@ -1,19 +1,18 @@
 use super::apple::*;
 use super::window_mac::*;
 use crate::{
-    Cursor, Event, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters,
+    Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters,
 };
 use kettlewin_platform_common::*;
 use std::cell::RefCell;
 use std::ffi::c_void;
-use std::rc::Rc;
 
 pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
 static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
 static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
 static APPLICATION_CLASS_NAME: &str = "KettlewinApplicationClass";
 
-thread_local!(pub static APPLICATION_DATA: RefCell<Option<Box<ApplicationData>>> = RefCell::new(None));
+thread_local!(pub static APPLICATION_DATA: RefCell<Box<ApplicationData>> = RefCell::new(Box::new(ApplicationData::new())));
 
 #[allow(clippy::mut_from_ref)]
 pub fn get_window_data(this: &Object) -> &mut InnerWindowData {
@@ -28,10 +27,21 @@ pub struct ApplicationData {
     // Used to construct a new window
     ns_application: *mut Object,
     pub modifier_flags: u64, // Key modifier flags
-    pub produce_event_callback: Option<Box<dyn FnMut(Event)>>,
-    pub events: Rc<RefCell<Vec<Event>>>,
     cursor_hidden: bool,
     requested_redraw: Vec<WindowId>,
+    pub actually_terminate: bool, // Set when quit is called. Indicates the program should quit.
+}
+
+impl ApplicationData {
+    pub fn new() -> Self {
+        Self {
+            ns_application: std::ptr::null_mut(),
+            modifier_flags: 0,
+            cursor_hidden: false,
+            requested_redraw: Vec::new(),
+            actually_terminate: false,
+        }
+    }
 }
 
 fn window_delegate_declaration() -> *const objc::runtime::Class {
@@ -78,47 +88,17 @@ extern "C" fn control_flow_end_handler(
     _: CFRunLoopActivity,
     _: *mut std::ffi::c_void,
 ) {
-    // This is called after all events in the event loop are processed.
-    let (mut callback, events) = APPLICATION_DATA.with(|d| {
-        let mut application_data = d.borrow_mut();
-
-        (
-            application_data
-                .as_mut()
-                .unwrap()
-                .produce_event_callback
-                .take()
-                .unwrap(),
-            application_data.as_mut().unwrap().events.clone(),
-        )
-    });
-
-    // Process all queued events.
-    // The reason that events are queued is because the callback can call
-    // application calls that produce new events which would cause the
-    // callback to be called again within the same stack.
-    // This loop is structured this way so that `events` is not borrowed while
-    // the callback is called.
-    // `events` may be appended to from code within the callback.
-    let mut event = events.borrow_mut().pop();
-    while let Some(e) = event {
-        callback(e);
-        event = events.borrow_mut().pop();
-    }
-
     // Now process all redraw request events
     APPLICATION_DATA.with(|d| {
-        let mut application_data = d.borrow_mut();
+        let application_data = d.borrow_mut();
 
-        for window_id in &application_data.as_mut().unwrap().requested_redraw {
+        for window_id in &application_data.requested_redraw {
             unsafe {
                 let window_view: *mut Object =
                     msg_send![window_id.raw() as *mut Object, contentView];
                 let () = msg_send![window_view, setNeedsDisplay: YES];
             }
         }
-
-        application_data.as_mut().unwrap().produce_event_callback = Some(callback);
     });
 }
 
@@ -128,10 +108,7 @@ pub struct PlatformEventLoop {
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
     fn run(&self, callback: Box<dyn FnMut(crate::Event)>) {
-        APPLICATION_DATA.with(|d| {
-            let mut application_data = d.borrow_mut();
-            application_data.as_mut().unwrap().produce_event_callback = Some(Box::new(callback));
-        });
+        event_receiver::set_callback(callback);
 
         unsafe {
             let () = msg_send![self.ns_application, run];
@@ -169,17 +146,8 @@ impl PlatformApplicationTrait for PlatformApplication {
 
             let run_loop_custom_event_source = self::create_run_loop_source();
 
-            let application_data = ApplicationData {
-                ns_application,
-                modifier_flags: 0,
-                produce_event_callback: None,
-                requested_redraw: Vec::new(),
-                cursor_hidden: false,
-                events: Rc::new(RefCell::new(Vec::new())),
-            };
-
             APPLICATION_DATA.with(|d| {
-                *d.borrow_mut() = Some(Box::new(application_data));
+                d.borrow_mut().ns_application = ns_application;
             });
 
             // We only used this context to pass application_data to the observer
@@ -284,8 +252,6 @@ impl PlatformApplicationTrait for PlatformApplication {
             APPLICATION_DATA.with(|d| {
                 let mut application_data = d.borrow_mut();
                 application_data
-                    .as_mut()
-                    .unwrap()
                     .requested_redraw
                     .push(window_id);
             });
@@ -326,10 +292,10 @@ impl PlatformApplicationTrait for PlatformApplication {
         APPLICATION_DATA.with(|d| {
             let mut application_data = d.borrow_mut();
 
-            if !application_data.as_ref().unwrap().cursor_hidden {
+            if !application_data.cursor_hidden {
                 let ns_cursor = class!(NSCursor);
                 let () = unsafe { msg_send![ns_cursor, hide] };
-                application_data.as_mut().unwrap().cursor_hidden = true;
+                application_data.cursor_hidden = true;
             }
         });
     }
@@ -339,10 +305,10 @@ impl PlatformApplicationTrait for PlatformApplication {
         APPLICATION_DATA.with(|d| {
             let mut application_data = d.borrow_mut();
 
-            if application_data.as_ref().unwrap().cursor_hidden {
+            if application_data.cursor_hidden {
                 let ns_cursor = class!(NSCursor);
                 let () = unsafe { msg_send![ns_cursor, unhide] };
-                application_data.as_mut().unwrap().cursor_hidden = false;
+                application_data.cursor_hidden = false;
             }
         });
     }
@@ -352,15 +318,24 @@ impl PlatformApplicationTrait for PlatformApplication {
             super::window_mac::build(window_parameters, self.window_class, self.view_class);
         result.unwrap()
     }
+
     fn quit(&self) {
         unsafe {
-            let ns_application =
-                APPLICATION_DATA.with(|d| d.borrow_mut().as_mut().unwrap().ns_application);
-            let () = msg_send![ns_application, terminate: nil];
+            let ns_application = {
+                // This thread local cannot be accessed if the program is already terminating.
+                APPLICATION_DATA.try_with(|d| {
+                    d.borrow_mut().actually_terminate = true;
+                    d.borrow_mut().ns_application
+                })
+            };
+            
+            if let Ok(ns_application) = ns_application {
+                let () = msg_send![ns_application, terminate: nil];
+            } 
         }
     }
 
-     fn raw_window_handle(&self, window_id: WindowId) -> raw_window_handle::RawWindowHandle {
+    fn raw_window_handle(&self, window_id: WindowId) -> raw_window_handle::RawWindowHandle {
          let ns_window = unsafe {window_id.raw() };
          let ns_view: *mut c_void = unsafe { msg_send![window_id.raw() as *mut Object, contentView] };
          raw_window_handle::RawWindowHandle::MacOS (raw_window_handle::macos::MacOSHandle{

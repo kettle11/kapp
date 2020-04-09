@@ -20,8 +20,20 @@ fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
-    event_loop.run(move |event| match event {
+    event_loop.run(move |event| {
+        match event {
         Event::WindowCloseRequested { .. } => app.quit(),
+        Event::WindowResized {..} => {
+            window.set_position(800, 800);
+        }
+        Event::KeyDown {key} => {
+            match key {
+                Key::Space => {
+                    window.set_size(200, 200);
+                }
+                _ => {}
+            }
+        }
         Event::Draw { .. } => {
             // Clear the screen to a lovely shade of blue.
             unsafe {
@@ -36,5 +48,5 @@ fn main() {
             window.request_redraw();
         }
         _ => {}
-    });
+    }});
 }

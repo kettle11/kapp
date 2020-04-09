@@ -6,6 +6,7 @@ mod mouse_buttons;
 mod platform_traits;
 mod window_id;
 mod window_parameters;
+pub mod event_receiver;
 
 pub use cursors::Cursor;
 pub use events::Event;

@@ -27,6 +27,9 @@ pub trait PlatformApplicationTrait {
     /// Sets the mouse position in physical coordinates in relation to the screen.
     fn set_mouse_position(&mut self, x: u32, y: u32);
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId;
+    
+    /// Request that the application should quit immediately.
+    /// This should be possible to be called multiple times without error.
     fn quit(&self);
 
     /// Sets the cursor in a way that persists between all windows for the current program.
