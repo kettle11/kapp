@@ -95,9 +95,8 @@ impl GLContextTrait for GLContext {
     // Is this behavior correct? Does it really work if called from another thread?
     fn make_current(&mut self) -> Result<(), std::io::Error> {
         unsafe {
-            let window_device_context = self
-                .current_window
-                .map_or(std::ptr::null_mut(), |w| winuser::GetDC(w));
+            let window_device_context = self.device_context.unwrap_or(std::ptr::null_mut());
+
             error_if_false(wingdi::wglMakeCurrent(
                 window_device_context,
                 self.context_ptr,
@@ -114,8 +113,16 @@ impl GLContextTrait for GLContext {
     }
 
     // wglSwapIntervalEXT sets VSync for the window bound to the current context.
+    // However here we treat Vsync as a setting on the GLContext,
+    // so whenever a window is bound we update the GL Context.
     fn set_vsync(&mut self, vsync: VSync) -> Result<(), Error> {
         if self.current_window.is_some() {
+            // This call to swap_buffers seems to prevent an issue on Macbooks
+            // where the setting wouldn't take effect.
+            // I suspect wglSwapIntervalEXT doesn't get set if a lock of some
+            // sort is held on back/front buffers, so rendering here ensures that's unlikely
+            // to happen.
+            self.swap_buffers();
             if match vsync {
                 VSync::Off => wglSwapIntervalEXT(0),
                 VSync::On => wglSwapIntervalEXT(1),
