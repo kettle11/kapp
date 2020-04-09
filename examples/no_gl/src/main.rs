@@ -2,7 +2,7 @@ use kettlewin::{Event::*, *};
 
 fn main() {
     // Create a new window manager with default settings.
-    let (mut app, mut event_loop) = initialize();
+    let (app, event_loop) = initialize();
     let _window = app.new_window().build().unwrap();
 
     // Run forever

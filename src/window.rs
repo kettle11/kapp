@@ -21,27 +21,27 @@ impl Window {
         }
     }
 
-    pub fn minimize(&mut self) {
+    pub fn minimize(&self) {
         self.platform_application
             .borrow_mut()
             .minimize_window(self.id);
     }
 
-    pub fn maximize(&mut self) {
+    pub fn maximize(&self) {
         self.platform_application
             .borrow_mut()
             .maximize_window(self.id);
     }
 
     /// Returns the window from a minimized, maximized, or fullscreened state.
-    pub fn restore(&mut self) {
+    pub fn restore(&self) {
         self.platform_application
             .borrow_mut()
             .restore_window(self.id);
     }
 
     /// On Web this must be done in response to a user event.
-    pub fn fullscreen(&mut self) {
+    pub fn fullscreen(&self) {
         self.platform_application
             .borrow_mut()
             .fullscreen_window(self.id);
@@ -61,16 +61,22 @@ impl Window {
     }
 
     /// Set the window's width and height, excluding the titlebar
-    pub fn set_size(&mut self, width: u32, height: u32) {
+    pub fn set_size(&self, width: u32, height: u32) {
         self.platform_application
             .borrow_mut()
             .set_window_dimensions(self.id, width, height);
     }
 
-    pub fn request_redraw(&mut self) {
+    pub fn request_redraw(&self) {
         self.platform_application
             .borrow_mut()
             .redraw_window(self.id);
+    }
+
+    pub fn raw_window_handle(&self) -> RawWindowHandle {
+        self.platform_application
+            .borrow_mut()
+            .raw_window_handle(self.id)
     }
 }
 
@@ -80,6 +86,7 @@ impl Drop for Window {
         println!("Dropping window");
     }
 }
+
 
 #[cfg(feature = "gl_context")]
 impl crate::WindowTrait for Window {

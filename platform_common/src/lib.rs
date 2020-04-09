@@ -14,3 +14,4 @@ pub use mouse_buttons::MouseButton;
 pub use platform_traits::{PlatformApplicationTrait, PlatformEventLoopTrait};
 pub use window_id::WindowId;
 pub use window_parameters::WindowParameters;
+pub use raw_window_handle;

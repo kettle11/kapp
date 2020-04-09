@@ -2,11 +2,7 @@ use objc::runtime::{Object, YES};
 use objc::*;
 use std::ffi::c_void;
 use std::io::Error;
-
-pub struct GLContextBuilder {
-    samples: u32,
-}
-
+use crate::common::*;
 pub struct GLContext {
     gl_context: *mut Object,
     pixel_format: *mut Object,
@@ -19,30 +15,25 @@ pub struct GLContext {
 unsafe impl Send for GLContext {}
 
 impl GLContextBuilder {
-    pub fn samples(&mut self, samples: u32) -> &mut Self {
-        self.samples = samples;
-        self
-    }
-
     pub fn build(&self) -> Result<GLContext, ()> {
         unsafe {
             let attrs = [
                 NSOpenGLPFAOpenGLProfile as u32,
-                NSOpenGLProfileVersion4_1Core as u32, // Needed if using opengl 3.2 you can comment this line out to use the old version.
+                NSOpenGLProfileVersion4_1Core as u32, 
                 NSOpenGLPFAColorSize as u32,
-                24,
+                self.gl_attributes.color_bits as u32,
                 NSOpenGLPFAAlphaSize as u32,
-                8,
+                self.gl_attributes.alpha_bits as u32,
                 NSOpenGLPFADepthSize as u32,
-                24,
+                self.gl_attributes.depth_bits as u32,
                 NSOpenGLPFAStencilSize as u32,
-                8,
+                self.gl_attributes.stencil_bits as u32,
                 NSOpenGLPFAAccelerated as u32,
                 NSOpenGLPFADoubleBuffer as u32,
                 NSOpenGLPFASampleBuffers as u32,
                 1,
                 NSOpenGLPFASamples as u32,
-                self.samples as u32,
+                self.gl_attributes.msaa_samples as u32,
                 0,
             ];
 
@@ -69,27 +60,34 @@ impl GLContextBuilder {
 
 impl GLContext {
     pub fn new() -> GLContextBuilder {
-        GLContextBuilder { samples: 2 }
+        GLContextBuilder {
+            gl_attributes: GLContextAttributes {
+                version_major: 3,
+                version_minor: 3,
+                msaa_samples: 1,
+                color_bits: 24,
+                alpha_bits: 8,
+                depth_bits: 24,
+                stencil_bits: 8,
+            },
+        }
     }
+}
 
-    pub fn set_window(
-        &mut self,
-        window: Option<&kettlewin_platform_common::WindowId>,
-    ) -> Result<(), Error> {
-        let window = window.map(|w| unsafe { w.raw() } as *mut std::ffi::c_void);
+impl GLContext {
+    pub fn set_window(&mut self, window: Option<&impl WindowTrait>) -> Result<(), SetWindowError> 
+        {
+        let window = window.map(|w|  w.raw_handle() as *mut std::ffi::c_void);
         self.set_window_raw(window)
     }
 
-    pub fn set_window_raw(&mut self, window: Option<*mut std::ffi::c_void>) -> Result<(), Error> {
+    pub fn set_window_raw(&mut self, window: Option<*mut std::ffi::c_void>) -> Result<(), SetWindowError> {
         let window = window.map(|w| w as *mut Object);
         if let Some(window) = window {
             let window_view: *mut Object = unsafe { msg_send![window, contentView] };
-
             let () = unsafe { msg_send![self.gl_context, setView: window_view] };
-        // self.current_window = Some(window.clone());
         } else {
             let () = unsafe { msg_send![self.gl_context, clearDrawable] };
-            //  self.current_window = None;
         }
 
         Ok(())

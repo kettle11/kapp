@@ -27,6 +27,6 @@ pub mod prelude {
     pub use super::{application_mac::PlatformApplication, application_mac::*};
     pub use kettlewin_platform_common::{
         Cursor, Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait,
-        WindowId, WindowParameters,
+        WindowId, WindowParameters, raw_window_handle::RawWindowHandle
     };
 }

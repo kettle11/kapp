@@ -31,6 +31,7 @@ pub enum SetWindowError {
 }
 
 pub trait GLContextTrait {
+
     /// Gets the pixel format and attributes of the context.
     fn get_attributes(&self) -> GLContextAttributes;
 

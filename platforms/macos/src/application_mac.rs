@@ -3,6 +3,7 @@ use super::window_mac::*;
 use crate::{
     Cursor, Event, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters,
 };
+use kettlewin_platform_common::*;
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::rc::Rc;
@@ -126,7 +127,7 @@ pub struct PlatformEventLoop {
 }
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
-    fn run(&mut self, callback: Box<dyn FnMut(crate::Event)>) {
+    fn run(&self, callback: Box<dyn FnMut(crate::Event)>) {
         APPLICATION_DATA.with(|d| {
             let mut application_data = d.borrow_mut();
             application_data.as_mut().unwrap().produce_event_callback = Some(Box::new(callback));
@@ -351,11 +352,21 @@ impl PlatformApplicationTrait for PlatformApplication {
             super::window_mac::build(window_parameters, self.window_class, self.view_class);
         result.unwrap()
     }
-    fn quit(&mut self) {
+    fn quit(&self) {
         unsafe {
             let ns_application =
                 APPLICATION_DATA.with(|d| d.borrow_mut().as_mut().unwrap().ns_application);
             let () = msg_send![ns_application, terminate: nil];
         }
     }
+
+     fn raw_window_handle(&self, window_id: WindowId) -> raw_window_handle::RawWindowHandle {
+         let ns_window = unsafe {window_id.raw() };
+         let ns_view: *mut c_void = unsafe { msg_send![window_id.raw() as *mut Object, contentView] };
+         raw_window_handle::RawWindowHandle::MacOS (raw_window_handle::macos::MacOSHandle{
+            ns_window,
+            ns_view,
+            ..raw_window_handle::macos::MacOSHandle::empty()
+        })
+     }
 }

@@ -4,7 +4,7 @@ fn main() {
     event_loop.run_async(app, run);
 }
 
-async fn run(mut app: Application, mut events: Events) {
+async fn run(app: Application, mut events: Events) {
     let mut _window = app.new_window().build().unwrap();
     
     // Loop forever!

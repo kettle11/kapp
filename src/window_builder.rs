@@ -2,12 +2,12 @@ use crate::platform::*;
 use crate::{Application, Window};
 
 pub struct WindowBuilder<'a> {
-    application: &'a mut Application,
+    application: &'a Application,
     window_parameters: WindowParameters,
 }
 
 impl<'a> WindowBuilder<'a> {
-    pub fn new(application: &'a mut Application) -> Self {
+    pub fn new(application: &'a Application) -> Self {
         Self {
             application,
             window_parameters: WindowParameters {

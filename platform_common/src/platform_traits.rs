@@ -1,5 +1,5 @@
 /// These are the core functions to be implemented by each platform.
-use crate::{Cursor, WindowId, WindowParameters};
+use crate::{Cursor, WindowId, WindowParameters, raw_window_handle::RawWindowHandle};
 pub trait PlatformApplicationTrait {
     type EventLoop: PlatformEventLoopTrait;
 
@@ -35,9 +35,10 @@ pub trait PlatformApplicationTrait {
     /// Hides the cursor or this application until a call to show cursor.
     fn hide_cursor(&mut self);
     fn show_cursor(&mut self);
+    fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle;
 }
 
 pub trait PlatformEventLoopTrait {
     /// Runs until the application quits.
-    fn run(&mut self, callback: Box<dyn FnMut(crate::Event)>);
+    fn run(& self, callback: Box<dyn FnMut(crate::Event)>);
 }

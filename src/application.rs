@@ -28,7 +28,7 @@ impl Application {
     /// Returns a new window builder.
     /// Call .build() on the window builder to complete the creation of the window.
     /// See [`crate::window_builder::WindowBuilder`] for more ways to setup a window.
-    pub fn new_window(&mut self) -> crate::window_builder::WindowBuilder {
+    pub fn new_window(&self) -> crate::window_builder::WindowBuilder {
         crate::window_builder::WindowBuilder::new(self)
     }
 
@@ -39,17 +39,17 @@ impl Application {
 
     /// Sets the mouse position relative to the screen.
     /// Coordinates are expressed in physical coordinates.
-    pub fn set_mouse_position(&mut self, x: u32, y: u32) {
+    pub fn set_mouse_position(&self, x: u32, y: u32) {
         self.platform_application
             .borrow_mut()
             .set_mouse_position(x, y);
     }
 
-    pub fn set_cursor(&mut self, cursor: Cursor) {
+    pub fn set_cursor(&self, cursor: Cursor) {
         self.platform_application.borrow_mut().set_cursor(cursor);
     }
 
-    pub fn set_cursor_visible(&mut self, visible: bool) {
+    pub fn set_cursor_visible(&self, visible: bool) {
         if visible {
             self.platform_application.borrow_mut().show_cursor();
         } else {
@@ -72,7 +72,7 @@ pub struct EventLoop {
 
 impl EventLoop {
     /// Run the application forever. When a new event occurs the callback passed in will be called.
-    pub fn run<T>(&mut self, callback: T)
+    pub fn run<T>(& self, callback: T)
     where
         T: 'static + FnMut(Event),
     {

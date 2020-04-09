@@ -10,7 +10,7 @@ mod windows;
 mod web;
 
 #[cfg(target_os = "macos")]
-pub use macos::{GLContext, GLContextBuilder};
+pub use macos::GLContext;
 
 #[cfg(target_os = "windows")]
 pub use windows::GLContext;
