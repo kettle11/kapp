@@ -405,7 +405,7 @@ fn main() {
                     gl_context.set_vsync(VSync::Off).unwrap();
                 }
                 Key::F => window.fullscreen(),
-                _ => {}
+                _ => window.fullscreen(),
             },
             Event::KeyUp { key } => match key {
                 Key::Left => left_held = false,

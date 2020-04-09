@@ -1,3 +1,4 @@
+/// Structures and traits shared between the platform backends.
 mod cursors;
 mod events;
 mod keys;

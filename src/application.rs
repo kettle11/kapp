@@ -33,8 +33,8 @@ impl Application {
     }
 
     /// Immediately quits the application.
-    pub fn quit(&mut self) {
-        self.platform_application.borrow_mut().quit();
+    pub fn quit(&self) {
+        self.platform_application.borrow().quit();
     }
 
     /// Sets the mouse position relative to the screen.

@@ -38,7 +38,7 @@ impl EventLoop {
         let events = Events {
             queue: Rc::new(RefCell::new(Vec::new())),
         };
-        let mut pin = Box::pin(run_function(application, events.clone()));
+        let mut pin = Box::pin(run_function(application.clone(), events.clone()));
 
         let waker = waker::create();
         let mut context = Context::from_waker(&waker);
@@ -66,6 +66,8 @@ impl EventLoop {
                 // Do something here!
             }
         });
+        application.quit();
+
         unreachable!()
     }
 }

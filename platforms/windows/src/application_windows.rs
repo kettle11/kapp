@@ -110,8 +110,32 @@ impl PlatformApplicationTrait for PlatformApplication {
             winuser::ShowWindow(window_id.raw() as windef::HWND, winuser::SW_MAXIMIZE);
         }
     }
-    fn fullscreen_window(&mut self, _window_id: WindowId) {
-        unimplemented!()
+    fn fullscreen_window(&mut self, window_id: WindowId) {
+        unsafe {
+            let hwnd = window_id.raw() as windef::HWND;
+            let screen_width = winuser::GetSystemMetrics(winuser::SM_CXSCREEN);
+            let screen_height = winuser::GetSystemMetrics(winuser::SM_CYSCREEN);
+            winuser::SetWindowLongPtrW(
+                hwnd,
+                winuser::GWL_STYLE,
+                (winuser::WS_VISIBLE | winuser::WS_POPUP) as isize,
+            );
+            let mut rect = windef::RECT {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
+            winuser::GetWindowRect(window_id.raw() as windef::HWND, &mut rect);
+            winuser::MoveWindow(
+                window_id.raw() as windef::HWND,
+                rect.left,
+                rect.top,
+                screen_width as i32,
+                screen_height as i32,
+                FALSE,
+            );
+        }
     }
     fn restore_window(&mut self, window_id: WindowId) {
         unsafe {
@@ -132,8 +156,10 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn set_mouse_position(&mut self, _x: u32, _y: u32) {
-        unimplemented!()
+    fn set_mouse_position(&mut self, x: u32, y: u32) {
+        unsafe {
+            winuser::SetCursorPos(x as i32, y as i32);
+        }
     }
 
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
@@ -197,7 +223,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn quit(&mut self) {
+    fn quit(&self) {
         unsafe {
             winuser::PostQuitMessage(0);
         }

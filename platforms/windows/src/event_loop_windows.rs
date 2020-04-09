@@ -4,15 +4,16 @@ use crate::keys_windows::virtual_keycode_to_key;
 use crate::Event;
 use crate::Key;
 use crate::MouseButton;
+use std::cell::RefCell;
 use std::ptr::null_mut;
+use std::rc::Rc;
 use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LRESULT, TRUE, UINT, WPARAM};
 use winapi::shared::windef::HWND;
 use winapi::shared::windowsx::{GET_X_LPARAM, GET_Y_LPARAM};
 use winapi::um::winuser;
 use winapi::um::winuser::{MSG, PM_REMOVE, WM_QUIT};
 
-type Callback = dyn 'static + FnMut(Event);
-static mut PROGRAM_CALLBACK: Option<Box<Callback>> = None;
+thread_local!(pub static PROGRAM_CALLBACK: RefCell<Option<Box< dyn 'static + FnMut(Event)>>> = RefCell::new(None));
 
 pub unsafe extern "system" fn window_callback(
     hwnd: HWND,
@@ -21,6 +22,13 @@ pub unsafe extern "system" fn window_callback(
     l_param: LPARAM,
 ) -> LRESULT {
     match u_msg {
+        winuser::WM_CLOSE => {
+            produce_event(Event::WindowCloseRequested {
+                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
+            });
+            // Return 0 because the user application must approve the close.
+            return 0;
+        }
         winuser::WM_KEYDOWN => produce_event(process_key_down(w_param, l_param)),
         winuser::WM_KEYUP => produce_event(process_key_up(w_param, l_param)),
         winuser::WM_SIZING => return TRUE as isize,
@@ -42,7 +50,7 @@ pub unsafe extern "system" fn window_callback(
         winuser::WM_SIZE => {
             resize_event(hwnd, l_param, w_param);
             produce_event(Event::Draw {
-                window_id: WindowId::new(0 as *mut std::ffi::c_void),
+                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
             });
             return 0;
         }
@@ -178,11 +186,11 @@ fn resize_event(hwnd: HWND, l_param: LPARAM, w_param: WPARAM) {
 }
 
 fn produce_event(event: Event) {
-    unsafe {
-        if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
+    PROGRAM_CALLBACK.with(|d| {
+        if let Some(program_callback) = unsafe { d.borrow_mut().as_mut() } {
             program_callback(event)
         }
-    }
+    });
 }
 
 // https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-mousemove
@@ -225,12 +233,9 @@ fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key, bool) {
     (scancode, key, repeat)
 }
 
-pub fn run<T>(callback: T)
-where
-    T: 'static + FnMut(Event),
-{
+pub fn run(callback: Box<dyn FnMut(crate::Event)>) {
     unsafe {
-        PROGRAM_CALLBACK = Some(Box::new(callback));
+        PROGRAM_CALLBACK.with(|d| *d.borrow_mut() = Some(Box::new(callback)));
 
         let mut message: MSG = std::mem::zeroed();
 
@@ -248,12 +253,10 @@ where
                 &mut super::application_windows::WINDOWS_TO_REDRAW,
             );
 
-            if let Some(program_callback) = PROGRAM_CALLBACK.as_mut() {
-                while let Some(window_id) = &temp_draw_request_buffer.pop() {
-                    program_callback(Event::Draw {
-                        window_id: *window_id,
-                    });
-                }
+            while let Some(window_id) = &temp_draw_request_buffer.pop() {
+                produce_event(Event::Draw {
+                    window_id: *window_id,
+                });
             }
         }
     }

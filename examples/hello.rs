@@ -21,6 +21,7 @@ fn main() {
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
     event_loop.run(move |event| match event {
+        Event::WindowCloseRequested { .. } => app.quit(),
         Event::Draw { .. } => {
             // Clear the screen to a lovely shade of blue.
             unsafe {

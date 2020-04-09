@@ -5,7 +5,7 @@ use crate::WindowId;
 /// Input and system events
 #[derive(Debug, Clone)]
 pub enum Event {
-    /// A recommendation for when to draw. 
+    /// A recommendation for when to draw.
     /// On MacOS Draw is triggered by a system event.
     /// On Web Draw is triggered by requestAnimationFrame
     /// On Windows Draw is sent at the end of the event loop.
