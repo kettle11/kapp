@@ -116,6 +116,13 @@ impl GLContextTrait for GLContext {
         Ok(())
     }
 
+    fn resize(&mut self) {
+        let update = sel!(update);
+        unsafe {
+            let () = msg_send![self.gl_context, performSelectorOnMainThread:update withObject:nil waitUntilDone:YES];
+        }
+    }
+
     // https://developer.apple.com/documentation/appkit/nsopenglcontext/1436211-flushbuffer?language=objc
     fn swap_buffers(&mut self) {
         unsafe {

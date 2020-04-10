@@ -346,38 +346,9 @@ fn main() {
         match event {
             Event::WindowCloseRequested { .. } => app.quit(),
             Event::WindowResized { width, height, .. } => {
-                // gl_context.update_target(); // Resizes the window buffer
+                gl_context.resize(); // Resizes the window buffer
                 screen_width = width;
                 screen_height = height;
-
-                // Redraw
-                // Now begin drawing!
-                // First clear the screen
-                /*
-                gl.scissor(0, 0, screen_width as i32, screen_height as i32);
-                gl.clear_color(black.0, black.1, black.2, black.3);
-                gl.clear(COLOR_BUFFER_BIT);
-
-                let scale = 1.0; //window.backing_scale();
-                                 // Draw the background!
-                for block in background_blocks.iter() {
-                    draw_rect(&gl, &block.rect, &block.color, scale);
-                }
-
-                // Then draw the blocks the player can interact with
-                for block in interactive_blocks.iter() {
-                    draw_rect(&gl, &block.rect, &block.color, scale);
-                }
-                // Then draw the player
-                draw_rect(&gl, &player.rect, &player_color, scale);
-
-                // Draw the foreground!
-                for block in foreground_blocks.iter() {
-                    draw_rect(&gl, &block.rect, &block.color, scale);
-                }
-                // When we're done rendering swap the window buffers to display to the screen.
-                gl_context.swap_buffers();
-                */
             }
             Event::KeyDown { key } => match key {
                 Key::Left => {
@@ -396,13 +367,13 @@ fn main() {
                     }
                 } // Jump!
                 Key::V => {
-                    //gl_context.set_vsync(VSync::On);
+                    gl_context.set_vsync(VSync::On).unwrap();
                 }
                 Key::A => {
-                   // gl_context.set_vsync(VSync::Adaptive);
+                    gl_context.set_vsync(VSync::Adaptive).unwrap();
                 }
                 Key::O => {
-                   // gl_context.set_vsync(VSync::Off).unwrap();
+                    gl_context.set_vsync(VSync::Off).unwrap();
                 }
                 Key::F => window.fullscreen(),
                 _ => window.fullscreen(),

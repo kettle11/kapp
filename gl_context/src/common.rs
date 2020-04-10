@@ -43,6 +43,9 @@ pub trait GLContextTrait {
     /// Asssigns a window to draw to
     fn set_window(&mut self, window: Option<&impl raw_window_handle::HasRawWindowHandle>) -> Result<(), SetWindowError>;
 
+    /// Resizes the context to match the attached window
+    fn resize(&mut self);
+
     /// Swaps the backbuffer and frontbuffer for the currently bound window.
     fn swap_buffers(&mut self);
 
