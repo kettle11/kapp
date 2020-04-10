@@ -26,7 +26,6 @@ pub fn draw(window_id: WindowId) {
         // First remove the draw request to avoid it being fulfilled twice.
         let position = requests.borrow().iter().position(|w| w == &window_id);
         if let Some(position) = position {
-            println!("Fulfilling redraw with system call");
             requests.borrow_mut().swap_remove(position);
         }
 

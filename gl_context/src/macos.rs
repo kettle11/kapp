@@ -91,7 +91,7 @@ impl GLContextTrait for GLContext {
         if let Some(window) = window {
             let window_view: *mut Object = unsafe { msg_send![window, contentView] };
             let () = unsafe { msg_send![self.gl_context, setView: window_view] };
-            self.set_vsync(self.vsync);
+            self.set_vsync(self.vsync).unwrap();
         } else {
             let () = unsafe { msg_send![self.gl_context, clearDrawable] };
         }

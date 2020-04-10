@@ -27,7 +27,6 @@ pub fn send_event(event: Event) {
             // Flush events here to somewhat preserve the ordering of events.
             flush_overflow_events(&mut callback);
         } else {
-            println!("Overflow event");
             // If the callback is in use then push the event to overflow events to be
             // processed later.
             OVERFLOW_EVENTS.with(|events| {

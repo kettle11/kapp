@@ -6,7 +6,9 @@ use crate::WindowId;
 #[derive(Debug, Clone)]
 pub enum Event {
     /// A recommendation for when to draw.
-    /// On MacOS Draw is triggered by a system event.
+    /// On MacOS 'Draw' is sent after 'EventsCleared' or in response to 
+    /// a system event during resizing. While resizing draw will be sent at the screen's 
+    /// refresh rate.
     /// On Web Draw is triggered by requestAnimationFrame
     /// On Windows Draw is sent at the end of the event loop.
     Draw {

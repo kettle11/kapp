@@ -193,12 +193,9 @@ extern "C" fn application_should_terminate(
     _sel: Sel,
     _event: *mut Object,
 ) -> NSUInteger {
-    println!("application_should_terminate");
     if APPLICATION_DATA.with(|d| d.borrow().actually_terminate) {
-        println!("NSTerminateNow");
         NSTerminateNow
     } else {
-        println!("NSTerminateCancel");
         self::submit_event(Event::QuitRequested);
         NSTerminateCancel
     }

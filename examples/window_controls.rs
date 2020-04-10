@@ -3,7 +3,7 @@ use kettlewin::*;
 
 fn main() {
     // Create a new application with default settings.
-    let (mut app, mut event_loop) = initialize();
+    let (app, event_loop) = initialize();
     let mut window = app.new_window().title("Window Controls").build().unwrap();
 
     event_loop.run(move |event| match event {

@@ -87,8 +87,8 @@ fn setup(gl: &glow::Context) {
 
 fn main() {
     // Create a new application with default settings.
-    let (mut app, mut event_loop) = initialize();
-    let mut window = app
+    let (app, event_loop) = initialize();
+    let window = app
         .new_window()
         .dimensions(400, 400)
         .title("Hello")
@@ -96,7 +96,7 @@ fn main() {
         .unwrap();
     let mut gl_context = GLContext::new().build().unwrap(); // Create a gl_context for the app
 
-    gl_context.set_window(&window.id).unwrap();
+    gl_context.set_window(Some(&window)).unwrap();
 
     #[cfg(target_arch = "wasm32")]
     let gl = glow::Context::from_webgl2_context(gl_context.webgl2_context().unwrap());

@@ -2,7 +2,7 @@
 use kettlewin::*;
 
 fn main() {
-    let (mut app, mut event_loop) = initialize();
+    let (app, event_loop) = initialize();
     let _window = app.new_window().build();
 
     event_loop.run(move |event| match event {

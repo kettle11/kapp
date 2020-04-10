@@ -122,7 +122,7 @@ fn rect_overlap(rect0: &Rect, rect1: &Rect) -> Option<(f32, f32)> {
 
 fn main() {
     // Create a new application with default settings.
-    let (mut app, mut event_loop) = initialize();
+    let (app, event_loop) = initialize();
 
     let mut screen_width = 500;
     let mut screen_height = 500;
@@ -137,7 +137,7 @@ fn main() {
         gl.enable(SCISSOR_TEST);
     }
 
-    let mut window = app
+    let window = app
         .new_window()
         .title("Platformer")
         .dimensions(screen_width, screen_height)
@@ -340,7 +340,6 @@ fn main() {
 
     let mut right_held = false;
     let mut left_held = false;
-    let mut now = std::time::Instant::now();
 
     event_loop.run(move |event| unsafe {
         match event {
@@ -384,8 +383,6 @@ fn main() {
                 _ => {}
             },
             Event::Draw { .. } => {
-                // gl_context.make_current();
-
                 // First update the world
 
                 // It feels incorrect if the player can control too tightly while jumping, so change air acceleration here.
@@ -444,7 +441,6 @@ fn main() {
 
                 // Now begin drawing!
                 // First clear the screen
-
                 gl.scissor(0, 0, screen_width as i32, screen_height as i32);
                 gl.clear_color(black.0, black.1, black.2, black.3);
                 gl.clear(COLOR_BUFFER_BIT);
@@ -471,9 +467,6 @@ fn main() {
                 gl_context.swap_buffers();
 
                 window.request_redraw();
-
-                println!("{}", now.elapsed().as_millis());
-                now = std::time::Instant::now();
             }
             _ => {}
         }
