@@ -72,7 +72,7 @@ pub struct EventLoop {
 
 impl EventLoop {
     /// Run the application forever. When a new event occurs the callback passed in will be called.
-    pub fn run<T>(& self, callback: T)
+    pub fn run<T>(&self, callback: T)
     where
         T: 'static + FnMut(Event),
     {

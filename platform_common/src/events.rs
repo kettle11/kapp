@@ -43,11 +43,6 @@ pub enum Event {
     ScrollWheel {
         delta: f32,
     },
-    /// Only available on MacOS. Reports absolute position on trackpad.
-    TrackpadTouch {
-        x: f32,
-        y: f32,
-    },
     // ------------------- Window Events  ---------------------
     WindowMinimized {
         window_id: WindowId,
@@ -97,6 +92,8 @@ pub enum Event {
     Quit,
     /// A quit is requested, but it is up to the program to call quit().
     QuitRequested,
+    /// When the event loop sends its last event
+    EventsCleared,
     #[doc(hidden)]
     __Nonexhaustive, // More events will be added
 }

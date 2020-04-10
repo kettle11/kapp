@@ -7,7 +7,7 @@ fn main() {
     let _window = app.new_window().title("Log Events").build().unwrap();
 
     event_loop.run(move |event| match event {
-        Event::TrackpadTouch { .. } => {}
+        // Event::TrackpadTouch { .. } => {}
         Event::Draw { .. } => {}
         Event::WindowCloseRequested { .. } => app.quit(),
         _ => {

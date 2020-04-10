@@ -1,8 +1,6 @@
 use super::apple::*;
 use super::window_mac::*;
-use crate::{
-    Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters,
-};
+use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
 use kettlewin_platform_common::*;
 use std::cell::RefCell;
 use std::ffi::c_void;
@@ -28,7 +26,6 @@ pub struct ApplicationData {
     ns_application: *mut Object,
     pub modifier_flags: u64, // Key modifier flags
     cursor_hidden: bool,
-    requested_redraw: Vec<WindowId>,
     pub actually_terminate: bool, // Set when quit is called. Indicates the program should quit.
 }
 
@@ -38,7 +35,6 @@ impl ApplicationData {
             ns_application: std::ptr::null_mut(),
             modifier_flags: 0,
             cursor_hidden: false,
-            requested_redraw: Vec::new(),
             actually_terminate: false,
         }
     }
@@ -89,17 +85,33 @@ extern "C" fn control_flow_end_handler(
     _: *mut std::ffi::c_void,
 ) {
     // Now process all redraw request events
-    APPLICATION_DATA.with(|d| {
-        let application_data = d.borrow_mut();
+    event_receiver::send_event(Event::EventsCleared);
 
-        for window_id in &application_data.requested_redraw {
+    let any_draw_requests = redraw_manager::draw_requests_count() > 0;
+    redraw_manager::begin_draw_flush();
+    while let Some(window_id) = redraw_manager::get_draw_request() {
+        // If live resizing redraw only in response to a 'drawRect' event in order to keep
+        // resizing smooth.
+        // Redrawing during resize will always produce events in sync with the monitor refresh rate.
+        let in_live_resize: bool =
+            unsafe { msg_send![window_id.raw() as *mut Object, inLiveResize] };
+        if in_live_resize {
             unsafe {
                 let window_view: *mut Object =
                     msg_send![window_id.raw() as *mut Object, contentView];
                 let () = msg_send![window_view, setNeedsDisplay: YES];
             }
+        } else {
+            event_receiver::send_event(Event::Draw { window_id });
         }
-    });
+    }
+
+    if any_draw_requests {
+        unsafe {
+            let rl = CFRunLoopGetMain();
+            CFRunLoopWakeUp(rl);
+        }
+    }
 }
 
 pub struct PlatformEventLoop {
@@ -192,8 +204,7 @@ impl PlatformApplicationTrait for PlatformApplication {
 
             let backing_scale: CGFloat =
                 msg_send![window_id.raw() as *mut Object, backingScaleFactor];
-            let () =
-                msg_send![
+            let () = msg_send![
                     window_id.raw() as *mut Object,
                     setFrameTopLeftPoint: NSPoint::new((x as f64) / backing_scale, screen_frame.size.height - (y as f64) / backing_scale)];
         }
@@ -203,8 +214,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         unsafe {
             let backing_scale: CGFloat =
                 msg_send![window_id.raw() as *mut Object, backingScaleFactor];
-            let () =
-                msg_send![window_id.raw() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+            let () = msg_send![window_id.raw() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
         }
     }
 
@@ -243,20 +253,9 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn redraw_window(&mut self, window_id: WindowId) {
-        let in_live_resize: bool =
-            unsafe { msg_send![window_id.raw() as *mut Object, inLiveResize] };
-
-        // If resizing the window don't send a redraw request as it will get one
-        // anyways
-        if !in_live_resize {
-            APPLICATION_DATA.with(|d| {
-                let mut application_data = d.borrow_mut();
-                application_data
-                    .requested_redraw
-                    .push(window_id);
-            });
-        }
+        redraw_manager::add_draw_request(window_id);
     }
+
     fn set_mouse_position(&mut self, _x: u32, _y: u32) {
         // Need to account for backing scale here!
 
@@ -328,21 +327,20 @@ impl PlatformApplicationTrait for PlatformApplication {
                     d.borrow_mut().ns_application
                 })
             };
-            
+
             if let Ok(ns_application) = ns_application {
                 let () = msg_send![ns_application, terminate: nil];
-            } 
+            }
         }
     }
 
     fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle {
-        let ns_window = unsafe {window_id.raw() };
+        let ns_window = unsafe { window_id.raw() };
         let ns_view: *mut c_void = unsafe { msg_send![ns_window as *mut Object, contentView] };
-        raw_window_handle::RawWindowHandle::MacOS (raw_window_handle::macos::MacOSHandle{
-           ns_window,
-           ns_view,
-           ..raw_window_handle::macos::MacOSHandle::empty()
-       })
+        raw_window_handle::RawWindowHandle::MacOS(raw_window_handle::macos::MacOSHandle {
+            ns_window,
+            ns_view,
+            ..raw_window_handle::macos::MacOSHandle::empty()
+        })
     }
 }
-

@@ -6,20 +6,21 @@
 ///   event_receiver should be used on platforms where calls to a platform
 ///   functions can trigger events.
 mod cursors;
+pub mod event_receiver;
 mod events;
 mod keys;
 mod mouse_buttons;
 mod platform_traits;
+pub mod redraw_manager;
 mod window_id;
 mod window_parameters;
-pub mod event_receiver;
 
 pub use cursors::Cursor;
 pub use events::Event;
 pub use keys::Key;
 pub use mouse_buttons::MouseButton;
 pub use platform_traits::{PlatformApplicationTrait, PlatformEventLoopTrait};
-pub use window_id::{WindowId, RawWindowHandleTrait};
-pub use window_parameters::WindowParameters;
 pub use raw_window_handle;
-pub use raw_window_handle::{RawWindowHandle, HasRawWindowHandle};
+pub use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+pub use window_id::{RawWindowHandleTrait, WindowId};
+pub use window_parameters::WindowParameters;

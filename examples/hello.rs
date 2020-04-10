@@ -20,33 +20,52 @@ fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
+    let mut now = std::time::Instant::now();
     event_loop.run(move |event| {
         match event {
-        Event::WindowCloseRequested { .. } => app.quit(),
-        Event::WindowResized {..} => {
-            window.set_position(800, 800);
-        }
-        Event::KeyDown {key} => {
-            match key {
+            Event::WindowCloseRequested { .. } => app.quit(),
+            Event::WindowResized { .. } => {
+                //   window.set_position(800, 800);
+            }
+            Event::KeyDown { key } => match key {
                 Key::Space => {
                     window.set_size(200, 200);
                 }
                 _ => {}
-            }
-        }
-        Event::Draw { .. } => {
-            // Clear the screen to a lovely shade of blue.
-            unsafe {
-                gl.clear_color(0.3765, 0.3137, 0.8627, 1.0);
-                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-            }
-            // Finally display what we've drawn.
-            gl_context.swap_buffers();
+            },
+            Event::EventsCleared => {
+                println!("EVENTS CLEARED: {:?}", now.elapsed());
+                now = std::time::Instant::now();
+                std::thread::sleep(std::time::Duration::from_millis(16));
+                // window.request_redraw();
 
-            // It is not necessary for this example,
-            // but calling request_frame ensures the program redraws continuously.
-            window.request_redraw();
+                unsafe {
+                    gl.clear_color(0.3765, 0.3137, 0.8627, 1.0);
+                    gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+                }
+                // Finally display what we've drawn.
+                gl_context.swap_buffers();
+
+                // It is not necessary for this example,
+                // but calling request_frame ensures the program redraws continuously.
+                window.request_redraw();
+            }
+            Event::Draw { .. } => {
+                /*
+                // Clear the screen to a lovely shade of blue.
+                unsafe {
+                    gl.clear_color(0.3765, 0.3137, 0.8627, 1.0);
+                    gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+                }
+                // Finally display what we've drawn.
+                gl_context.swap_buffers();
+
+                // It is not necessary for this example,
+                // but calling request_frame ensures the program redraws continuously.
+                window.request_redraw();
+                */
+            }
+            _ => {}
         }
-        _ => {}
-    }});
+    });
 }

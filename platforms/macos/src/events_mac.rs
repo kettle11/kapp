@@ -204,11 +204,7 @@ extern "C" fn application_should_terminate(
     }
 }
 
-extern "C" fn application_will_terminate(
-    _this: &Object,
-    _sel: Sel,
-    _event: *mut Object,
-) {
+extern "C" fn application_will_terminate(_this: &Object, _sel: Sel, _event: *mut Object) {
     self::submit_event(Event::Quit);
 }
 
@@ -234,10 +230,7 @@ pub fn add_application_events_to_decl(decl: &mut ClassDecl) {
 // ------------------------ View Events --------------------------
 extern "C" fn draw_rect(this: &Object, _sel: Sel, _event: *mut Object) {
     let window: *mut Object = unsafe { msg_send![this, window] };
-
-    self::submit_event(Event::Draw {
-        window_id: WindowId::new(window as *mut c_void),
-    });
+    kettlewin_platform_common::redraw_manager::draw(WindowId::new(window as *mut c_void));
 }
 
 extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
@@ -432,59 +425,11 @@ extern "C" fn accepts_first_responder(_this: &Object, _sel: Sel) -> BOOL {
     YES
 }
 
-// https://developer.apple.com/documentation/appkit/nsresponder/1531151-touchesbeganwithevent?language=objc
-extern "C" fn touches_began_with_event(this: &Object, _sel: Sel, event: *mut Object) {
-    unsafe {
-        let touches: *mut Object =
-            msg_send![event, touchesMatchingPhase:NSTouchPhaseBegan inView: this];
-
-        let array: *mut Object = msg_send![touches, allObjects];
-        let count: NSUInteger = msg_send![array, count];
-        for i in 0..count {
-            let touch: *mut Object = msg_send![array, objectAtIndex: i];
-            let position: NSPoint = msg_send![touch, normalizedPosition];
-
-            self::submit_event(crate::Event::TrackpadTouch {
-                x: position.x as f32,
-                y: position.y as f32,
-            });
-        }
-    }
-}
-
-// https://developer.apple.com/documentation/appkit/nsresponder/1531151-touchesbeganwithevent?language=objc
-extern "C" fn touches_moved_with_event(this: &Object, _sel: Sel, event: *mut Object) {
-    unsafe {
-        let touches: *mut Object =
-            msg_send![event, touchesMatchingPhase:NSTouchPhaseMoved inView: this];
-
-        let array: *mut Object = msg_send![touches, allObjects];
-        let count: NSUInteger = msg_send![array, count];
-        for i in 0..count {
-            let touch: *mut Object = msg_send![array, objectAtIndex: i];
-            let position: NSPoint = msg_send![touch, normalizedPosition];
-
-            self::submit_event(crate::Event::TrackpadTouch {
-                x: position.x as f32,
-                y: position.y as f32,
-            });
-        }
-    }
-}
-
 pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
         decl.add_method(
             sel!(drawRect:),
             draw_rect as extern "C" fn(&Object, Sel, *mut Object),
-        );
-        decl.add_method(
-            sel!(touchesBeganWithEvent:),
-            touches_began_with_event as extern "C" fn(&Object, Sel, *mut Object),
-        );
-        decl.add_method(
-            sel!(touchesMovedWithEvent:),
-            touches_moved_with_event as extern "C" fn(&Object, Sel, *mut Object),
         );
         decl.add_method(
             sel!(acceptsFirstResponder),
