@@ -1,12 +1,13 @@
+use crate::common::*;
 use objc::runtime::{Object, YES};
 use objc::*;
 use std::ffi::c_void;
-use crate::common::*;
 use std::io::Error;
 
 pub struct GLContext {
     gl_context: *mut Object,
     pixel_format: *mut Object,
+    vsync: VSync,
     // current_window: Option<*mut Object>,
 }
 
@@ -20,7 +21,9 @@ impl GLContextBuilder {
         unsafe {
             let attrs = [
                 NSOpenGLPFAOpenGLProfile as u32,
-                NSOpenGLProfileVersion4_1Core as u32, 
+                NSOpenGLProfileVersion4_1Core as u32,
+                // NSOpenGLPFAClosestPolicy as u32,
+                NSOpenGLPFAAccelerated as u32,
                 NSOpenGLPFAColorSize as u32,
                 self.gl_attributes.color_bits as u32,
                 NSOpenGLPFAAlphaSize as u32,
@@ -29,7 +32,6 @@ impl GLContextBuilder {
                 self.gl_attributes.depth_bits as u32,
                 NSOpenGLPFAStencilSize as u32,
                 self.gl_attributes.stencil_bits as u32,
-                NSOpenGLPFAAccelerated as u32,
                 NSOpenGLPFADoubleBuffer as u32,
                 NSOpenGLPFASampleBuffers as u32,
                 1,
@@ -48,11 +50,10 @@ impl GLContextBuilder {
                 msg_send![gl_context, initWithFormat: pixel_format shareContext: nil];
             let () = msg_send![gl_context, makeCurrentContext];
 
-            // Enable vsync
-            let () = msg_send![gl_context, setValues:&(1 as i32) forParameter:NSOpenGLContextParameter::NSOpenGLCPSwapInterval];
             Ok(GLContext {
                 gl_context,
                 pixel_format,
+                vsync: VSync::On // Enable VSync for the next window bound
                 // current_window: None,
             })
         }
@@ -76,20 +77,21 @@ impl GLContext {
 }
 
 impl GLContextTrait for GLContext {
-    fn set_window(&mut self, window: Option<&impl raw_window_handle::HasRawWindowHandle>) -> Result<(), SetWindowError> {
+    fn set_window(
+        &mut self,
+        window: Option<&impl raw_window_handle::HasRawWindowHandle>,
+    ) -> Result<(), SetWindowError> {
         use raw_window_handle::*;
 
-        let window = window.map(|w|  
-            match w.raw_window_handle() {
-            RawWindowHandle::MacOS(handle) => {
-                handle.ns_window as *mut Object
-            }
-            _ => unreachable!()
+        let window = window.map(|w| match w.raw_window_handle() {
+            RawWindowHandle::MacOS(handle) => handle.ns_window as *mut Object,
+            _ => unreachable!(),
         });
 
         if let Some(window) = window {
             let window_view: *mut Object = unsafe { msg_send![window, contentView] };
             let () = unsafe { msg_send![self.gl_context, setView: window_view] };
+            self.set_vsync(self.vsync);
         } else {
             let () = unsafe { msg_send![self.gl_context, clearDrawable] };
         }
@@ -102,14 +104,46 @@ impl GLContextTrait for GLContext {
     }
 
     fn set_vsync(&mut self, vsync: VSync) -> Result<(), std::io::Error> {
-        unimplemented!()
+        let result = match vsync {
+            VSync::On => {
+                let () = unsafe {
+                    msg_send![self.gl_context, setValues:&(1 as i32) forParameter:NSOpenGLCPSwapInterval]
+                };
+                Ok(())
+            }
+            VSync::Off => {
+                let () = unsafe {
+                    msg_send![self.gl_context, setValues:&(0 as i32) forParameter:NSOpenGLCPSwapInterval]
+                };
+                Ok(())
+            }
+            VSync::Adaptive => {
+                Ok(()) // Unsupported, should throw an error
+            }
+            VSync::Other(..) => {
+                Ok(()) // Unsupported, should throw an error
+            }
+        };
+
+        if result.is_ok() {
+            self.vsync = vsync;
+        }
+        result
     }
 
-    fn get_vsync(&self) -> VSync { 
-        unimplemented!()
+    fn get_vsync(&self) -> VSync {
+        let mut i: i64 = 0;
+        let () = unsafe {
+            msg_send![self.gl_context, getValues:&mut i forParameter:NSOpenGLCPSwapInterval]
+        };
+        match i {
+            0 => VSync::Off,
+            1 => VSync::On,
+            _ => VSync::Other(i as i32),
+        }
     }
 
-    fn make_current(&mut self) -> Result<(), Error>{
+    fn make_current(&mut self) -> Result<(), Error> {
         unsafe {
             let () = msg_send![self.gl_context, makeCurrentContext];
         }
@@ -150,13 +184,13 @@ impl Drop for GLContext {
     }
 }
 
-// These enums are taken from the core-foundation-rs crate
 #[repr(u64)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSOpenGLContextParameter {
     NSOpenGLCPSwapInterval = 222,
 }
-pub use NSOpenGLContextParameter::*;
+
+use NSOpenGLContextParameter::*;
 
 #[repr(u64)]
 #[derive(Clone, Copy, Debug, PartialEq)]
