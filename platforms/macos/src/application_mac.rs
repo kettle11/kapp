@@ -335,13 +335,14 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn raw_window_handle(&self, window_id: WindowId) -> raw_window_handle::RawWindowHandle {
-         let ns_window = unsafe {window_id.raw() };
-         let ns_view: *mut c_void = unsafe { msg_send![window_id.raw() as *mut Object, contentView] };
-         raw_window_handle::RawWindowHandle::MacOS (raw_window_handle::macos::MacOSHandle{
-            ns_window,
-            ns_view,
-            ..raw_window_handle::macos::MacOSHandle::empty()
-        })
-     }
+    fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle {
+        let ns_window = unsafe {window_id.raw() };
+        let ns_view: *mut c_void = unsafe { msg_send![ns_window as *mut Object, contentView] };
+        raw_window_handle::RawWindowHandle::MacOS (raw_window_handle::macos::MacOSHandle{
+           ns_window,
+           ns_view,
+           ..raw_window_handle::macos::MacOSHandle::empty()
+       })
+    }
 }
+

@@ -2,6 +2,8 @@ use objc::runtime::{Object, YES};
 use objc::*;
 use std::ffi::c_void;
 use crate::common::*;
+use std::io::Error;
+
 pub struct GLContext {
     gl_context: *mut Object,
     pixel_format: *mut Object,
@@ -73,15 +75,18 @@ impl GLContext {
     }
 }
 
-impl GLContext {
-    pub fn set_window(&mut self, window: Option<&impl WindowTrait>) -> Result<(), SetWindowError> 
-        {
-        let window = window.map(|w|  w.raw_handle() as *mut std::ffi::c_void);
-        self.set_window_raw(window)
-    }
+impl GLContextTrait for GLContext {
+    fn set_window(&mut self, window: Option<&impl raw_window_handle::HasRawWindowHandle>) -> Result<(), SetWindowError> {
+        use raw_window_handle::*;
 
-    pub fn set_window_raw(&mut self, window: Option<*mut std::ffi::c_void>) -> Result<(), SetWindowError> {
-        let window = window.map(|w| w as *mut Object);
+        let window = window.map(|w|  
+            match w.raw_window_handle() {
+            RawWindowHandle::MacOS(handle) => {
+                handle.ns_window as *mut Object
+            }
+            _ => unreachable!()
+        });
+
         if let Some(window) = window {
             let window_view: *mut Object = unsafe { msg_send![window, contentView] };
             let () = unsafe { msg_send![self.gl_context, setView: window_view] };
@@ -92,41 +97,35 @@ impl GLContext {
         Ok(())
     }
 
-    // Updates the backbuffer of the target when it resizes
-    pub fn update_target(&self) {
-        unsafe {
-            let update = sel!(update);
-            let () = msg_send![self.gl_context, performSelectorOnMainThread:update withObject:nil waitUntilDone:YES];
-        }
+    fn get_attributes(&self) -> GLContextAttributes {
+        unimplemented!()
     }
 
-    pub fn make_current(&self) {
+    fn set_vsync(&mut self, vsync: VSync) -> Result<(), std::io::Error> {
+        unimplemented!()
+    }
+
+    fn get_vsync(&self) -> VSync { 
+        unimplemented!()
+    }
+
+    fn make_current(&mut self) -> Result<(), Error>{
         unsafe {
             let () = msg_send![self.gl_context, makeCurrentContext];
         }
-    }
-
-    pub fn gl_loader_c_string(&self) -> Box<dyn FnMut(*const i8) -> *const std::ffi::c_void> {
-        Box::new(move |s| unsafe {
-            let name = std::ffi::CStr::from_ptr(s);
-            Self::get_proc_address_inner((&name).to_str().unwrap())
-        })
+        Ok(())
     }
 
     // https://developer.apple.com/documentation/appkit/nsopenglcontext/1436211-flushbuffer?language=objc
-    pub fn swap_buffers(&self) {
+    fn swap_buffers(&mut self) {
         unsafe {
             let () = msg_send![self.gl_context, flushBuffer];
         }
     }
 
-    pub fn get_proc_address(&self, addr: &str) -> *const core::ffi::c_void {
-        Self::get_proc_address_inner(addr)
-    }
-
     // Taken from Glutin:
     // https://github.com/rust-windowing/glutin/blob/447f3526dcf90a460d52afefd0b29eb2ed7f87f3/glutin/src/platform_impl/macos/mod.rs
-    fn get_proc_address_inner(addr: &str) -> *const core::ffi::c_void {
+    fn get_proc_address(&self, addr: &str) -> *const core::ffi::c_void {
         let symbol_name = NSString::new(addr);
         let framework_name = NSString::new("com.apple.opengl");
         let framework = unsafe { CFBundleGetBundleWithIdentifier(framework_name.raw) };

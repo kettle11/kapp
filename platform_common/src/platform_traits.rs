@@ -38,7 +38,11 @@ pub trait PlatformApplicationTrait {
     /// Hides the cursor or this application until a call to show cursor.
     fn hide_cursor(&mut self);
     fn show_cursor(&mut self);
-    fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle;
+
+    /// Returns a RawWindowHandle as defined in the raw_window_handle crate
+    /// https://github.com/rust-windowing/raw-window-handle
+    fn raw_window_handle(&self, window: WindowId) -> RawWindowHandle;
+
 }
 
 pub trait PlatformEventLoopTrait {

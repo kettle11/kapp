@@ -72,12 +72,6 @@ impl Window {
             .borrow_mut()
             .redraw_window(self.id);
     }
-
-    pub fn raw_window_handle(&self) -> RawWindowHandle {
-        self.platform_application
-            .borrow_mut()
-            .raw_window_handle(self.id)
-    }
 }
 
 impl Drop for Window {
@@ -87,10 +81,10 @@ impl Drop for Window {
     }
 }
 
-
-#[cfg(feature = "gl_context")]
-impl crate::WindowTrait for Window {
-    fn raw_handle(&self) -> *mut std::ffi::c_void {
-        unsafe { self.id.raw() }
+unsafe impl HasRawWindowHandle for Window {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        self.platform_application
+            .borrow_mut()
+            .raw_window_handle(self.id)
     }
 }

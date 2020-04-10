@@ -19,6 +19,6 @@ pub use windows::GLContext;
 pub use web::{GLContext, GLContextBuilder};
 
 pub mod prelude {
-    pub use super::common::{GLContextBuilder, GLContextTrait, SetWindowError, VSync, WindowTrait};
+    pub use super::common::{GLContextBuilder, GLContextTrait, SetWindowError, VSync};
     pub use super::GLContext;
 }

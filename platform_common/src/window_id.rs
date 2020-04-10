@@ -2,7 +2,6 @@
 #[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
 pub struct WindowId {
     raw_id: *mut std::ffi::c_void,
-    device_context: *mut std::ffi::c_void,
 }
 
 impl WindowId {
@@ -11,17 +10,6 @@ impl WindowId {
     pub fn new(raw_id: *mut std::ffi::c_void) -> Self {
         Self {
             raw_id,
-            device_context: std::ptr::null_mut(),
-        }
-    }
-
-    pub fn new_with_device_context(
-        raw_id: *mut std::ffi::c_void,
-        device_context: *mut std::ffi::c_void,
-    ) -> Self {
-        Self {
-            raw_id,
-            device_context,
         }
     }
 
@@ -33,16 +21,12 @@ impl WindowId {
     pub unsafe fn raw(self) -> *mut std::ffi::c_void {
         self.raw_id
     }
-
-    /// # Safety
-    ///
-    /// On Windows this is the window's device context.
-    /// On other platforms this is unspecified.
-    pub unsafe fn device_context(self) -> *mut std::ffi::c_void {
-        self.device_context
-    }
 }
 
 // raw_id is only used as a unique identifier
 // or carefully used on the UI thread if the platform requires it.
 unsafe impl Send for WindowId {}
+
+pub trait RawWindowHandleTrait {
+    fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle;
+}

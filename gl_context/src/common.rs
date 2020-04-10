@@ -20,9 +20,6 @@ pub enum VSync {
     Other(i32),
 }
 
-pub trait WindowTrait {
-    fn raw_handle(&self) -> *mut std::ffi::c_void;
-}
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SetWindowError {
@@ -44,7 +41,7 @@ pub trait GLContextTrait {
     fn get_vsync(&self) -> VSync;
 
     /// Asssigns a window to draw to
-    fn set_window(&mut self, window: Option<&impl WindowTrait>) -> Result<(), SetWindowError>;
+    fn set_window(&mut self, window: Option<&impl raw_window_handle::HasRawWindowHandle>) -> Result<(), SetWindowError>;
 
     /// Swaps the backbuffer and frontbuffer for the currently bound window.
     fn swap_buffers(&mut self);

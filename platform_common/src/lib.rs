@@ -1,4 +1,10 @@
-/// Structures and traits shared between the platform backends.
+/// This crate provides structures and traits shared between the platform backends.
+/// Each platform must provide the following:
+/// * Structures and implementations for the traits in platform_traits.rs
+/// * Means to detect and trigger all events in events.rs
+///   Each event has documented behavior that must be conformed to.
+///   event_receiver should be used on platforms where calls to a platform
+///   functions can trigger events.
 mod cursors;
 mod events;
 mod keys;
@@ -13,6 +19,7 @@ pub use events::Event;
 pub use keys::Key;
 pub use mouse_buttons::MouseButton;
 pub use platform_traits::{PlatformApplicationTrait, PlatformEventLoopTrait};
-pub use window_id::WindowId;
+pub use window_id::{WindowId, RawWindowHandleTrait};
 pub use window_parameters::WindowParameters;
 pub use raw_window_handle;
+pub use raw_window_handle::{RawWindowHandle, HasRawWindowHandle};
