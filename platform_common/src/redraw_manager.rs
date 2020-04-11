@@ -4,7 +4,6 @@
 /// Draw requests can be fulfilled by calling 'begin_draw_flush' and
 /// then 'get_draw_request' until None is returned.
 /// Or 'draw' can be called by a system call to fulfill a queued draw request.
-
 use crate::{Event, WindowId};
 use std::cell::RefCell;
 

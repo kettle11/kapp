@@ -1,13 +1,14 @@
 use crate::keys::Key;
 use crate::mouse_buttons::MouseButton;
 use crate::WindowId;
-
+use std::time::Duration;
 /// Input and system events
+/// All user input events have timestamps.
 #[derive(Debug, Clone)]
 pub enum Event {
     /// A recommendation for when to draw.
-    /// On MacOS 'Draw' is sent after 'EventsCleared' or in response to 
-    /// a system event during resizing. While resizing draw will be sent at the screen's 
+    /// On MacOS 'Draw' is sent after 'EventsCleared' or in response to
+    /// a system event during resizing. While resizing draw will be sent at the screen's
     /// refresh rate.
     /// On Web Draw is triggered by requestAnimationFrame
     /// On Windows Draw is sent at the end of the event loop.
@@ -18,32 +19,39 @@ pub enum Event {
     /// A key is pressed.
     KeyDown {
         key: Key,
+        timestamp: Duration,
     },
     /// A key is released.
     KeyUp {
         key: Key,
+        timestamp: Duration,
     },
-    /// A key is held and is repeating.
+    /// A repeat of a held key.
     KeyRepeat {
         key: Key,
+        timestamp: Duration,
     },
     /// The mouse position has changed. Reports physical coordinates.
     MouseMoved {
         x: f32,
         y: f32,
+        timestamp: Duration,
     },
     MouseButtonDown {
         x: f32,
         y: f32,
         button: MouseButton,
+        timestamp: Duration,
     },
     MouseButtonUp {
         x: f32,
         y: f32,
         button: MouseButton,
+        timestamp: Duration,
     },
     ScrollWheel {
         delta: f32,
+        timestamp: Duration,
     },
     // ------------------- Window Events  ---------------------
     WindowMinimized {

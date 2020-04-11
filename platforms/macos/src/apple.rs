@@ -325,3 +325,9 @@ extern "C" {
 }
 
 pub const NSEventModifierFlagCapsLock: NSUInteger = 1 << 16;
+
+pub fn current_time() -> std::time::Duration {
+    let process_info: *mut Object = unsafe { msg_send![class!(NSProcessInfo), processInfo] };
+    let current_time = unsafe { msg_send![process_info, systemUptime] };
+    std::time::Duration::from_secs_f64(current_time)
+}
