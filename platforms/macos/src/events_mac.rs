@@ -538,8 +538,6 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
 
 // ------------------------ End View Events --------------------------
 pub fn submit_event(event: Event) {
-    println!("SENDING EVENT: {:?}", event);
-
     kettlewin_platform_common::event_receiver::send_event(event);
 }
 
