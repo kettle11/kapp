@@ -190,7 +190,7 @@ fn get_proc_address_inner(opengl_module: HMODULE, address: &str) -> *const core:
 }
 impl Drop for GLContext {
     fn drop(&mut self) {
-        unimplemented!()
+        // unimplemented!()
     }
 }
 
