@@ -349,7 +349,7 @@ fn main() {
                 screen_width = width;
                 screen_height = height;
             }
-            Event::KeyDown { key } => match key {
+            Event::KeyDown { key, .. } => match key {
                 Key::Left => {
                     left_held = true;
                     // This gives the player a little extra velocity when they hit a button.
@@ -377,7 +377,7 @@ fn main() {
                 Key::F => window.fullscreen(),
                 _ => window.fullscreen(),
             },
-            Event::KeyUp { key } => match key {
+            Event::KeyUp { key, .. } => match key {
                 Key::Left => left_held = false,
                 Key::Right => right_held = false,
                 _ => {}

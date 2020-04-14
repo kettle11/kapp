@@ -61,6 +61,7 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::MouseButtonDown {
                 x: x as f32,
                 y: y as f32,
+                timestamp: get_message_time(),
                 button: MouseButton::Left,
             });
         }
@@ -70,6 +71,7 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::MouseButtonDown {
                 x: x as f32,
                 y: y as f32,
+                timestamp: get_message_time(),
                 button: MouseButton::Middle,
             });
         }
@@ -79,6 +81,7 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::MouseButtonDown {
                 x: x as f32,
                 y: y as f32,
+                timestamp: get_message_time(),
                 button: MouseButton::Right,
             });
         }
@@ -88,6 +91,7 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::MouseButtonDown {
                 x: x as f32,
                 y: y as f32,
+                timestamp: get_message_time(),
                 button: match HIWORD(w_param as u32) {
                     winuser::XBUTTON1 => MouseButton::Extra1,
                     winuser::XBUTTON2 => MouseButton::Extra2,
@@ -102,6 +106,7 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::MouseButtonUp {
                 x: x as f32,
                 y: y as f32,
+                timestamp: get_message_time(),
                 button: MouseButton::Left,
             });
         }
@@ -112,6 +117,7 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::MouseButtonUp {
                 x: x as f32,
                 y: y as f32,
+                timestamp: get_message_time(),
                 button: MouseButton::Middle,
             });
         }
@@ -122,6 +128,7 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::MouseButtonUp {
                 x: x as f32,
                 y: y as f32,
+                timestamp: get_message_time(),
                 button: MouseButton::Right,
             });
         }
@@ -131,6 +138,7 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::MouseButtonUp {
                 x: x as f32,
                 y: y as f32,
+                timestamp: get_message_time(),
                 button: match HIWORD(w_param as u32) {
                     winuser::XBUTTON1 => MouseButton::Extra1,
                     winuser::XBUTTON2 => MouseButton::Extra2,
@@ -143,6 +151,12 @@ pub unsafe extern "system" fn window_callback(
     }
     // DefWindowProcW is the default Window event handler.
     winuser::DefWindowProcW(hwnd, u_msg, w_param, l_param)
+}
+
+/// Gets the message time with millisecond precision
+/// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagetime
+fn get_message_time() -> std::time::Duration {
+    std::time::Duration::from_millis(unsafe { winuser::GetMessageTime() } as u64)
 }
 
 // https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-mousemove
@@ -187,7 +201,7 @@ fn resize_event(hwnd: HWND, l_param: LPARAM, w_param: WPARAM) {
 
 fn produce_event(event: Event) {
     PROGRAM_CALLBACK.with(|d| {
-        if let Some(program_callback) = unsafe { d.borrow_mut().as_mut() } {
+        if let Some(program_callback) = d.borrow_mut().as_mut() {
             program_callback(event)
         }
     });
@@ -201,6 +215,7 @@ fn process_mouse_move_event(_hwnd: HWND, l_param: LPARAM) -> Event {
     Event::MouseMoved {
         x: x as f32,
         y: y as f32,
+        timestamp: get_message_time(),
     }
 }
 // https://docs.microsoft.com/en-us/windows/win32/winmsg/wm-size
@@ -214,15 +229,24 @@ fn process_key_down(w_param: WPARAM, l_param: LPARAM) -> Event {
     let (_scancode, key, repeat) = process_key_event(w_param, l_param);
 
     if repeat {
-        Event::KeyRepeat { key }
+        Event::KeyRepeat {
+            key,
+            timestamp: get_message_time(),
+        }
     } else {
-        Event::KeyDown { key }
+        Event::KeyDown {
+            key,
+            timestamp: get_message_time(),
+        }
     }
 }
 
 fn process_key_up(w_param: WPARAM, l_param: LPARAM) -> Event {
     let (_scancode, key, _repeat) = process_key_event(w_param, l_param);
-    Event::KeyUp { key }
+    Event::KeyUp {
+        key,
+        timestamp: get_message_time(),
+    }
 }
 
 fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key, bool) {

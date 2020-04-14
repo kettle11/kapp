@@ -44,11 +44,22 @@ impl GLContextTrait for GLContext {
     fn get_attributes(&self) -> GLContextAttributes {
         unimplemented!()
     }
-    fn set_window(&mut self, window: Option<&impl WindowTrait>) -> Result<(), SetWindowError> {
-        unsafe {
-            let window_device_context = if let Some(window) = window {
-                let window_handle = window.raw_handle() as windef::HWND;
 
+    // This does not correctly handle unsetting a window.
+    fn set_window(
+        &mut self,
+        window: Option<&impl raw_window_handle::HasRawWindowHandle>,
+    ) -> Result<(), SetWindowError> {
+        use raw_window_handle::*;
+
+        unsafe {
+            let window_handle = window
+                .map(|w| match w.raw_window_handle() {
+                    RawWindowHandle::Windows(handle) => handle.hwnd as windef::HWND,
+                    _ => unreachable!(),
+                })
+                .unwrap();
+            let window_device_context = if let Some(window) = window {
                 if let Some(current_device_context) = self.device_context {
                     winuser::ReleaseDC(window_handle, current_device_context);
                 }
@@ -81,7 +92,7 @@ impl GLContextTrait for GLContext {
 
             // self.set_vsync(self.vsync).unwrap(); // Everytime a device context is requested, vsync must be updated.
             self.current_window = if let Some(window) = window {
-                Some(window.raw_handle() as windef::HWND)
+                Some(window_handle)
             } else {
                 None
             };
@@ -111,6 +122,8 @@ impl GLContextTrait for GLContext {
             }
         }
     }
+
+    fn resize(&mut self) {}
 
     // wglSwapIntervalEXT sets VSync for the window bound to the current context.
     // However here we treat Vsync as a setting on the GLContext,

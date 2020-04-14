@@ -7,7 +7,10 @@ use winapi::um::winuser;
 use crate::utils_windows::*;
 use minwindef::{FALSE, TRUE};
 
-use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
+use crate::{
+    raw_window_handle, Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, RawWindowHandle,
+    WindowId, WindowParameters,
+};
 
 // These should be made into something safe.
 pub static mut CURRENT_CURSOR: windef::HCURSOR = null_mut();
@@ -213,11 +216,7 @@ impl PlatformApplicationTrait for PlatformApplication {
                 null_mut(),
             );
 
-            let device_context = winuser::GetDC(window_handle);
-            let window_id = WindowId::new_with_device_context(
-                window_handle as *mut std::ffi::c_void,
-                device_context as *mut std::ffi::c_void,
-            );
+            let window_id = WindowId::new(window_handle as *mut std::ffi::c_void);
             WINDOWS_TO_REDRAW.push(window_id); // Send the window an initial Draw event.
             window_id
         }
@@ -267,12 +266,20 @@ impl PlatformApplicationTrait for PlatformApplication {
             winuser::ShowCursor(TRUE);
         }
     }
+
+    fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle {
+        raw_window_handle::RawWindowHandle::Windows(raw_window_handle::windows::WindowsHandle {
+            hwnd: unsafe { window_id.raw() },
+            hinstance: self.h_instance as *mut std::ffi::c_void,
+            ..raw_window_handle::windows::WindowsHandle::empty()
+        })
+    }
 }
 
 pub struct PlatformEventLoop {}
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
-    fn run(&mut self, callback: Box<dyn FnMut(crate::Event)>) {
+    fn run(&self, callback: Box<dyn FnMut(crate::Event)>) {
         super::event_loop_windows::run(callback);
     }
 }
