@@ -1,3 +1,4 @@
+/// This example demonstrates using Kettlewin's built in async support
 use kettlewin::*;
 fn main() {
     let (app, mut event_loop) = initialize();

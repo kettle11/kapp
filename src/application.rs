@@ -65,13 +65,13 @@ impl Drop for Application {
     }
 }
 
-/// Call the 'run' function on an EventLoop instance to start your program.
+/// Call the 'run' or 'run_async' function on an EventLoop instance to start your program.
 pub struct EventLoop {
     platform_event_loop: PlatformEventLoop,
 }
 
 impl EventLoop {
-    /// Run the application forever. When a new event occurs the callback passed in will be called.
+    /// Run the application forever. The callback is called for each new event.
     pub fn run<T>(&self, callback: T)
     where
         T: 'static + FnMut(Event),

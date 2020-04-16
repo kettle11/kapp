@@ -26,7 +26,28 @@ impl<'a> Future for EventFuture<'a> {
 
 impl EventLoop {
     /// Events are sent to the program immediately as they're ready.
-    /// However if they main program is blocked then events are queued.
+    /// However if the main program is blocked then events are queued.
+    /// ```no_run
+    /// use kettlewin::*;
+    /// fn main() {
+    ///    let (app, mut event_loop) = initialize();
+    ///     event_loop.run_async(app, run);
+    /// }
+    ///
+    /// async fn run(app: Application, mut events: Events) {
+    ///     let mut _window = app.new_window().build().unwrap();
+    ///
+    ///     // Loop forever!
+    ///     loop {
+    ///         match events.next_event().await {
+    ///             Event::WindowCloseRequested { .. } => app.quit(),
+    ///             Event::Draw { .. } => {}
+    ///             _ => {}
+    ///         }
+    ///     }
+    /// }
+    /// ```
+
     pub fn run_async<F>(
         &mut self,
         application: Application,
@@ -72,8 +93,9 @@ impl EventLoop {
     }
 }
 
+/// Passed to an asynchronous function to get the next event.
+///
 #[derive(Clone)]
-
 pub struct Events {
     queue: Rc<RefCell<Vec<crate::Event>>>,
 }

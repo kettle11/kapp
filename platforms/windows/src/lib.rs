@@ -1,6 +1,3 @@
-/// This is specifically a 'web' backend and not a general 'wasm' backend
-/// In the future Wasm may be a more general purpose platform, and this backend
-/// is not appropriate for all wasm contexts.
 mod application_windows;
 mod event_loop_windows;
 mod keys_windows;
