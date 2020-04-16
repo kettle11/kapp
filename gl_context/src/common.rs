@@ -7,8 +7,15 @@ pub struct GLContextAttributes {
     pub stencil_bits: u8,
     /// msaa_samples hould be a multiple of 2
     pub msaa_samples: u8,
+    /// WebGL version is only relevant for web.
+    pub webgl_version: WebGLVersion,
 }
 
+pub enum WebGLVersion {
+    One,
+    Two,
+    None,
+}
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum VSync {
     ///
@@ -20,7 +27,6 @@ pub enum VSync {
     Other(i32),
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SetWindowError {
     /// The pixel format of the window does not match the context's
@@ -28,7 +34,6 @@ pub enum SetWindowError {
 }
 
 pub trait GLContextTrait {
-
     /// Gets the pixel format and attributes of the context.
     fn get_attributes(&self) -> GLContextAttributes;
 
@@ -41,7 +46,10 @@ pub trait GLContextTrait {
     fn get_vsync(&self) -> VSync;
 
     /// Asssigns a window to draw to
-    fn set_window(&mut self, window: Option<&impl raw_window_handle::HasRawWindowHandle>) -> Result<(), SetWindowError>;
+    fn set_window(
+        &mut self,
+        window: Option<&impl raw_window_handle::HasRawWindowHandle>,
+    ) -> Result<(), SetWindowError>;
 
     /// Resizes the context to match the attached window
     fn resize(&mut self);

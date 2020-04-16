@@ -12,8 +12,5 @@ use kettlewin_platform_common::{
 
 pub mod prelude {
     pub use super::application_web::{PlatformApplication, PlatformEventLoop};
-    pub use kettlewin_platform_common::{
-        Cursor, Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait,
-        WindowId, WindowParameters,
-    };
+    pub use kettlewin_platform_common::*;
 }

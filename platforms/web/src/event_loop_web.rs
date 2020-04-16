@@ -1,5 +1,6 @@
 use super::keys_web;
 use crate::{Event, MouseButton, WindowId};
+use std::time::Duration;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -71,7 +72,11 @@ where
         // Mouse move event
         let mouse_move = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
             let (x, y) = get_mouse_position(&event);
-            send_event(Event::MouseMoved { x, y });
+            send_event(Event::MouseMoved {
+                x,
+                y,
+                timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
+            });
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_onmousemove(Some(mouse_move.as_ref().unchecked_ref()));
         mouse_move.forget();
@@ -91,6 +96,7 @@ where
                     4 => MouseButton::Extra2,
                     _ => MouseButton::Unknown,
                 },
+                timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
             });
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_onmousedown(Some(mouse_down.as_ref().unchecked_ref()));
@@ -111,6 +117,7 @@ where
                     4 => MouseButton::Extra2,
                     _ => MouseButton::Unknown,
                 },
+                timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
             });
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_onmouseup(Some(mouse_up.as_ref().unchecked_ref()));
@@ -121,10 +128,12 @@ where
             let key_event = if event.repeat() {
                 Event::KeyRepeat {
                     key: keys_web::virtual_keycode_to_key(&event.code()),
+                    timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
                 }
             } else {
                 Event::KeyDown {
                     key: keys_web::virtual_keycode_to_key(&event.code()),
+                    timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
                 }
             };
 
@@ -141,6 +150,7 @@ where
         let keyup = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             send_event(Event::KeyUp {
                 key: keys_web::virtual_keycode_to_key(&event.code()),
+                timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
             });
             event
                 .dyn_into::<web_sys::Event>()
@@ -156,7 +166,7 @@ where
 
 fn get_mouse_position(event: &web_sys::MouseEvent) -> (f32, f32) {
     // 0,0 is the upper left of the canvas on web, so no transformations need to be performed.
-    unsafe { (event.client_x() as f32, event.client_y() as u32 as f32) }
+    (event.client_x() as f32, event.client_y() as u32 as f32)
 }
 
 fn request_animation_frame(f: &Closure<dyn FnMut()>) {

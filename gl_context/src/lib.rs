@@ -16,7 +16,7 @@ pub use macos::GLContext;
 pub use windows::GLContext;
 
 #[cfg(target_arch = "wasm32")]
-pub use web::{GLContext, GLContextBuilder};
+pub use web::GLContext;
 
 pub mod prelude {
     pub use super::common::{GLContextBuilder, GLContextTrait, SetWindowError, VSync};

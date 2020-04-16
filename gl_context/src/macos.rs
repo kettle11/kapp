@@ -71,6 +71,7 @@ impl GLContext {
                 alpha_bits: 8,
                 depth_bits: 24,
                 stencil_bits: 8,
+                webgl_version: WebGLVersion::None,
             },
         }
     }
@@ -164,8 +165,6 @@ impl GLContextTrait for GLContext {
         }
     }
 
-    // Taken from Glutin:
-    // https://github.com/rust-windowing/glutin/blob/447f3526dcf90a460d52afefd0b29eb2ed7f87f3/glutin/src/platform_impl/macos/mod.rs
     fn get_proc_address(&self, addr: &str) -> *const core::ffi::c_void {
         let symbol_name = NSString::new(addr);
         let framework_name = NSString::new("com.apple.opengl");

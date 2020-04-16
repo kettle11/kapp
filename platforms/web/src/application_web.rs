@@ -1,6 +1,5 @@
-use crate::{
-    Cursor, Event, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters,
-};
+use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
+use kettlewin_platform_common::*;
 pub struct PlatformApplication {}
 
 impl PlatformApplicationTrait for PlatformApplication {
@@ -12,32 +11,32 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn event_loop(&mut self) -> Self::EventLoop {
         PlatformEventLoop {}
     }
-    fn set_window_position(&mut self, window_id: WindowId, x: u32, y: u32) {}
-    fn set_window_dimensions(&mut self, window_id: WindowId, width: u32, height: u32) {}
-    fn set_window_title(&mut self, window_id: WindowId, title: &str) {}
-    fn minimize_window(&mut self, window_id: WindowId) {}
-    fn maximize_window(&mut self, window_id: WindowId) {}
-    fn fullscreen_window(&mut self, window_id: WindowId) {
+    fn set_window_position(&mut self, _window_id: WindowId, _x: u32, _y: u32) {}
+    fn set_window_dimensions(&mut self, _window_id: WindowId, _width: u32, _height: u32) {}
+    fn set_window_title(&mut self, _window_id: WindowId, _title: &str) {}
+    fn minimize_window(&mut self, _window_id: WindowId) {}
+    fn maximize_window(&mut self, _window_id: WindowId) {}
+    fn fullscreen_window(&mut self, _window_id: WindowId) {
         super::event_loop_web::request_fullscreen()
     }
-    fn restore_window(&mut self, window_id: WindowId) {
+    fn restore_window(&mut self, _window_id: WindowId) {
         unimplemented!()
     }
-    fn close_window(&mut self, window_id: WindowId) {}
-    fn redraw_window(&mut self, window_id: WindowId) {
+    fn close_window(&mut self, _window_id: WindowId) {}
+    fn redraw_window(&mut self, _window_id: WindowId) {
         super::event_loop_web::request_frame()
     }
 
-    fn set_mouse_position(&mut self, x: u32, y: u32) {
+    fn set_mouse_position(&mut self, _x: u32, _y: u32) {
         unimplemented!()
     }
 
-    fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
+    fn new_window(&mut self, _window_parameters: &WindowParameters) -> WindowId {
         WindowId::new(0 as *mut std::ffi::c_void)
     }
 
-    fn quit(&mut self) {}
-    fn set_cursor(&mut self, cursor: Cursor) {
+    fn quit(&self) {}
+    fn set_cursor(&mut self, _cursor: Cursor) {
         unimplemented!();
     }
     fn hide_cursor(&mut self) {
@@ -46,12 +45,16 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn show_cursor(&mut self) {
         unimplemented!()
     }
+
+    fn raw_window_handle(&self, _window_id: WindowId) -> RawWindowHandle {
+        RawWindowHandle::Web(raw_window_handle::web::WebHandle::empty())
+    }
 }
 
 pub struct PlatformEventLoop {}
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
-    fn run(&mut self, callback: Box<dyn FnMut(crate::Event)>) {
+    fn run(&self, callback: Box<dyn FnMut(crate::Event)>) {
         super::event_loop_web::run(callback);
     }
 }

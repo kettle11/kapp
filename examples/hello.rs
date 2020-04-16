@@ -16,7 +16,7 @@ fn main() {
     // which GLContext provides with get_proc_address.
 
     #[cfg(target_arch = "wasm32")]
-    let gl = glow::Context::from_webgl1_context(gl_context.get_webgl1_context());
+    let gl = glow::Context::from_webgl1_context(gl_context.webgl1_context().unwrap());
     #[cfg(not(target_arch = "wasm32"))]
     let gl = glow::Context::from_loader_function(|s| gl_context.get_proc_address(s));
 
