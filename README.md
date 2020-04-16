@@ -31,11 +31,16 @@ fn main() {
 
 
 ## Similar Projects
-The following projects were valuable as learning resources that inspired Kettlewin.
+The following projects were valuable resources that inspired Kettlewin.
 
 [Winit](https://github.com/rust-windowing/winit)
+
 [Makepad](https://github.com/makepad/makepad)
+
 [Glutin](https://github.com/rust-windowing/glutin)
+
 [SDL2](https://www.libsdl.org/download-2.0.php)
+
 [Sokol](https://github.com/floooh/sokol)
+
 [GLFW](https://www.glfw.org/)
