@@ -134,6 +134,9 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
     fn restore_window(&mut self, window_id: WindowId) {
         unsafe {
+            let hwnd = window_id.raw() as HWND;
+            let window_style = WS_OVERLAPPEDWINDOW | WS_VISIBLE | CS_OWNDC;
+            SetWindowLongPtrW(hwnd, GWL_STYLE, window_style as isize);
             ShowWindow(window_id.raw() as HWND, SW_RESTORE);
         }
     }
