@@ -5,10 +5,8 @@ use crate::keys_windows::virtual_keycode_to_key;
 use crate::Event;
 use crate::Key;
 use crate::MouseButton;
-use std::cell::RefCell;
+use kettlewin_platform_common::event_receiver;
 use std::ptr::null_mut;
-
-thread_local!(pub static PROGRAM_CALLBACK: RefCell<Option<Box< dyn 'static + FnMut(Event)>>> = RefCell::new(None));
 
 pub unsafe extern "system" fn window_callback(
     hwnd: HWND,
@@ -186,20 +184,10 @@ fn resize_event(hwnd: HWND, l_param: LPARAM, w_param: WPARAM) {
         }
         _ => {}
     }
-
-    /*
-    produce_event(Event::Draw {
-        window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
-    });
-    */
 }
 
 fn produce_event(event: Event) {
-    PROGRAM_CALLBACK.with(|d| {
-        if let Some(program_callback) = d.borrow_mut().as_mut() {
-            program_callback(event)
-        }
-    });
+    event_receiver::send_event(event);
 }
 
 // https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-mousemove
@@ -254,7 +242,7 @@ fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key, bool) {
 
 pub fn run(callback: Box<dyn FnMut(crate::Event)>) {
     unsafe {
-        PROGRAM_CALLBACK.with(|d| *d.borrow_mut() = Some(Box::new(callback)));
+        event_receiver::set_callback(callback);
 
         let mut message: MSG = std::mem::zeroed();
 
