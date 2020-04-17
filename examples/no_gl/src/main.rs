@@ -9,11 +9,10 @@ fn main() {
     event_loop.run(move |event| match event {
         WindowCloseRequested { .. } => app.quit(),
         EventsCleared => {
-            println!("here");
             std::thread::sleep(std::time::Duration::from_millis(16));
             window.request_redraw();
         }
-        KeyDown { key } => println!("Key pressed: {:?}", key),
+        KeyDown { key, .. } => println!("Key pressed: {:?}", key),
         _ => println!("Received event: {:?}", event),
     });
 }

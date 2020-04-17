@@ -3,4 +3,21 @@
 [[package]]
 name = "kettlewin_platform_common"
 version = "0.1.0"
+dependencies = [
+ "raw-window-handle",
+]
 
+[[package]]
+name = "libc"
+version = "0.2.69"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99e85c08494b21a9054e7fe1374a732aeadaff3980b6990b94bfd3a70f690005"
+
+[[package]]
+name = "raw-window-handle"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a441a7a6c80ad6473bd4b74ec1c9a4c951794285bf941c2126f607c72e48211"
+dependencies = [
+ "libc",
+]

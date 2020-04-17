@@ -92,7 +92,6 @@ name = "kettlewin_platform_windows"
 version = "0.1.0"
 dependencies = [
  "kettlewin_platform_common 0.1.0",
- "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

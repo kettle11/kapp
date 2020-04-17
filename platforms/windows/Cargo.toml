@@ -6,4 +6,3 @@ edition = "2018"
 
 [dependencies]
 kettlewin_platform_common = { path = "../../platform_common" }
-winapi = { version = "0.3.8", features = ["winuser", "libloaderapi", "windowsx"] }
