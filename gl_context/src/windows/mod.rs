@@ -35,7 +35,7 @@ impl GLContext {
                 alpha_bits: 8,
                 depth_bits: 24,
                 stencil_bits: 8,
-                webgl_version: WeblGLVersion::None,
+                webgl_version: WebGLVersion::None,
             },
         }
     }
@@ -60,7 +60,7 @@ impl GLContextTrait for GLContext {
                     _ => unreachable!(),
                 })
                 .unwrap();
-            let window_device_context = if let Some(window) = window {
+            let window_device_context = if let Some(_window) = window {
                 if let Some(current_device_context) = self.device_context {
                     winuser::ReleaseDC(window_handle, current_device_context);
                 }
@@ -92,7 +92,7 @@ impl GLContextTrait for GLContext {
             .unwrap();
 
             // self.set_vsync(self.vsync).unwrap(); // Everytime a device context is requested, vsync must be updated.
-            self.current_window = if let Some(window) = window {
+            self.current_window = if let Some(_window) = window {
                 Some(window_handle)
             } else {
                 None

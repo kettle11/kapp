@@ -108,7 +108,6 @@ fn main() {
     unsafe {
         gl.viewport(0, 0, 400 as i32, 400 as i32);
     }
-    let mut now = std::time::Instant::now();
 
     // Run forever
     event_loop.run(move |event| match event {
@@ -116,10 +115,7 @@ fn main() {
         Event::WindowResized { width, height, .. } => unsafe {
             gl.viewport(0, 0, width as i32, height as i32);
         },
-        //  Event::WindowResized { .. } => gl_context.update_target(), // This call updates the window backbuffer to match the new window size.
         Event::Draw { .. } => {
-            //gl_context.make_current();
-
             unsafe {
                 gl.clear_color(0.5, 1.0, 0.0, 1.0);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
@@ -127,14 +123,12 @@ fn main() {
             }
             gl_context.swap_buffers(); // Swaps the currently bound window. Blocks if vSync is used
             window.request_redraw();
-
-            println!("{}", now.elapsed().as_millis());
-            now = std::time::Instant::now();
         }
         _ => {}
     });
 }
 
+// Log for Wasm and non-Wasm
 #[macro_export]
 macro_rules! log {
     ( $( $arg:tt )* ) => {

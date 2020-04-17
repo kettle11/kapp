@@ -16,6 +16,7 @@ pub enum WebGLVersion {
     Two,
     None,
 }
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum VSync {
     ///

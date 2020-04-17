@@ -6,7 +6,6 @@ use crate::Key;
 use crate::MouseButton;
 use std::cell::RefCell;
 use std::ptr::null_mut;
-use std::rc::Rc;
 use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LRESULT, TRUE, UINT, WPARAM};
 use winapi::shared::windef::HWND;
 use winapi::shared::windowsx::{GET_X_LPARAM, GET_Y_LPARAM};
