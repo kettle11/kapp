@@ -1,5 +1,5 @@
+use crate::external_windows::*;
 use crate::{Key, Key::*};
-use winapi::um::winuser::*;
 
 // Hand transcribed from here:
 // It took a while

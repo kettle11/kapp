@@ -2,6 +2,7 @@ mod application_windows;
 mod event_loop_windows;
 mod keys_windows;
 mod utils_windows;
+mod external_windows;
 
 use kettlewin_platform_common::{
     raw_window_handle, Cursor, Event, Key, MouseButton, PlatformApplicationTrait,

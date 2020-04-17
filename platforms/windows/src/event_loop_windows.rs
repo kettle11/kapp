@@ -1,4 +1,5 @@
 use super::WindowId;
+use crate::external_windows::*;
 /// All windows share a pixel format and an OpenGlContext.
 use crate::keys_windows::virtual_keycode_to_key;
 use crate::Event;
@@ -6,11 +7,6 @@ use crate::Key;
 use crate::MouseButton;
 use std::cell::RefCell;
 use std::ptr::null_mut;
-use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LRESULT, TRUE, UINT, WPARAM};
-use winapi::shared::windef::HWND;
-use winapi::shared::windowsx::{GET_X_LPARAM, GET_Y_LPARAM};
-use winapi::um::winuser;
-use winapi::um::winuser::{MSG, PM_REMOVE, WM_QUIT};
 
 thread_local!(pub static PROGRAM_CALLBACK: RefCell<Option<Box< dyn 'static + FnMut(Event)>>> = RefCell::new(None));
 
@@ -21,40 +17,40 @@ pub unsafe extern "system" fn window_callback(
     l_param: LPARAM,
 ) -> LRESULT {
     match u_msg {
-        winuser::WM_CLOSE => {
+        WM_CLOSE => {
             produce_event(Event::WindowCloseRequested {
                 window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
             });
             // Return 0 because the user application must approve the close.
             return 0;
         }
-        winuser::WM_KEYDOWN => produce_event(process_key_down(w_param, l_param)),
-        winuser::WM_KEYUP => produce_event(process_key_up(w_param, l_param)),
-        winuser::WM_SIZING => return TRUE as isize,
-        winuser::WM_SETCURSOR => {
+        WM_KEYDOWN => produce_event(process_key_down(w_param, l_param)),
+        WM_KEYUP => produce_event(process_key_up(w_param, l_param)),
+        WM_SIZING => return TRUE as isize,
+        WM_SETCURSOR => {
             // Give the OS a chance to set the cursor first, and don't override it if it sets it.
             // The OS will not set the cursor within a window as the default cursor
             // for a window is set to null.
-            if winuser::DefWindowProcW(hwnd, u_msg, w_param, l_param) == 0 {
-                winuser::SetCursor(super::application_windows::CURRENT_CURSOR);
+            if DefWindowProcW(hwnd, u_msg, w_param, l_param) == 0 {
+                SetCursor(super::application_windows::CURRENT_CURSOR);
             }
             return 0;
         }
-        winuser::WM_ENTERSIZEMOVE => {
+        WM_ENTERSIZEMOVE => {
             return 0;
         }
-        winuser::WM_EXITSIZEMOVE => {
+        WM_EXITSIZEMOVE => {
             return 0;
         }
-        winuser::WM_SIZE => {
+        WM_SIZE => {
             resize_event(hwnd, l_param, w_param);
             produce_event(Event::Draw {
                 window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
             });
             return 0;
         }
-        winuser::WM_PAINT => {}
-        winuser::WM_LBUTTONDOWN => {
+        WM_PAINT => {}
+        WM_LBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonDown {
@@ -64,7 +60,7 @@ pub unsafe extern "system" fn window_callback(
                 button: MouseButton::Left,
             });
         }
-        winuser::WM_MBUTTONDOWN => {
+        WM_MBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonDown {
@@ -74,7 +70,7 @@ pub unsafe extern "system" fn window_callback(
                 button: MouseButton::Middle,
             });
         }
-        winuser::WM_RBUTTONDOWN => {
+        WM_RBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonDown {
@@ -84,7 +80,7 @@ pub unsafe extern "system" fn window_callback(
                 button: MouseButton::Right,
             });
         }
-        winuser::WM_XBUTTONDOWN => {
+        WM_XBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonDown {
@@ -92,13 +88,13 @@ pub unsafe extern "system" fn window_callback(
                 y: y as f32,
                 timestamp: get_message_time(),
                 button: match HIWORD(w_param as u32) {
-                    winuser::XBUTTON1 => MouseButton::Extra1,
-                    winuser::XBUTTON2 => MouseButton::Extra2,
+                    XBUTTON1 => MouseButton::Extra1,
+                    XBUTTON2 => MouseButton::Extra2,
                     _ => unreachable!(),
                 },
             });
         }
-        winuser::WM_LBUTTONUP => {
+        WM_LBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
 
@@ -109,7 +105,7 @@ pub unsafe extern "system" fn window_callback(
                 button: MouseButton::Left,
             });
         }
-        winuser::WM_MBUTTONUP => {
+        WM_MBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
 
@@ -120,7 +116,7 @@ pub unsafe extern "system" fn window_callback(
                 button: MouseButton::Middle,
             });
         }
-        winuser::WM_RBUTTONUP => {
+        WM_RBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
 
@@ -131,7 +127,7 @@ pub unsafe extern "system" fn window_callback(
                 button: MouseButton::Right,
             });
         }
-        winuser::WM_XBUTTONUP => {
+        WM_XBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonUp {
@@ -139,23 +135,23 @@ pub unsafe extern "system" fn window_callback(
                 y: y as f32,
                 timestamp: get_message_time(),
                 button: match HIWORD(w_param as u32) {
-                    winuser::XBUTTON1 => MouseButton::Extra1,
-                    winuser::XBUTTON2 => MouseButton::Extra2,
+                    XBUTTON1 => MouseButton::Extra1,
+                    XBUTTON2 => MouseButton::Extra2,
                     _ => unreachable!(),
                 },
             });
         }
-        winuser::WM_MOUSEMOVE => produce_event(process_mouse_move_event(hwnd, l_param)),
+        WM_MOUSEMOVE => produce_event(process_mouse_move_event(hwnd, l_param)),
         _ => {}
     }
     // DefWindowProcW is the default Window event handler.
-    winuser::DefWindowProcW(hwnd, u_msg, w_param, l_param)
+    DefWindowProcW(hwnd, u_msg, w_param, l_param)
 }
 
 /// Gets the message time with millisecond precision
 /// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagetime
 fn get_message_time() -> std::time::Duration {
-    std::time::Duration::from_millis(unsafe { winuser::GetMessageTime() } as u64)
+    std::time::Duration::from_millis(unsafe { GetMessageTime() } as u64)
 }
 
 // https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-mousemove
@@ -170,13 +166,13 @@ fn resize_event(hwnd: HWND, l_param: LPARAM, w_param: WPARAM) {
 
     // Then send more specific events.
     match w_param {
-        winuser::SIZE_MAXIMIZED => produce_event(Event::WindowMaximized {
+        SIZE_MAXIMIZED => produce_event(Event::WindowMaximized {
             window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
         }),
-        winuser::SIZE_MINIMIZED => produce_event(Event::WindowMinimized {
+        SIZE_MINIMIZED => produce_event(Event::WindowMinimized {
             window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
         }),
-        winuser::SIZE_RESTORED => {
+        SIZE_RESTORED => {
             /* Quote from the docs: "The window has been resized, but
             neither the SIZE_MINIMIZED nor SIZE_MAXIMIZED value applies" */
             // While resizing the OS directly calls window_callback and does not call the typical event loop.
@@ -264,9 +260,9 @@ pub fn run(callback: Box<dyn FnMut(crate::Event)>) {
 
         let mut temp_draw_request_buffer = Vec::new();
         while message.message != WM_QUIT {
-            while winuser::PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
-                winuser::TranslateMessage(&message as *const MSG);
-                winuser::DispatchMessageW(&message as *const MSG);
+            while PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
+                TranslateMessage(&message as *const MSG);
+                DispatchMessageW(&message as *const MSG);
             }
 
             // The draw request buffer cannot be the same as the one read below
