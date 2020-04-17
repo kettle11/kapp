@@ -109,6 +109,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
     fn fullscreen_window(&mut self, window_id: WindowId) {
+        // This implementation is windowless fullscreen, not true fullscreen.
         unsafe {
             let hwnd = window_id.raw() as HWND;
             let screen_width = GetSystemMetrics(SM_CXSCREEN);
@@ -123,8 +124,8 @@ impl PlatformApplicationTrait for PlatformApplication {
             GetWindowRect(window_id.raw() as HWND, &mut rect);
             MoveWindow(
                 window_id.raw() as HWND,
-                rect.left,
-                rect.top,
+                0,
+                0,
                 screen_width as i32,
                 screen_height as i32,
                 FALSE,
