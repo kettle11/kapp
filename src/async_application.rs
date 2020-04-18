@@ -52,8 +52,7 @@ impl EventLoop {
         &mut self,
         application: Application,
         run_function: impl Fn(Application, Events) -> F,
-    ) -> !
-    where
+    ) where
         F: 'static + Future<Output = ()>,
     {
         let events = Events {
@@ -87,9 +86,8 @@ impl EventLoop {
                 // Do something here!
             }
         });
-        application.quit();
 
-        unreachable!()
+        // Probably nothing should be done here, but on web this is reached whenever the main loop is setup.
     }
 }
 
