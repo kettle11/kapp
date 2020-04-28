@@ -467,8 +467,22 @@ extern "C" fn accepts_first_responder(_this: &Object, _sel: Sel) -> BOOL {
     YES
 }
 
+// https://developer.apple.com/documentation/appkit/nsresponder/1525862-magnifywithevent
+extern "C" fn magnify_with_event(_this: &Object, _sel: Sel, event: *mut Object) {
+    let delta_z: CGFloat = unsafe { msg_send![event, deltaZ] };
+
+    self::submit_event(crate::Event::PinchGesture {
+        delta: delta_z as f32,
+        timestamp: get_timestamp(event),
+    });
+}
+
 pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
+        decl.add_method(
+            sel!(magnifyWithEvent:),
+            magnify_with_event as extern "C" fn(&Object, Sel, *mut Object),
+        );
         decl.add_method(
             sel!(drawRect:),
             draw_rect as extern "C" fn(&Object, Sel, CGRect),

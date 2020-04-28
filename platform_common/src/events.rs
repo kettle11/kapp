@@ -56,6 +56,10 @@ pub enum Event {
         delta: f32,
         timestamp: Duration,
     },
+    PinchGesture {
+        delta: f32,
+        timestamp: Duration,
+    },
     // ------------------- Window Events  ---------------------
     WindowMinimized {
         window_id: WindowId,
