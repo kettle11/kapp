@@ -455,10 +455,12 @@ extern "C" fn other_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) 
 
 // https://developer.apple.com/documentation/appkit/nsresponder/1534192-scrollwheel?language=objc
 extern "C" fn scroll_wheel(_this: &Object, _sel: Sel, event: *mut Object) {
+    let delta_x: CGFloat = unsafe { msg_send![event, scrollingDeltaX] };
     let delta_y: CGFloat = unsafe { msg_send![event, scrollingDeltaY] };
 
-    self::submit_event(crate::Event::ScrollWheel {
-        delta: delta_y as f32,
+    self::submit_event(crate::Event::Scroll {
+        delta_x: delta_x as f32,
+        delta_y: delta_y as f32,
         timestamp: get_timestamp(event),
     });
 }
@@ -483,6 +485,7 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
             sel!(magnifyWithEvent:),
             magnify_with_event as extern "C" fn(&Object, Sel, *mut Object),
         );
+
         decl.add_method(
             sel!(drawRect:),
             draw_rect as extern "C" fn(&Object, Sel, CGRect),

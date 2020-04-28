@@ -52,8 +52,11 @@ pub enum Event {
         button: MouseButton,
         timestamp: Duration,
     },
-    ScrollWheel {
-        delta: f32,
+    /// If delta_x is set it horizontal scrolling from something like a trackpad.
+    /// Momentum may be added to this value
+    Scroll {
+        delta_x: f32,
+        delta_y: f32,
         timestamp: Duration,
     },
     PinchGesture {
