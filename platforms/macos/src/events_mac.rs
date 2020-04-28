@@ -469,10 +469,10 @@ extern "C" fn accepts_first_responder(_this: &Object, _sel: Sel) -> BOOL {
 
 // https://developer.apple.com/documentation/appkit/nsresponder/1525862-magnifywithevent
 extern "C" fn magnify_with_event(_this: &Object, _sel: Sel, event: *mut Object) {
-    let delta_z: CGFloat = unsafe { msg_send![event, deltaZ] };
+    let magnification: CGFloat = unsafe { msg_send![event, magnification] };
 
     self::submit_event(crate::Event::PinchGesture {
-        delta: delta_z as f32,
+        delta: magnification as f32,
         timestamp: get_timestamp(event),
     });
 }
