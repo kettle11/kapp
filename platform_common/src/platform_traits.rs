@@ -30,6 +30,10 @@ pub trait PlatformApplicationTrait {
     
     /// Request that the application should quit immediately.
     /// This should be possible to be called multiple times without error.
+    /// The actual termination initiation should be postponed until the end of the event loop. 
+    /// If termination is initiated while the program closure is active then 
+    /// things may be borrowed multiple times.
+    /// The termination should occur before any requested draw events.
     fn quit(&self);
 
     /// Sets the cursor in a way that persists between all windows for the current program.

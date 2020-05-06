@@ -106,6 +106,23 @@ extern "C" fn control_flow_end_handler(
         }
     }
 
+    // Termination, if requested, occurs here. 
+    // Termination occurs here to avoid holding the program closure while termination is requested.
+    unsafe {
+        let data = {
+            APPLICATION_DATA.try_with(|d| {
+                let actually_terminate = d.borrow().actually_terminate;
+                (actually_terminate, d.borrow_mut().ns_application)
+            })
+        };
+
+        if let Ok((should_terminate, ns_application)) = data {
+            if should_terminate {
+                let () = msg_send![ns_application, terminate: nil];
+            }
+        }
+    }
+
     if any_draw_requests {
         unsafe {
             let rl = CFRunLoopGetMain();
@@ -204,7 +221,8 @@ impl PlatformApplicationTrait for PlatformApplication {
 
             let backing_scale: CGFloat =
                 msg_send![window_id.raw() as *mut Object, backingScaleFactor];
-            let () = msg_send![
+            let () =
+                msg_send![
                     window_id.raw() as *mut Object,
                     setFrameTopLeftPoint: NSPoint::new((x as f64) / backing_scale, screen_frame.size.height - (y as f64) / backing_scale)];
         }
@@ -214,7 +232,8 @@ impl PlatformApplicationTrait for PlatformApplication {
         unsafe {
             let backing_scale: CGFloat =
                 msg_send![window_id.raw() as *mut Object, backingScaleFactor];
-            let () = msg_send![window_id.raw() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+            let () =
+                msg_send![window_id.raw() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
         }
     }
 
@@ -319,19 +338,12 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn quit(&self) {
-        unsafe {
-            let ns_application = {
-                // This thread local cannot be accessed if the program is already terminating.
-                APPLICATION_DATA.try_with(|d| {
-                    d.borrow_mut().actually_terminate = true;
-                    d.borrow_mut().ns_application
-                })
-            };
+        // This thread local cannot be accessed if the program is already terminating.
+        let _ = APPLICATION_DATA.try_with(|d| {
+            d.borrow_mut().actually_terminate = true;
+        });
 
-            if let Ok(ns_application) = ns_application {
-                let () = msg_send![ns_application, terminate: nil];
-            }
-        }
+        // Actual termination is postponed until the end of the event loop.
     }
 
     fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle {
