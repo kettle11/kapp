@@ -7,7 +7,7 @@ use std::time::Duration;
 /// Timestamps on MacOS and Windows represent time since the computer was turned on.
 /// On Web timestamps represent time since the current document was created.
 /// Precision of timestamps varies between platforms.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Event {
     /// A recommendation for when to draw.
     /// On MacOS 'Draw' is sent after 'EventsCleared' or in response to

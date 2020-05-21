@@ -52,6 +52,7 @@
 //! See the `simple_gl.rs` example.
 mod application;
 mod async_application;
+mod state_tracker;
 mod window;
 mod window_builder;
 
