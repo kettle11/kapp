@@ -67,6 +67,8 @@ impl Window {
             .set_window_dimensions(self.id, width, height);
     }
 
+    /// Requests that this window receive another Draw event.
+    /// Extra redraw requests will be ignored.
     pub fn request_redraw(&self) {
         self.platform_application
             .borrow_mut()

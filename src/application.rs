@@ -89,6 +89,9 @@ impl Application {
         self.state_tracker.borrow().mouse_button_down(button)
     }
 
+    /// Returns the current mouse position
+    /// The current screen is unspecified, but perhaps that should change
+    /// in the future.
     pub fn mouse_position(&self) -> (f32, f32) {
         self.state_tracker.borrow().mouse_position()
     }
