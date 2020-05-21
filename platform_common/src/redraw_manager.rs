@@ -14,11 +14,11 @@ thread_local!(
 
 pub fn add_draw_request(window_id: WindowId) {
     DRAW_REQUESTS.with(|d| {
-        let requests = d.borrow_mut();
+        let mut requests = d.borrow_mut();
 
         // Only allow one queued redraw per window.
         if !requests.contains(&window_id) {
-            d.borrow_mut().push(window_id);
+            requests.push(window_id);
         }
     })
 }
