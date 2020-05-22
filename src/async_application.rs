@@ -49,7 +49,7 @@ impl EventLoop {
     /// ```
 
     pub fn run_async<F>(
-        &mut self,
+        &self,
         application: Application,
         run_function: impl Fn(Application, Events) -> F,
     ) where

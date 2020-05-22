@@ -1,7 +1,7 @@
 /// This example demonstrates using Kettlewin's built in async support
 use kettlewin::*;
 fn main() {
-    let (app, mut event_loop) = initialize();
+    let (app, event_loop) = initialize();
     event_loop.run_async(app, run);
 }
 
