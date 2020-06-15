@@ -78,10 +78,13 @@ impl GLContext {
 }
 
 impl GLContextTrait for GLContext {
+    
     fn set_window(
         &mut self,
         window: Option<&impl raw_window_handle::HasRawWindowHandle>,
     ) -> Result<(), SetWindowError> {
+        // This does not currently handle the case where a window is closed
+        // but this context remains.
         use raw_window_handle::*;
 
         let window = window.map(|w| match w.raw_window_handle() {

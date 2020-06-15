@@ -2,10 +2,13 @@ use crate::{Event, Key, MouseButton};
 use std::collections::HashMap;
 use std::time::Duration;
 
-/// In the future this could be extended to track:
-/// * Window positions and status.
-/// * Window scale factors
-/// * Window color spaces
+
+// In the future this could be extended to track:
+// * Window positions and status.
+// * Window scale factors
+// * Window color spaces
+
+/// Tracks key and mouse input state based on events.
 pub struct StateTracker {
     keys_down_since_last_frame: HashMap<Key, Duration>, // Key was pressed since the last draw event for any window.
     keys_pressed: HashMap<Key, Duration>,
