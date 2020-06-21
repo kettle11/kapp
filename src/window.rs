@@ -4,7 +4,6 @@ use std::rc::Rc;
 
 /// A handle used to control a Window.
 /// The window is closed when the Window instance is dropped.
-#[derive(Clone)]
 pub struct Window {
     pub id: WindowId,
     platform_application: Rc<RefCell<PlatformApplication>>,
