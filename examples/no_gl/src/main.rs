@@ -1,4 +1,4 @@
-use kettlewin::{Event::*, *};
+use kapp::{Event::*, *};
 
 fn main() {
     // Create a new window manager with default settings.

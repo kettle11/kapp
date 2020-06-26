@@ -19,17 +19,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "kettlewin_gl_context"
+name = "kapp_gl_context"
 version = "0.1.0"
 dependencies = [
- "kettlewin_platform_common 0.1.0",
+ "kapp_platform_common 0.1.0",
  "objc 0.2.7 (git+https://github.com/kettle11/rust-objc)",
  "wasm-bindgen 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-sys 0.3.37 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
-name = "kettlewin_platform_common"
+name = "kapp_platform_common"
 version = "0.1.0"
 
 [[package]]

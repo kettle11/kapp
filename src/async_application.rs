@@ -28,7 +28,7 @@ impl EventLoop {
     /// Events are sent to the program immediately as they're ready.
     /// However if the main program is blocked then events are queued.
     /// ```no_run
-    /// use kettlewin::*;
+    /// use kapp::*;
     /// fn main() {
     ///    let (app, mut event_loop) = initialize();
     ///     event_loop.run_async(app, run);

@@ -1,5 +1,5 @@
 use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
-use kettlewin_platform_common::*;
+use kapp_platform_common::*;
 pub struct PlatformApplication {}
 
 impl PlatformApplicationTrait for PlatformApplication {

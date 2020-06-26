@@ -5,5 +5,5 @@ authors = ["Ian Kettlewell"]
 edition = "2018"
 
 [dependencies]
-kettlewin = {path = "../../", default-features = true}
+kapp = {path = "../../", default-features = true}
 ogl33 = {version = "0.2.0"}

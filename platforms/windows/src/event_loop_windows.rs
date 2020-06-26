@@ -5,7 +5,7 @@ use crate::keys_windows::virtual_keycode_to_key;
 use crate::Event;
 use crate::Key;
 use crate::MouseButton;
-use kettlewin_platform_common::event_receiver;
+use kapp_platform_common::event_receiver;
 use std::ptr::null_mut;
 
 pub unsafe extern "system" fn window_callback(

@@ -19,20 +19,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "kettlewin"
+name = "kapp"
 version = "0.1.0"
 dependencies = [
- "kettlewin_gl_context 0.1.0",
- "kettlewin_platform_macos 0.1.0",
- "kettlewin_platform_web 0.1.0",
- "kettlewin_platform_windows 0.1.0",
+ "kapp_gl_context 0.1.0",
+ "kapp_platform_macos 0.1.0",
+ "kapp_platform_web 0.1.0",
+ "kapp_platform_windows 0.1.0",
 ]
 
 [[package]]
-name = "kettlewin_gl_context"
+name = "kapp_gl_context"
 version = "0.1.0"
 dependencies = [
- "kettlewin_platform_common 0.1.0",
+ "kapp_platform_common 0.1.0",
  "objc 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "raw-window-handle 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -41,34 +41,34 @@ dependencies = [
 ]
 
 [[package]]
-name = "kettlewin_platform_common"
+name = "kapp_platform_common"
 version = "0.1.0"
 dependencies = [
  "raw-window-handle 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
-name = "kettlewin_platform_macos"
+name = "kapp_platform_macos"
 version = "0.1.0"
 dependencies = [
- "kettlewin_platform_common 0.1.0",
+ "kapp_platform_common 0.1.0",
  "objc 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
-name = "kettlewin_platform_web"
+name = "kapp_platform_web"
 version = "0.1.0"
 dependencies = [
- "kettlewin_platform_common 0.1.0",
+ "kapp_platform_common 0.1.0",
  "wasm-bindgen 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-sys 0.3.37 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
-name = "kettlewin_platform_windows"
+name = "kapp_platform_windows"
 version = "0.1.0"
 dependencies = [
- "kettlewin_platform_common 0.1.0",
+ "kapp_platform_common 0.1.0",
 ]
 
 [[package]]
@@ -109,7 +109,7 @@ dependencies = [
 name = "ogl33"
 version = "0.1.0"
 dependencies = [
- "kettlewin 0.1.0",
+ "kapp 0.1.0",
  "ogl33 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

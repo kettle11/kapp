@@ -1,11 +1,11 @@
 [package]
-name = "kettlewin_gl_context"
+name = "kapp_gl_context"
 version = "0.1.0"
 authors = ["Ian Kettlewell <ian.kettlewell@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-kettlewin_platform_common = { path = "../platform_common" }
+kapp_platform_common = { path = "../platform_common" }
 raw-window-handle = "0.3.3"
 
 [target.'cfg(target_os="macos")'.dependencies]

@@ -2,7 +2,7 @@
 //!
 //! # Hello Window
 //! ```no_run
-//! use kettlewin::*;
+//! use kapp::*;
 //!
 //! fn main() {
 //!     // Initialize the Application and EventLoop
@@ -32,7 +32,7 @@
 //! (the actual pixels of the device without a scale factor applied).
 //! The origin (0,0) is the upper left corner of the screen or window.
 //! ```no_run
-//! use kettlewin::*;
+//! use kapp::*;
 //!
 //! fn main() {
 //!     let (mut app, event_loop) = initialize();
@@ -57,16 +57,16 @@ mod window;
 mod window_builder;
 
 #[cfg(target_os = "macos")]
-use kettlewin_platform_macos::prelude as platform;
+use kapp_platform_macos::prelude as platform;
 
 #[cfg(target_arch = "wasm32")]
-use kettlewin_platform_web::prelude as platform;
+use kapp_platform_web::prelude as platform;
 
 #[cfg(target_os = "windows")]
-use kettlewin_platform_windows::prelude as platform;
+use kapp_platform_windows::prelude as platform;
 
 #[cfg(feature = "gl_context")]
-pub use kettlewin_gl_context::prelude::*;
+pub use kapp_gl_context::prelude::*;
 
 pub use platform::{Cursor, Event, Key, MouseButton, WindowId};
 

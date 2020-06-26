@@ -1,4 +1,4 @@
-use kettlewin::*;
+use kapp::*;
 use ogl33::*;
 
 fn main() {

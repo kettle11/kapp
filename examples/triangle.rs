@@ -1,7 +1,7 @@
 //! Render a single triangle with OpenGL
 
 use glow::*;
-use kettlewin::*;
+use kapp::*;
 
 fn new_shader(
     gl: &glow::Context,

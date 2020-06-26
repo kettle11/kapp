@@ -5,12 +5,12 @@ mod application_web;
 mod event_loop_web;
 mod keys_web;
 
-use kettlewin_platform_common::{
+use kapp_platform_common::{
     Cursor, Event, Key, MouseButton, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId,
     WindowParameters,
 };
 
 pub mod prelude {
     pub use super::application_web::{PlatformApplication, PlatformEventLoop};
-    pub use kettlewin_platform_common::*;
+    pub use kapp_platform_common::*;
 }

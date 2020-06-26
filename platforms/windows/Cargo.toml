@@ -1,8 +1,8 @@
 [package]
-name = "kettlewin_platform_windows"
+name = "kapp_platform_windows"
 version = "0.1.0"
 authors = ["Ian Kettlewell <ian.kettlewell@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-kettlewin_platform_common = { path = "../../platform_common" }
+kapp_platform_common = { path = "../../platform_common" }

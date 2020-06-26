@@ -1,6 +1,6 @@
 /// This is a really messy example of building a basic platformer.
 use glow::*;
-use kettlewin::*;
+use kapp::*;
 
 #[derive(Clone, Copy)]
 struct Color {

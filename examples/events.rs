@@ -1,5 +1,5 @@
-extern crate kettlewin;
-use kettlewin::*;
+extern crate kapp;
+use kapp::*;
 
 fn main() {
     let (app, event_loop) = initialize();

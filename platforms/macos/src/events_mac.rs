@@ -87,6 +87,10 @@ extern "C" fn window_did_resize(this: &Object, _sel: Sel, _ns_notification: *mut
 }
 
 extern "C" fn window_did_change_backing_properties(_this: &Object, _sel: Sel, _event: *mut Object) {
+    // Color space changes need to be detected here.
+    // Info about how to check the old color space:
+    // https://developer.apple.com/documentation/appkit/nswindowdelegate/1419517-windowdidchangebackingproperties
+
     // unsafe {
     // let window_data = get_window_data(this);
     // let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
@@ -231,7 +235,7 @@ pub fn add_application_events_to_decl(decl: &mut ClassDecl) {
 // ------------------------ View Events --------------------------
 extern "C" fn draw_rect(this: &Object, _sel: Sel, _rect: CGRect) {
     let window: *mut Object = unsafe { msg_send![this, window] };
-    kettlewin_platform_common::redraw_manager::draw(WindowId::new(window as *mut c_void));
+    kapp_platform_common::redraw_manager::draw(WindowId::new(window as *mut c_void));
 }
 
 extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
@@ -555,7 +559,7 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
 
 // ------------------------ End View Events --------------------------
 pub fn submit_event(event: Event) {
-    kettlewin_platform_common::event_receiver::send_event(event);
+    kapp_platform_common::event_receiver::send_event(event);
 }
 
 pub fn get_timestamp(event: *mut Object) -> std::time::Duration {

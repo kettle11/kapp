@@ -1,5 +1,5 @@
 /// Just display a window
-use kettlewin::*;
+use kapp::*;
 
 fn main() {
     let (app, event_loop) = initialize();

@@ -1,4 +1,4 @@
-/// This file is a stripped down version of WinAPI with just the parts relevant to Kettlewin.
+/// This file is a stripped down version of WinAPI with just the parts relevant to kapp.
 /// https://github.com/retep998/winapi-rs
 ///
 /// WinAPI is licensed under Apache 2.0 or MIT:

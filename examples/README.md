@@ -3,7 +3,7 @@
 ```cargo run --example hello```
 
 ## Web
-From the kettlewin root folder run:
+From the kapp root folder run:
 ```cargo build --example hello --target wasm32-unknown-unknown
 wasm-bindgen target/wasm32-unknown-unknown/debug/examples/hello.wasm --out-dir examples/web_build --out-name example --no-modules
 ```

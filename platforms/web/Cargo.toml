@@ -1,11 +1,11 @@
 [package]
-name = "kettlewin_platform_web"
+name = "kapp_platform_web"
 version = "0.1.0"
 authors = ["Ian Kettlewell <ian.kettlewell@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-kettlewin_platform_common = { path = "../../platform_common" }
+kapp_platform_common = { path = "../../platform_common" }
 wasm-bindgen = "0.2.58"
 
 [dependencies.web-sys]

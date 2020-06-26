@@ -232,12 +232,12 @@ pub fn new_opengl_context(
     // * Which is used to create the final OpenGL context!
     unsafe {
         // Register the window class.
-        let window_class_name = win32_string("kettlewin_gl_window");
+        let window_class_name = win32_string("kapp_gl_window");
         let h_instance = libloaderapi::GetModuleHandleW(null_mut());
 
         let window_class = winuser::WNDCLASSW {
             style: 0,
-            lpfnWndProc: Some(kettlewin_gl_window_callback),
+            lpfnWndProc: Some(kapp_gl_window_callback),
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: h_instance,
@@ -452,7 +452,7 @@ pub fn new_opengl_context(
 }
 
 fn create_dummy_window(h_instance: HINSTANCE, class_name: &Vec<u16>) -> windef::HWND {
-    let title = win32_string("Kettlewin Placeholder");
+    let title = win32_string("kapp Placeholder");
 
     unsafe {
         // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexw
@@ -473,7 +473,7 @@ fn create_dummy_window(h_instance: HINSTANCE, class_name: &Vec<u16>) -> windef::
     }
 }
 
-pub unsafe extern "system" fn kettlewin_gl_window_callback(
+pub unsafe extern "system" fn kapp_gl_window_callback(
     hwnd: windef::HWND,
     u_msg: minwindef::UINT,
     w_param: minwindef::WPARAM,

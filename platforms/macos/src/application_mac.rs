@@ -1,14 +1,14 @@
 use super::apple::*;
 use super::window_mac::*;
 use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
-use kettlewin_platform_common::*;
+use kapp_platform_common::*;
 use std::cell::RefCell;
 use std::ffi::c_void;
 
 pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
-static WINDOW_CLASS_NAME: &str = "KettlewinWindowClass";
-static VIEW_CLASS_NAME: &str = "KettlewinViewClass";
-static APPLICATION_CLASS_NAME: &str = "KettlewinApplicationClass";
+static WINDOW_CLASS_NAME: &str = "kappWindowClass";
+static VIEW_CLASS_NAME: &str = "kappViewClass";
+static APPLICATION_CLASS_NAME: &str = "kappApplicationClass";
 
 thread_local!(pub static APPLICATION_DATA: RefCell<Box<ApplicationData>> = RefCell::new(Box::new(ApplicationData::new())));
 
@@ -106,7 +106,7 @@ extern "C" fn control_flow_end_handler(
         }
     }
 
-    // Termination, if requested, occurs here. 
+    // Termination, if requested, occurs here.
     // Termination occurs here to avoid holding the program closure while termination is requested.
     unsafe {
         let data = {
