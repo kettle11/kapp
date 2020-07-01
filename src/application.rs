@@ -97,13 +97,6 @@ impl Application {
     }
 }
 
-// When the application is dropped, quit the program.
-impl Drop for Application {
-    fn drop(&mut self) {
-        self.quit();
-    }
-}
-
 /// Call the 'run' or 'run_async' function on an EventLoop instance to start your program.
 pub struct EventLoop {
     platform_event_loop: PlatformEventLoop,

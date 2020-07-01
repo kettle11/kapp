@@ -356,3 +356,10 @@ impl PlatformApplicationTrait for PlatformApplication {
         })
     }
 }
+
+// When the application is dropped, quit the program.
+impl Drop for PlatformApplication {
+    fn drop(&mut self) {
+        self.quit();
+    }
+}

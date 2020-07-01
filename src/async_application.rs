@@ -55,6 +55,27 @@ impl EventLoop {
     ) where
         F: 'static + Future<Output = ()>,
     {
+        let mut program = AsyncProgram::new(application, run_function);
+
+        // A proper context and waker need to be setup here.
+        self.run(move |event| {
+            program.update(event);
+        });
+
+        // Probably nothing should be done here, but on web this is reached whenever the main loop is setup.
+    }
+}
+
+pub struct AsyncProgram {
+    events: Events,
+    program: Pin<Box<dyn Future<Output = ()>>>,
+}
+
+impl AsyncProgram {
+    fn new<F>(application: Application, run_function: impl Fn(Application, Events) -> F) -> Self
+    where
+        F: 'static + Future<Output = ()>,
+    {
         let events = Events {
             queue: Rc::new(RefCell::new(Vec::new())),
         };
@@ -68,26 +89,28 @@ impl EventLoop {
             // Program immediately exited on first run.
         }
 
-        // A proper context and waker need to be setup here.
-        self.run(move |event| {
-            events.queue.borrow_mut().push(event);
+        Self {
+            events,
+            program: pin,
+        }
+    }
 
-            // This waker does nothing presently,
-            // This means that completed futures won't actually wake up the main loop.
-            // However the main loop has a chance to continue immediately on the next event.
-            // In the future an artificial event should be triggered to ensure the main loop
-            // continues immediately.
-            // That artificial event may need to be implemented per platform.
-            let waker = waker::create();
-            let mut context = Context::from_waker(&waker);
+    pub fn update(&mut self, event: Event) {
+        self.events.queue.borrow_mut().push(event);
 
-            if Poll::Ready(()) == pin.as_mut().poll(&mut context) {
-                // The main application loop has exited.
-                // Do something here!
-            }
-        });
+        // This waker does nothing presently,
+        // This means that completed futures won't actually wake up the main loop.
+        // However the main loop has a chance to continue immediately on the next event.
+        // In the future an artificial event should be triggered to ensure the main loop
+        // continues immediately.
+        // That artificial event may need to be implemented per platform.
+        let waker = waker::create();
+        let mut context = Context::from_waker(&waker);
 
-        // Probably nothing should be done here, but on web this is reached whenever the main loop is setup.
+        if Poll::Ready(()) == self.program.as_mut().poll(&mut context) {
+            // The main application loop has exited.
+            // Do something here!
+        }
     }
 }
 
