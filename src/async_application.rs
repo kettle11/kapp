@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::task::{Context, Poll};
 
 pub struct EventFuture<'a> {
-    events: &'a mut Events,
+    events: &'a Events,
 }
 
 impl<'a> Future for EventFuture<'a> {
@@ -55,7 +55,9 @@ impl EventLoop {
     ) where
         F: 'static + Future<Output = ()>,
     {
-        let mut program = AsyncProgram::new(application, run_function);
+        let events = Events::new();
+        let mut program =
+            AsyncProgram::new(events.clone(), run_function(application.clone(), events));
 
         // A proper context and waker need to be setup here.
         self.run(move |event| {
@@ -72,14 +74,8 @@ pub struct AsyncProgram {
 }
 
 impl AsyncProgram {
-    fn new<F>(application: Application, run_function: impl Fn(Application, Events) -> F) -> Self
-    where
-        F: 'static + Future<Output = ()>,
-    {
-        let events = Events {
-            queue: Rc::new(RefCell::new(Vec::new())),
-        };
-        let mut pin = Box::pin(run_function(application.clone(), events.clone()));
+    pub fn new(events: Events, future: impl Future<Output = ()> + 'static) -> Self {
+        let mut pin = Box::pin(future);
 
         let waker = waker::create();
         let mut context = Context::from_waker(&waker);
@@ -107,6 +103,11 @@ impl AsyncProgram {
         let waker = waker::create();
         let mut context = Context::from_waker(&waker);
 
+        // The user main loop is polled here. 
+        // If it's awaiting something else this will immediately return 'pending'.
+        // For an example if the main loop is blocked waiting for something to load
+        // and a 'Draw' is requested it will not immediately occur which can cause 
+        // window resizing to flicker.
         if Poll::Ready(()) == self.program.as_mut().poll(&mut context) {
             // The main application loop has exited.
             // Do something here!
@@ -122,7 +123,15 @@ pub struct Events {
 }
 
 impl Events {
-    pub fn next_event(&mut self) -> self::EventFuture {
+    pub fn new() -> Self {
+        Events {
+            queue: Rc::new(RefCell::new(Vec::new())),
+        }
+    }
+}
+
+impl Events {
+    pub fn next(&self) -> self::EventFuture {
         self::EventFuture { events: self }
     }
 }

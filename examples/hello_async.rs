@@ -10,7 +10,7 @@ async fn run(app: Application, mut events: Events) {
 
     // Loop forever!
     loop {
-        match events.next_event().await {
+        match events.next().await {
             Event::WindowCloseRequested { .. } => app.quit(),
             Event::Draw { .. } => {}
             _ => {}
