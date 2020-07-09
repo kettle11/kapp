@@ -84,6 +84,7 @@ pub enum Event {
     WindowEndResize {
         window_id: WindowId,
     },
+    /// On web this event is only sent right before a draw event.
     WindowResized {
         width: u32,
         height: u32,

@@ -1,5 +1,5 @@
 /// These are the core functions to be implemented by each platform.
-use crate::{Cursor, WindowId, WindowParameters, raw_window_handle::RawWindowHandle};
+use crate::{raw_window_handle::RawWindowHandle, Cursor, WindowId, WindowParameters};
 pub trait PlatformApplicationTrait {
     type EventLoop: PlatformEventLoopTrait;
 
@@ -18,6 +18,8 @@ pub trait PlatformApplicationTrait {
     fn restore_window(&mut self, window_id: WindowId);
     fn close_window(&mut self, window_id: WindowId);
 
+    fn get_window_size(&mut self, _window_id: WindowId) -> (f32, f32);
+
     /// Requests that the a Draw event be sent for the window.
     /// Draw events should either be sent at the end of an event loop,
     /// or in response to a system redraw request.
@@ -27,11 +29,11 @@ pub trait PlatformApplicationTrait {
     /// Sets the mouse position in physical coordinates in relation to the screen.
     fn set_mouse_position(&mut self, x: u32, y: u32);
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId;
-    
+
     /// Request that the application should quit immediately.
     /// This should be possible to be called multiple times without error.
-    /// The actual termination initiation should be postponed until the end of the event loop. 
-    /// If termination is initiated while the program closure is active then 
+    /// The actual termination initiation should be postponed until the end of the event loop.
+    /// If termination is initiated while the program closure is active then
     /// things may be borrowed multiple times.
     /// The termination should occur before any requested draw events.
     fn quit(&self);
@@ -46,10 +48,9 @@ pub trait PlatformApplicationTrait {
     /// Returns a RawWindowHandle as defined in the raw_window_handle crate
     /// https://github.com/rust-windowing/raw-window-handle
     fn raw_window_handle(&self, window: WindowId) -> RawWindowHandle;
-
 }
 
 pub trait PlatformEventLoopTrait {
     /// Runs until the application quits.
-    fn run(& self, callback: Box<dyn FnMut(crate::Event)>);
+    fn run(&self, callback: Box<dyn FnMut(crate::Event)>);
 }

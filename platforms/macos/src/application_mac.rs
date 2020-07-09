@@ -275,6 +275,21 @@ impl PlatformApplicationTrait for PlatformApplication {
         redraw_manager::add_draw_request(window_id);
     }
 
+    fn get_window_size(&mut self, window_id: WindowId) -> (f32, f32) {
+        unsafe {
+            let backing_scale: CGFloat =
+                msg_send![window_id.raw() as *mut Object, backingScaleFactor];
+
+            let window_view: *mut Object = msg_send![window_id.raw() as *mut Object, contentView];
+            let frame: CGRect = msg_send![window_view, frame];
+
+            (
+                (frame.size.width * backing_scale) as f32,
+                (frame.size.height * backing_scale) as f32,
+            )
+        }
+    }
+
     fn set_mouse_position(&mut self, _x: u32, _y: u32) {
         // Need to account for backing scale here!
 

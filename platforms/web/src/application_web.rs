@@ -5,6 +5,9 @@ pub struct PlatformApplication {}
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
     fn new() -> Self {
+        // Set panic hook. Should this be possible to disable?
+        console_error_panic_hook::set_once();
+
         Self {}
     }
 
@@ -16,6 +19,9 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn set_window_title(&mut self, _window_id: WindowId, _title: &str) {}
     fn minimize_window(&mut self, _window_id: WindowId) {}
     fn maximize_window(&mut self, _window_id: WindowId) {}
+    fn get_window_size(&mut self, _window_id: WindowId) -> (f32, f32) {
+        unimplemented!()
+    }
     fn fullscreen_window(&mut self, _window_id: WindowId) {
         super::event_loop_web::request_fullscreen()
     }

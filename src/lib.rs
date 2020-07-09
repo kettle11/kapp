@@ -74,4 +74,5 @@ pub use application::{initialize, Application, EventLoop};
 
 pub use async_application::*;
 
+pub use state_tracker::StateTracker;
 pub use window::Window;

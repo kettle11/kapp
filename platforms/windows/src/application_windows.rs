@@ -154,6 +154,10 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
+    fn get_window_size(&mut self, _window_id: WindowId) -> (f32, f32) {
+        unimplemented!()
+    }
+
     fn set_mouse_position(&mut self, x: u32, y: u32) {
         unsafe {
             SetCursorPos(x as i32, y as i32);
