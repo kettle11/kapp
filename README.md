@@ -1,4 +1,4 @@
-# kapp
+# kApp
 A pure Rust window and input library for MacOS, Web, and Windows.
 
 Strives to be unsurprising, quick to build, and straightforward to maintain.
