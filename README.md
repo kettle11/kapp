@@ -3,7 +3,7 @@ A pure Rust window and input library for MacOS, Web, and Windows.
 
 Strives to be unsurprising, quick to build, and straightforward to maintain.
 
-kapp is a work in progress. There are rough edges, unimplemented functions, and many bugs.
+kApp is a work in progress. There are rough edges, unimplemented functions, and many bugs.
 
 ## Example
 ```rust
@@ -31,7 +31,7 @@ fn main() {
 
 
 ## Similar Projects
-The following projects were valuable resources that inspired kapp.
+The following projects were valuable resources that inspired kApp.
 
 [Winit](https://github.com/rust-windowing/winit)
 
