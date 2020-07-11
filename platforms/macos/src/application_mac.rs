@@ -24,21 +24,21 @@ impl ApplicationData {
 }
 
 fn window_delegate_declaration() -> *const objc::runtime::Class {
-    let superclass = class!(NSResponder);
+    let superclass = unsafe { &*NSResponderClass };
     let mut decl = ClassDecl::new("kappWindowClass", superclass).unwrap();
     super::events_mac::add_window_events_to_decl(&mut decl);
     decl.register()
 }
 
 fn view_delegate_declaration() -> *const objc::runtime::Class {
-    let superclass = class!(NSView);
+    let superclass = unsafe { &*NSViewClass };
     let mut decl = ClassDecl::new("kappViewClass", superclass).unwrap();
     super::events_mac::add_view_events_to_decl(&mut decl);
     decl.register()
 }
 
 fn application_delegate_declaration() -> *const objc::runtime::Class {
-    let superclass = class!(NSResponder);
+    let superclass = unsafe { &*NSResponderClass };
     let mut decl = ClassDecl::new("kappApplicationClass", superclass).unwrap();
     super::events_mac::add_application_events_to_decl(&mut decl);
     decl.register()
@@ -72,12 +72,14 @@ extern "C" fn control_flow_end_handler(
         // resizing smooth.
         // Redrawing during resize will always produce events in sync with the monitor refresh rate.
         let in_live_resize: bool =
-            unsafe { msg_send![window_id.raw() as *mut Object, inLiveResize] };
+            unsafe { msg(window_id.raw() as *mut Object, Sels::inLiveResize, ()) };
+
         if in_live_resize {
             unsafe {
-                let window_view: *mut Object =
-                    msg_send![window_id.raw() as *mut Object, contentView];
-                let () = msg_send![window_view, setNeedsDisplay: YES];
+                let content_view: *mut Object =
+                    msg(window_id.raw() as *mut Object, Sels::contentView, ());
+
+                let () = msg(content_view, Sels::setNeedsDisplay, (YES,));
             }
         } else {
             event_receiver::send_event(Event::Draw { window_id });
@@ -96,7 +98,7 @@ extern "C" fn control_flow_end_handler(
 
         if let Ok((should_terminate, ns_application)) = data {
             if should_terminate {
-                let () = msg_send![ns_application, terminate: nil];
+                let () = msg(ns_application, Sels::terminate, (nil,));
             }
         }
     }
@@ -119,7 +121,7 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
         event_receiver::set_callback(callback);
 
         unsafe {
-            let () = msg_send![self.ns_application, run];
+            let () = msg(self.ns_application, Sels::run, ());
         }
     }
 }
@@ -137,19 +139,25 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn new() -> Self {
         unsafe {
-            let ns_application: *mut Object = msg_send![class!(NSApplication), sharedApplication];
+            // Requests and loads the relevant Objc classes.
+            initialize_classes();
 
-            let () = msg_send![
+            let ns_application: *mut Object = msg(NSApplicationClass, Sels::sharedApplication, ());
+            let () = msg(
                 ns_application,
-                setActivationPolicy:
-                    NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular
-            ];
+                Sels::setActivationPolicy,
+                (NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular,),
+            );
 
             // Setup the application delegate to handle application events.
             let ns_application_delegate_class = application_delegate_declaration();
             let ns_application_delegate: *mut Object =
-                msg_send![ns_application_delegate_class, new];
-            let () = msg_send![ns_application, setDelegate: ns_application_delegate];
+                msg(ns_application_delegate_class, Sels::new, ());
+            let () = msg(
+                ns_application,
+                Sels::setDelegate,
+                (ns_application_delegate,),
+            );
 
             let run_loop_custom_event_source = self::create_run_loop_source();
 
@@ -186,37 +194,45 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn set_window_position(&mut self, window_id: WindowId, x: u32, y: u32) {
         unsafe {
-            let screen: *const Object = msg_send![window_id.raw() as *mut Object, screen];
-            let screen_frame: CGRect = msg_send![screen, frame];
+            let screen: *const Object = msg(window_id.raw() as *mut Object, Sels::screen, ());
+            let screen_frame: CGRect = msg(screen, Sels::frame, ());
 
-            let backing_scale: CGFloat =
-                msg_send![window_id.raw() as *mut Object, backingScaleFactor];
-            let () =
-                msg_send![
-                    window_id.raw() as *mut Object,
-                    setFrameTopLeftPoint: NSPoint::new((x as f64) / backing_scale, screen_frame.size.height - (y as f64) / backing_scale)];
+            let backing_scale = get_backing_scale(window_id);
+            let () = msg(
+                window_id.raw() as *mut Object,
+                Sels::setFrameTopLeftPoint,
+                (NSPoint::new(
+                    (x as f64) / backing_scale,
+                    screen_frame.size.height - (y as f64) / backing_scale,
+                ),),
+            );
         }
     }
 
     fn set_window_size(&mut self, window_id: WindowId, width: u32, height: u32) {
         unsafe {
-            let backing_scale: CGFloat =
-                msg_send![window_id.raw() as *mut Object, backingScaleFactor];
-            let () =
-                msg_send![window_id.raw() as *mut Object, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+            let backing_scale = get_backing_scale(window_id);
+            let () = msg(
+                window_id.raw() as *mut Object,
+                Sels::setContentSize,
+                (NSSize::new(
+                    (width as f64) / backing_scale,
+                    (height as f64) / backing_scale,
+                ),),
+            );
         }
     }
 
     fn set_window_title(&mut self, window_id: WindowId, title: &str) {
         unsafe {
             let title = NSString::new(&title);
-            let () = msg_send![window_id.raw() as *mut Object, setTitle: title.raw];
+            let () = msg(window_id.raw() as *mut Object, Sels::setTitle, (title.raw,));
         }
     }
 
     fn minimize_window(&mut self, window_id: WindowId) {
         unsafe {
-            let () = msg_send![window_id.raw() as *mut Object, miniaturize: nil];
+            let () = msg(window_id.raw() as *mut Object, Sels::miniaturize, (nil,));
         }
     }
 
@@ -227,7 +243,11 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn fullscreen_window(&mut self, window_id: WindowId) {
         unsafe {
-            let () = msg_send![window_id.raw() as *mut Object, toggleFullScreen: nil];
+            let () = msg(
+                window_id.raw() as *mut Object,
+                Sels::toggleFullScreen,
+                (nil,),
+            );
         }
     }
 
@@ -237,7 +257,7 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn close_window(&mut self, window_id: WindowId) {
         unsafe {
-            let () = msg_send![window_id.raw() as *mut Object, close];
+            let () = msg(window_id.raw() as *mut Object, Sels::close, ());
         }
     }
 
@@ -247,11 +267,10 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn get_window_size(&mut self, window_id: WindowId) -> (f32, f32) {
         unsafe {
-            let backing_scale: CGFloat =
-                msg_send![window_id.raw() as *mut Object, backingScaleFactor];
-
-            let window_view: *mut Object = msg_send![window_id.raw() as *mut Object, contentView];
-            let frame: CGRect = msg_send![window_view, frame];
+            let backing_scale = get_backing_scale(window_id);
+            let content_view: *mut Object =
+                msg(window_id.raw() as *mut Object, Sels::contentView, ());
+            let frame: CGRect = msg(content_view, Sels::frame, ());
 
             (
                 (frame.size.width * backing_scale) as f32,
@@ -275,31 +294,35 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     // https://developer.apple.com/documentation/appkit/nscursor?language=objc
     fn set_cursor(&mut self, cursor: Cursor) {
-        let ns_cursor = class!(NSCursor);
+        let ns_cursor = unsafe { &*NSCursorClass };
         let cursor: *mut Object = unsafe {
             match cursor {
-                Cursor::Arrow => msg_send![ns_cursor, arrowCursor],
-                Cursor::IBeam => msg_send![ns_cursor, IBeamCursor],
-                Cursor::PointingHand => msg_send![ns_cursor, pointingHandCursor],
-                Cursor::OpenHand => msg_send![ns_cursor, openHandCursor],
-                Cursor::ClosedHand => msg_send![ns_cursor, closedHandCursor],
+                Cursor::Arrow => msg(ns_cursor, Sels::arrowCursor, ()),
+                Cursor::IBeam => msg(ns_cursor, Sels::IBeamCursor, ()),
+                Cursor::PointingHand => msg(ns_cursor, Sels::pointingHandCursor, ()),
+                Cursor::OpenHand => msg(ns_cursor, Sels::openHandCursor, ()),
+                Cursor::ClosedHand => msg(ns_cursor, Sels::closedHandCursor, ()),
             }
         };
-        let () = unsafe { msg_send![cursor, set] };
+        let () = unsafe { msg(cursor, Sels::set, ()) };
     }
 
     fn hide_cursor(&mut self) {
         // For every call to 'hide' an 'unhide' must be called to make the cursor visible.
         // Because of this 'unhide' is always called before every call to hide.
         // This ensures that there is only ever one hide active at once.
-        let ns_cursor = class!(NSCursor);
-        let () = unsafe { msg_send![ns_cursor, unhide] };
-        let () = unsafe { msg_send![ns_cursor, hide] };
+        let ns_cursor = unsafe { &*NSCursorClass };
+        unsafe {
+            let () = msg(ns_cursor, Sels::unhide, ());
+            let () = msg(ns_cursor, Sels::hide, ());
+        }
     }
 
     fn show_cursor(&mut self) {
-        let ns_cursor = class!(NSCursor);
-        let () = unsafe { msg_send![ns_cursor, unhide] };
+        let ns_cursor = unsafe { &*NSCursorClass };
+        unsafe {
+            let () = msg(ns_cursor, Sels::unhide, ());
+        }
     }
 
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
@@ -319,14 +342,20 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle {
-        let ns_window = unsafe { window_id.raw() };
-        let ns_view: *mut c_void = unsafe { msg_send![ns_window as *mut Object, contentView] };
-        raw_window_handle::RawWindowHandle::MacOS(raw_window_handle::macos::MacOSHandle {
-            ns_window,
-            ns_view,
-            ..raw_window_handle::macos::MacOSHandle::empty()
-        })
+        unsafe {
+            let ns_window = window_id.raw();
+            let ns_view: *mut c_void = msg(window_id.raw() as *mut Object, Sels::contentView, ());
+            raw_window_handle::RawWindowHandle::MacOS(raw_window_handle::macos::MacOSHandle {
+                ns_window,
+                ns_view,
+                ..raw_window_handle::macos::MacOSHandle::empty()
+            })
+        }
     }
+}
+
+pub fn get_backing_scale(window_id: WindowId) -> CGFloat {
+    unsafe { msg(window_id.raw() as *mut Object, Sels::backingScaleFactor, ()) }
 }
 
 // When the application is dropped, quit the program.

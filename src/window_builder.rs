@@ -57,15 +57,6 @@ impl<'a> WindowBuilder<'a> {
             }
         }
 
-        println!(
-            "self.window_parameters.size: {:?}",
-            self.window_parameters.size
-        );
-        println!(
-            "self.window_parameters.minimum_size: {:?}",
-            self.window_parameters.minimum_size
-        );
-
         Ok(Window::new(
             self.application
                 .platform_application

@@ -7,9 +7,6 @@ fn main() {
 
     event_loop.run(move |event| match event {
         Event::WindowCloseRequested { .. } => app.quit(),
-        Event::WindowResized { width, height, .. } => {
-            println!("Width: {:?}, height: {:?}", width, height)
-        }
         Event::Draw { .. } => {
             // Render something here.
         }

@@ -1,10 +1,201 @@
 // This file is a bunch of stuff needed for calling into MacOS code.
+use objc::runtime::Class;
+
+pub static mut NSResponderClass: *const Class = null();
+pub static mut NSViewClass: *const Class = null();
+pub static mut NSApplicationClass: *const Class = null();
+pub static mut NSCursorClass: *const Class = null();
+
+// By manually querying for Selectors and Classes a ton of generated code is avoided.
+pub unsafe fn msg<R>(
+    target: *const impl objc::Message,
+    sel: *const c_void,
+    args: impl objc::MessageArguments,
+) -> R
+where
+    R: core::any::Any,
+{
+    objc::__send_message(target, Sel::from_ptr(sel), args).unwrap()
+}
+
+pub mod Sels {
+    use std::ffi::c_void;
+    use std::ptr::null;
+
+    pub static mut inLiveResize: *const c_void = null();
+    pub static mut contentView: *const c_void = null();
+    pub static mut setNeedsDisplay: *const c_void = null();
+    pub static mut terminate: *const c_void = null();
+    pub static mut run: *const c_void = null();
+    pub static mut sharedApplication: *const c_void = null();
+    pub static mut setActivationPolicy: *const c_void = null();
+    pub static mut new: *const c_void = null();
+    pub static mut setDelegate: *const c_void = null();
+    pub static mut screen: *const c_void = null();
+    pub static mut frame: *const c_void = null();
+    pub static mut backingScaleFactor: *const c_void = null();
+    pub static mut setFrameTopLeftPoint: *const c_void = null();
+    pub static mut setContentSize: *const c_void = null();
+    pub static mut setTitle: *const c_void = null();
+    pub static mut miniaturize: *const c_void = null();
+    pub static mut toggleFullScreen: *const c_void = null();
+    pub static mut close: *const c_void = null();
+    pub static mut arrowCursor: *const c_void = null();
+    pub static mut IBeamCursor: *const c_void = null();
+    pub static mut pointingHandCursor: *const c_void = null();
+    pub static mut openHandCursor: *const c_void = null();
+    pub static mut closedHandCursor: *const c_void = null();
+    pub static mut set: *const c_void = null();
+    pub static mut unhide: *const c_void = null();
+    pub static mut hide: *const c_void = null();
+    pub static mut object: *const c_void = null();
+    pub static mut windowShouldClose: *const c_void = null();
+    pub static mut windowDidMiniaturize: *const c_void = null();
+    pub static mut windowDidDeminiaturize: *const c_void = null();
+    pub static mut windowDidEnterFullScreen: *const c_void = null();
+    pub static mut windowDidExitFullScreen: *const c_void = null();
+    pub static mut windowDidMove: *const c_void = null();
+    pub static mut windowDidResize: *const c_void = null();
+    pub static mut windowWillStartLiveResize: *const c_void = null();
+    pub static mut windowDidEndLiveResize: *const c_void = null();
+    pub static mut windowDidChangeBackingProperties: *const c_void = null();
+    pub static mut windowDidBecomeKey: *const c_void = null();
+    pub static mut windowDidResignKey: *const c_void = null();
+    pub static mut applicationShouldTerminateAfterLastWindowClosed: *const c_void = null();
+    pub static mut applicationShouldTerminate: *const c_void = null();
+    pub static mut applicationWillTerminate: *const c_void = null();
+    pub static mut window: *const c_void = null();
+    pub static mut keyCode: *const c_void = null();
+    pub static mut isARepeat: *const c_void = null();
+    pub static mut modifierFlags: *const c_void = null();
+    pub static mut buttonNumber: *const c_void = null();
+    pub static mut scrollingDeltaX: *const c_void = null();
+    pub static mut scrollingDeltaY: *const c_void = null();
+    pub static mut magnification: *const c_void = null();
+    pub static mut magnifyWithEvent: *const c_void = null();
+    pub static mut drawRect: *const c_void = null();
+    pub static mut acceptsFirstResponder: *const c_void = null();
+    pub static mut scrollWheel: *const c_void = null();
+    pub static mut otherMouseDown: *const c_void = null();
+    pub static mut otherMouseUp: *const c_void = null();
+    pub static mut rightMouseDown: *const c_void = null();
+    pub static mut rightMouseUp: *const c_void = null();
+    pub static mut mouseDown: *const c_void = null();
+    pub static mut mouseUp: *const c_void = null();
+    pub static mut mouseMoved: *const c_void = null();
+    pub static mut mouseDragged: *const c_void = null();
+    pub static mut rightMouseDragged: *const c_void = null();
+    pub static mut otherMouseDragged: *const c_void = null();
+    pub static mut keyDown: *const c_void = null();
+    pub static mut keyUp: *const c_void = null();
+    pub static mut flagsChanged: *const c_void = null();
+    pub static mut timestamp: *const c_void = null();
+    pub static mut locationInWindow: *const c_void = null();
+
+    pub fn get_sel(name: &str) -> *const c_void {
+        objc::runtime::Sel::register(name).as_ptr()
+    }
+
+    pub unsafe fn load_all() {
+        inLiveResize = get_sel("inLiveResize");
+        contentView = get_sel("contentView");
+        setNeedsDisplay = get_sel("setNeedsDisplay:");
+        terminate = get_sel("terminate:");
+        run = get_sel("run");
+        sharedApplication = get_sel("sharedApplication");
+        setActivationPolicy = get_sel("setActivationPolicy:");
+        new = get_sel("new");
+        setDelegate = get_sel("setDelegate:");
+        screen = get_sel("screen");
+        frame = get_sel("frame");
+        backingScaleFactor = get_sel("backingScaleFactor");
+        setFrameTopLeftPoint = get_sel("setFrameTopLeftPoint:");
+        setContentSize = get_sel("setContentSize:");
+        setTitle = get_sel("setTitle:");
+        miniaturize = get_sel("miniaturize:");
+        toggleFullScreen = get_sel("toggleFullScreen:");
+        close = get_sel("close");
+        arrowCursor = get_sel("arrowCursor");
+        IBeamCursor = get_sel("IBeamCursor");
+        pointingHandCursor = get_sel("pointingHandCursor");
+        openHandCursor = get_sel("openHandCursor");
+        closedHandCursor = get_sel("closedHandCursor");
+        set = get_sel("set");
+        unhide = get_sel("unhide");
+        hide = get_sel("hide");
+        windowDidMiniaturize = get_sel("windowDidMiniaturize:");
+        windowShouldClose = get_sel("windowShouldClose:");
+        windowDidDeminiaturize = get_sel("windowDidDeminiaturize:");
+        windowDidEnterFullScreen = get_sel("windowDidEnterFullScreen:");
+        windowDidExitFullScreen = get_sel("windowDidExitFullScreen:");
+        windowDidMove = get_sel("windowDidMove:");
+        windowDidResize = get_sel("windowDidResize:");
+        windowWillStartLiveResize = get_sel("windowWillStartLiveResize:");
+        windowDidEndLiveResize = get_sel("windowDidEndLiveResize:");
+        windowDidChangeBackingProperties = get_sel("windowDidChangeBackingProperties:");
+        windowDidBecomeKey = get_sel("windowDidBecomeKey:");
+        windowDidResignKey = get_sel("windowDidResignKey:");
+        applicationShouldTerminateAfterLastWindowClosed =
+            get_sel("applicationShouldTerminateAfterLastWindowClosed:");
+        applicationShouldTerminate = get_sel("applicationShouldTerminate:");
+        applicationWillTerminate = get_sel("applicationWillTerminate:");
+        window = get_sel("window");
+        keyCode = get_sel("keyCode");
+        isARepeat = get_sel("isARepeat");
+        modifierFlags = get_sel("modifierFlags");
+        object = get_sel("object");
+        buttonNumber = get_sel("buttonNumber");
+        scrollingDeltaX = get_sel("scrollingDeltaX");
+        scrollingDeltaY = get_sel("scrollingDeltaY");
+        magnification = get_sel("magnification");
+        magnifyWithEvent = get_sel("magnifyWithEvent:");
+        drawRect = get_sel("drawRect:");
+        acceptsFirstResponder = get_sel("acceptsFirstResponder");
+        scrollWheel = get_sel("scrollWheel:");
+        otherMouseDown = get_sel("otherMouseDown:");
+        otherMouseUp = get_sel("otherMouseUp:");
+        rightMouseDown = get_sel("rightMouseDown:");
+        rightMouseUp = get_sel("rightMouseUp:");
+        mouseDown = get_sel("mouseDown:");
+        mouseUp = get_sel("mouseUp:");
+        mouseMoved = get_sel("mouseMoved:");
+        mouseDragged = get_sel("mouseDragged:");
+        rightMouseDragged = get_sel("rightMouseDragged:");
+        otherMouseDragged = get_sel("otherMouseDragged:");
+        keyDown = get_sel("keyDown:");
+        keyUp = get_sel("keyUp:");
+        flagsChanged = get_sel("flagsChanged:");
+        timestamp = get_sel("timestamp");
+        locationInWindow = get_sel("locationInWindow");
+    }
+}
+
+pub fn get_class(name: &str) -> *const Class {
+    unsafe {
+        let class = objc::runtime::objc_getClass(name.as_ptr() as *const _) as *const Class;
+        if class.is_null() {
+            panic!("Could not find: {:?}", name);
+        } else {
+            class
+        }
+    }
+}
+
+/// Only call this once!
+pub(crate) unsafe fn initialize_classes() {
+    NSResponderClass = get_class("NSResponder\u{0}");
+    NSViewClass = get_class("NSView\u{0}");
+    NSApplicationClass = get_class("NSApplication\u{0}");
+    NSCursorClass = get_class("NSCursor\u{0}");
+    Sels::load_all();
+}
 
 pub type c_long = i64;
 pub type c_ulong = u64;
 
 use std::ffi::c_void;
 use std::os::raw::c_double;
+use std::ptr::null;
 
 pub use objc::{
     declare::ClassDecl,
