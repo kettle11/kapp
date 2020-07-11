@@ -6,8 +6,8 @@ fn main() {
     let _window = app.new_window().title("Log Events").build().unwrap();
 
     event_loop.run(move |event| match event {
-        // Event::TrackpadTouch { .. } => {}
-        Event::Draw { .. } => {}
+        // EventsCleared and MouseMoved log a lots, so ignore them.
+        Event::EventsCleared | Event::MouseMoved { .. } => {}
         Event::WindowCloseRequested { .. } => app.quit(),
         _ => {
             println!("{:?}", event);
