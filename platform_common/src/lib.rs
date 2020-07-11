@@ -12,6 +12,7 @@ mod keys;
 mod mouse_buttons;
 mod platform_traits;
 pub mod redraw_manager;
+mod screen_id;
 mod window_id;
 mod window_parameters;
 
@@ -22,5 +23,6 @@ pub use mouse_buttons::MouseButton;
 pub use platform_traits::{PlatformApplicationTrait, PlatformEventLoopTrait};
 pub use raw_window_handle;
 pub use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+pub use screen_id::ScreenId;
 pub use window_id::{RawWindowHandleTrait, WindowId};
 pub use window_parameters::WindowParameters;

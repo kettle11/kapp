@@ -52,6 +52,7 @@ impl Window {
             .borrow_mut()
             .set_window_title(self.id, title);
     }
+
     /// Set the lower left corner of the window.
     pub fn set_position(&mut self, x: u32, y: u32) {
         self.platform_application
@@ -63,18 +64,18 @@ impl Window {
     pub fn set_size(&self, width: u32, height: u32) {
         self.platform_application
             .borrow_mut()
-            .set_window_dimensions(self.id, width, height);
+            .set_window_size(self.id, width, height);
     }
 
     /// Get the window's width and height excluding the titlebar.
     /// Unimplemented on Windows and Web.
-    pub fn get_size(&self) -> (f32, f32) {
+    pub fn size(&self) -> (f32, f32) {
         self.platform_application
             .borrow_mut()
             .get_window_size(self.id)
     }
 
-    /// Requests that this window receive another Draw event.
+    /// Requests that this window receive another `Draw` event.
     /// Extra redraw requests will be ignored.
     pub fn request_redraw(&self) {
         self.platform_application

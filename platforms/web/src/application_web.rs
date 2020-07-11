@@ -15,7 +15,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         PlatformEventLoop {}
     }
     fn set_window_position(&mut self, _window_id: WindowId, _x: u32, _y: u32) {}
-    fn set_window_dimensions(&mut self, _window_id: WindowId, _width: u32, _height: u32) {}
+    fn set_window_size(&mut self, _window_id: WindowId, _width: u32, _height: u32) {}
     fn set_window_title(&mut self, _window_id: WindowId, _title: &str) {}
     fn minimize_window(&mut self, _window_id: WindowId) {}
     fn maximize_window(&mut self, _window_id: WindowId) {}

@@ -140,7 +140,7 @@ fn main() {
     let window = app
         .new_window()
         .title("Platformer")
-        .dimensions(screen_width, screen_height)
+        .size(screen_width, screen_height)
         .build()
         .unwrap();
 

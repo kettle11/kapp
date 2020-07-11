@@ -1,8 +1,6 @@
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+#[non_exhaustive]
 pub enum Key {
-    #[doc(hidden)]
-    __Nonexhaustive, // More keys may be added.
-
     Unknown,
     // --------- International and IME (Input method editor) keys --------------
     KanaHangul,

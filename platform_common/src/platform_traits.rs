@@ -8,8 +8,8 @@ pub trait PlatformApplicationTrait {
 
     /// Sets window position in physical coordinates on its current screen.
     fn set_window_position(&mut self, window_id: WindowId, x: u32, y: u32);
-    /// Sets window dimensions with physical coordinates.
-    fn set_window_dimensions(&mut self, window_id: WindowId, width: u32, height: u32);
+    /// Sets window size with physical coordinates.
+    fn set_window_size(&mut self, window_id: WindowId, width: u32, height: u32);
     fn set_window_title(&mut self, window_id: WindowId, title: &str);
     fn minimize_window(&mut self, window_id: WindowId);
     fn maximize_window(&mut self, window_id: WindowId);

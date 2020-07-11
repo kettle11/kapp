@@ -41,7 +41,7 @@ pub fn draw_requests_count() -> usize {
     DRAW_REQUESTS.with(|d| d.borrow().len())
 }
 
-// Called when starting to iterate through all draw requests.
+/// Called when starting to iterate through all draw requests.
 pub fn begin_draw_flush() {
     DRAW_REQUESTS_SWAP.with(|swap| {
         DRAW_REQUESTS.with(|requests| requests.swap(swap));

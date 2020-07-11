@@ -7,14 +7,23 @@ use std::time::Duration;
 /// Timestamps on MacOS and Windows represent time since the computer was turned on.
 /// On Web timestamps represent time since the current document was created.
 /// Precision of timestamps varies between platforms.
+
+// Event members are ordered by how important the information is.
+// f64 is used for all input events.
+// u32 is used for window positioning and movements.
+
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub enum Event {
-    /// A recommendation for when to draw.
-    /// On MacOS 'Draw' is sent after 'EventsCleared' or in response to
+    /// A recommendation for when a window should draw.
+    ///
+    /// On MacOS `Draw` is sent after `EventsCleared` or in response to
     /// a system event during resizing. While resizing draw will be sent at the screen's
     /// refresh rate.
-    /// On Web Draw is triggered by requestAnimationFrame
-    /// On Windows Draw is sent at the end of the event loop.
+    ///
+    /// On Web `Draw` is triggered by requestAnimationFrame
+    ///
+    /// On Windows `Draw` is sent at the end of the event loop.
     Draw {
         window_id: WindowId,
     },
@@ -34,33 +43,40 @@ pub enum Event {
         key: Key,
         timestamp: Duration,
     },
-    /// The mouse position has changed. Reports physical coordinates.
+    /// The mouse position has changed.
+    /// Reports physical coordinates in relation to the mouse's window
     MouseMoved {
-        x: f32,
-        y: f32,
+        x: f64,
+        y: f64,
         timestamp: Duration,
     },
+    /// Reports physical coordinates in relation to the mouse's window
     MouseButtonDown {
-        x: f32,
-        y: f32,
+        x: f64,
+        y: f64,
         button: MouseButton,
         timestamp: Duration,
     },
+    /// Reports physical coordinates in relation to the mouse's window
     MouseButtonUp {
-        x: f32,
-        y: f32,
+        x: f64,
+        y: f64,
         button: MouseButton,
         timestamp: Duration,
     },
     /// If delta_x is set it horizontal scrolling from something like a trackpad.
     /// Momentum may be added to this value
+    // This event should report WindowId in the future.
     Scroll {
-        delta_x: f32,
-        delta_y: f32,
+        delta_x: f64,
+        delta_y: f64,
+        window_id: WindowId,
         timestamp: Duration,
     },
+    /// A number corresponding to a pinch gesture.
+    /// Presently only sent on MacOS.
     PinchGesture {
-        delta: f32,
+        delta: f64,
         timestamp: Duration,
     },
     // ------------------- Window Events  ---------------------
@@ -78,9 +94,11 @@ pub enum Event {
     WindowRestored {
         window_id: WindowId,
     },
+    /// When the window has begun resizing.
     WindowStartResize {
         window_id: WindowId,
     },
+    /// When the window is done resizing.
     WindowEndResize {
         window_id: WindowId,
     },
@@ -115,6 +133,4 @@ pub enum Event {
     QuitRequested,
     /// When the event loop sends its last event
     EventsCleared,
-    #[doc(hidden)]
-    __Nonexhaustive, // More events will be added
 }

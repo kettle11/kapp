@@ -14,7 +14,7 @@ pub struct StateTracker {
     keys_pressed: HashMap<Key, Duration>,
     mouse_buttons_down_since_last_frame: HashMap<MouseButton, Duration>, // Mouse was pressed since the last draw event for any window.
     mouse_buttons_pressed: HashMap<MouseButton, Duration>,
-    mouse_position: (f32, f32),
+    mouse_position: (f64, f64),
 }
 
 impl StateTracker {
@@ -95,7 +95,7 @@ impl StateTracker {
         self.mouse_buttons_pressed.contains_key(&button)
     }
 
-    pub fn mouse_position(&self) -> (f32, f32) {
+    pub fn mouse_position(&self) -> (f64, f64) {
         self.mouse_position
     }
 }

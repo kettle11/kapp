@@ -1,5 +1,4 @@
 use super::apple::*;
-use super::application_mac::INSTANCE_DATA_IVAR_ID;
 use crate::WindowId;
 use std::ffi::c_void;
 
@@ -31,12 +30,9 @@ pub fn build(
     view_class: *const objc::runtime::Class,
 ) -> Result<WindowId, ()> {
     unsafe {
-        let (width, height) = window_parameters
-            .dimensions
-            .map_or((600., 600.), |(width, height)| {
-                (width as f64, height as f64)
-            });
-        let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(width, height));
+        // The window width and height doesn't matter initially because it will
+        // just be reset with another call once the backing scale is known.
+        let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(500.0, 500.0));
 
         let mut style =
             NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable;
@@ -67,8 +63,16 @@ pub fn build(
             let () = msg_send![ns_window, center];
         }
 
+        // Set minimum size
+        if let Some((width, height)) = window_parameters.minimum_size {
+            let () = msg_send![ns_window, setMinSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+        }
+
         // Set the window size
-        let () = msg_send![ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+        // This should always be set
+        if let Some((width, height)) = window_parameters.size {
+            let () = msg_send![ns_window, setContentSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+        }
 
         let title = NSString::new(&window_parameters.title);
         let () = msg_send![ns_window, setTitle: title.raw];
@@ -100,21 +104,6 @@ pub fn build(
         let () = msg_send![ns_window, setDelegate: window_delegate];
         let () = msg_send![ns_window, setContentView: ns_view];
         let () = msg_send![ns_window, makeFirstResponder: ns_view];
-
-        let inner_window_data = Box::new(InnerWindowData {
-            ns_window,
-            ns_view,
-            window_delegate,
-            tracking_area,
-            // backing_scale,
-        });
-
-        // This is never dropped, but should be.
-        let inner_window_data_ptr = Box::into_raw(inner_window_data);
-
-        // Give weak references to the window data to the window_delegate and ns_view_delegate.
-        (*window_delegate).set_ivar(INSTANCE_DATA_IVAR_ID, inner_window_data_ptr as *mut c_void);
-        (*ns_view).set_ivar(INSTANCE_DATA_IVAR_ID, inner_window_data_ptr as *mut c_void);
 
         Ok(WindowId::new(ns_window as *mut c_void))
     }

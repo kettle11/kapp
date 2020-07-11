@@ -92,7 +92,7 @@ impl Application {
     /// Returns the current mouse position
     /// The current screen is unspecified, but perhaps that should change
     /// in the future.
-    pub fn mouse_position(&self) -> (f32, f32) {
+    pub fn mouse_position(&self) -> (f64, f64) {
         self.state_tracker.borrow().mouse_position()
     }
 }

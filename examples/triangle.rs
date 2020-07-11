@@ -90,7 +90,7 @@ fn main() {
     let (app, event_loop) = initialize();
     let window = app
         .new_window()
-        .dimensions(400, 400)
+        .size(400, 400)
         .title("Hello")
         .build()
         .unwrap();

@@ -1,8 +1,5 @@
 // This file is a bunch of stuff needed for calling into MacOS code.
 
-#[link(name = "AppKit", kind = "framework")]
-extern "C" {}
-
 pub type c_long = i64;
 pub type c_ulong = u64;
 
@@ -14,6 +11,19 @@ pub use objc::{
     runtime::{Object, Sel, BOOL, NO, YES},
 };
 
+#[link(name = "AppKit", kind = "framework")]
+extern "C" {}
+
+#[cfg(target_pointer_width = "32")]
+pub type NSInteger = c_int;
+#[cfg(target_pointer_width = "32")]
+pub type NSUInteger = c_uint;
+
+#[cfg(target_pointer_width = "64")]
+pub type NSInteger = c_long;
+#[cfg(target_pointer_width = "64")]
+pub type NSUInteger = c_ulong;
+
 pub const nil: *mut Object = 0 as *mut Object;
 
 pub const NSTrackingMouseEnteredAndExited: NSInteger = 0x01;
@@ -21,13 +31,37 @@ pub const NSTrackingMouseMoved: NSInteger = 0x02;
 pub const NSTrackingActiveInKeyWindow: NSInteger = 0x20;
 pub const NSTrackingInVisibleRect: NSInteger = 0x200;
 
+pub const NX_DEVICELSHIFTKEYMASK: u64 = 0x2;
+pub const NX_DEVICERSHIFTKEYMASK: u64 = 0x4;
+
+pub const NX_DEVICELCTLKEYMASK: u64 = 0x1;
+pub const NX_DEVICERCTLKEYMASK: u64 = 0x2000;
+
+pub const NX_DEVICELALTKEYMASK: u64 = 0x20;
+pub const NX_DEVICERALTKEYMASK: u64 = 0x40;
+
+pub const NX_DEVICELCMDKEYMASK: u64 = 0x8;
+pub const NX_DEVICERCMDKEYMASK: u64 = 0x10;
+
+pub const NSTerminateNow: NSUInteger = 1;
+pub const NSTerminateCancel: NSUInteger = 0;
+
+pub const NSEventModifierFlagCapsLock: NSUInteger = 1 << 16;
+
+pub const kCFRunLoopBeforeWaiting: CFRunLoopActivity = 1 << 5;
+
+pub const NSWindowStyleMaskTitled: NSUInteger = 1;
+pub const NSWindowStyleMaskClosable: NSUInteger = 1 << 1;
+pub const NSWindowStyleMaskMiniaturizable: NSUInteger = 1 << 2;
+pub const NSWindowStyleMaskResizable: NSUInteger = 1 << 3;
+
+pub const NSBackingStoreBuffered: NSUInteger = 2;
+pub const UTF8_ENCODING: usize = 4;
+
 #[repr(i64)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSApplicationActivationPolicy {
     NSApplicationActivationPolicyRegular = 0,
-    // NSApplicationActivationPolicyAccessory = 1,
-    // NSApplicationActivationPolicyProhibited = 2,
-    // NSApplicationActivationPolicyERROR = -1,
 }
 
 #[link(name = "CoreFoundation", kind = "framework")]
@@ -36,7 +70,6 @@ extern "C" {
     pub fn CFRunLoopWakeUp(rl: CFRunLoopRef);
 
     pub static kCFRunLoopCommonModes: CFRunLoopMode;
-    // pub static NSRunLoopCommonModes: *mut Object;
 
     pub fn CFRunLoopObserverCreate(
         allocator: CFAllocatorRef,
@@ -108,63 +141,6 @@ pub struct CFRunLoopObserverContext {
     pub retain: *const c_void,
 }
 
-// pub const kCFRunLoopEntry: CFRunLoopActivity = 0;
-pub const kCFRunLoopBeforeWaiting: CFRunLoopActivity = 1 << 5;
-// pub const kCFRunLoopAfterWaiting: CFRunLoopActivity = 1 << 6;
-// pub const kCFRunLoopExit: CFRunLoopActivity = 1 << 7;
-
-// NSWindowStyleMask
-// https://developer.apple.com/documentation/appkit/nswindowstylemask?language=objc
-// pub const NSWindowStyleMaskBorderless: NSUInteger = 0;
-pub const NSWindowStyleMaskTitled: NSUInteger = 1;
-pub const NSWindowStyleMaskClosable: NSUInteger = 1 << 1;
-pub const NSWindowStyleMaskMiniaturizable: NSUInteger = 1 << 2;
-pub const NSWindowStyleMaskResizable: NSUInteger = 1 << 3;
-
-pub const NSBackingStoreBuffered: NSUInteger = 2;
-pub const UTF8_ENCODING: usize = 4;
-
-// These enums are taken from the core-foundation-rs crate
-#[repr(u64)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum NSOpenGLContextParameter {
-    NSOpenGLCPSwapInterval = 222,
-}
-pub use NSOpenGLContextParameter::*;
-
-#[repr(u64)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum NSOpenGLPixelFormatAttribute {
-    NSOpenGLPFADoubleBuffer = 5,
-    NSOpenGLPFAColorSize = 8,
-
-    NSOpenGLPFAAlphaSize = 11,
-    NSOpenGLPFADepthSize = 12,
-    NSOpenGLPFAStencilSize = 13,
-    NSOpenGLPFAAccelerated = 73,
-    NSOpenGLPFAOpenGLProfile = 99,
-}
-pub use NSOpenGLPixelFormatAttribute::*;
-
-#[repr(u64)]
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum NSOpenGLPFAOpenGLProfiles {
-    //NSOpenGLProfileVersion3_2Core = 0x3200,
-    NSOpenGLProfileVersion4_1Core = 0x4100,
-}
-pub use NSOpenGLPFAOpenGLProfiles::*;
-
-#[cfg(target_pointer_width = "32")]
-pub type NSInteger = c_int;
-#[cfg(target_pointer_width = "32")]
-pub type NSUInteger = c_uint;
-
-#[cfg(target_pointer_width = "64")]
-pub type NSInteger = c_long;
-#[cfg(target_pointer_width = "64")]
-pub type NSUInteger = c_ulong;
-
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct CGPoint {
@@ -210,25 +186,6 @@ impl CGRect {
     }
 }
 
-// Encoding for the upcoming version of the objc crate
-/*
-use objc::{Encode, Encoding};
-
-unsafe impl objc::Encode for CGRect {
-    const ENCODING: Encoding<'static> =
-        Encoding::Struct("CGRect", &[CGPoint::ENCODING, CGSize::ENCODING]);
-}
-
-unsafe impl Encode for CGPoint {
-    const ENCODING: Encoding<'static> =
-        objc::Encoding::Struct("CGPoint", &[CGFloat::ENCODING, CGFloat::ENCODING]);
-}
-
-unsafe impl Encode for CGSize {
-    const ENCODING: Encoding<'static> =
-        Encoding::Struct("CGSize", &[CGFloat::ENCODING, CGFloat::ENCODING]);
-}*/
-
 unsafe impl objc::Encode for CGRect {
     fn encode() -> objc::Encoding {
         let encoding = format!(
@@ -264,18 +221,6 @@ unsafe impl objc::Encode for CGSize {
 
 pub type NSRect = CGRect;
 
-#[repr(C)]
-pub struct __CFBundle(c_void);
-pub type CFBundleRef = *mut __CFBundle;
-
-extern "C" {
-    pub fn CFBundleGetBundleWithIdentifier(bundleID: CFStringRef) -> CFBundleRef;
-    pub fn CFBundleGetFunctionPointerForName(
-        bundle: CFBundleRef,
-        function_name: CFStringRef,
-    ) -> *const c_void;
-}
-
 pub struct NSString {
     pub raw: *mut Object,
 }
@@ -302,35 +247,4 @@ impl Drop for NSString {
             let () = msg_send![self.raw, release];
         }
     }
-}
-
-pub const NX_DEVICELSHIFTKEYMASK: u64 = 0x2;
-pub const NX_DEVICERSHIFTKEYMASK: u64 = 0x4;
-
-pub const NX_DEVICELCTLKEYMASK: u64 = 0x1;
-pub const NX_DEVICERCTLKEYMASK: u64 = 0x2000;
-
-pub const NX_DEVICELALTKEYMASK: u64 = 0x20;
-pub const NX_DEVICERALTKEYMASK: u64 = 0x40;
-
-pub const NX_DEVICELCMDKEYMASK: u64 = 0x8;
-pub const NX_DEVICERCMDKEYMASK: u64 = 0x10;
-
-pub const NSTerminateNow: NSUInteger = 1;
-pub const NSTerminateCancel: NSUInteger = 0;
-
-pub const NSTouchPhaseBegan: NSUInteger = 0;
-pub const NSTouchPhaseMoved: NSUInteger = 1 << 1;
-
-#[link(name = "CoreGraphics", kind = "framework")]
-extern "C" {
-    pub fn CGWarpMouseCursorPosition(point: CGPoint) -> i32;
-}
-
-pub const NSEventModifierFlagCapsLock: NSUInteger = 1 << 16;
-
-pub fn current_time() -> std::time::Duration {
-    let process_info: *mut Object = unsafe { msg_send![class!(NSProcessInfo), processInfo] };
-    let current_time = unsafe { msg_send![process_info, systemUptime] };
-    std::time::Duration::from_secs_f64(current_time)
 }

@@ -73,7 +73,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             );
         }
     }
-    fn set_window_dimensions(&mut self, window_id: WindowId, width: u32, height: u32) {
+    fn set_window_size(&mut self, window_id: WindowId, width: u32, height: u32) {
         unsafe {
             let mut rect = RECT {
                 left: 0,
@@ -178,7 +178,7 @@ impl PlatformApplicationTrait for PlatformApplication {
 
             let (width, height) =
                 window_parameters
-                    .dimensions
+                    .size
                     .map_or((CW_USEDEFAULT, CW_USEDEFAULT), |d| {
                         let mut rect = RECT {
                             left: 0,

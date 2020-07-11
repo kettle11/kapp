@@ -1,5 +1,5 @@
 use super::apple::*;
-use super::application_mac::{get_window_data, APPLICATION_DATA};
+use super::application_mac::APPLICATION_DATA;
 use crate::{Event, Key, MouseButton, WindowId};
 use std::ffi::c_void;
 
@@ -324,24 +324,10 @@ extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
     self::submit_event(crate::Event::MouseMoved {
-        x: x as f32,
-        y: y as f32,
+        x,
+        y,
         timestamp: get_timestamp(event),
     });
-}
-
-fn get_mouse_position(this: &Object, event: *mut Object) -> (f32, f32) {
-    unsafe {
-        let window_data = get_window_data(this);
-        let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
-
-        let window_point: NSPoint = msg_send![event, locationInWindow];
-        let frame: CGRect = msg_send![window_data.ns_view, frame];
-
-        let x = window_point.x * backing_scale;
-        let y = (frame.size.height - window_point.y) * backing_scale; // Flip y coordinate because y is 0,0 on Mac.
-        (x as f32, y as f32)
-    }
 }
 
 extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
@@ -452,14 +438,16 @@ extern "C" fn other_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) 
 }
 
 // https://developer.apple.com/documentation/appkit/nsresponder/1534192-scrollwheel?language=objc
-extern "C" fn scroll_wheel(_this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn scroll_wheel(_this: &mut Object, _sel: Sel, event: *mut Object) {
     let delta_x: CGFloat = unsafe { msg_send![event, scrollingDeltaX] };
     let delta_y: CGFloat = unsafe { msg_send![event, scrollingDeltaY] };
+    let window: *mut c_void = unsafe { msg_send![event, window] };
 
     self::submit_event(crate::Event::Scroll {
-        delta_x: delta_x as f32,
-        delta_y: delta_y as f32,
+        delta_x,
+        delta_y,
         timestamp: get_timestamp(event),
+        window_id: WindowId::new(window),
     });
 }
 
@@ -472,7 +460,7 @@ extern "C" fn magnify_with_event(_this: &Object, _sel: Sel, event: *mut Object) 
     let magnification: CGFloat = unsafe { msg_send![event, magnification] };
 
     self::submit_event(crate::Event::PinchGesture {
-        delta: magnification as f32,
+        delta: magnification,
         timestamp: get_timestamp(event),
     });
 }
@@ -494,7 +482,7 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
         );
         decl.add_method(
             sel!(scrollWheel:),
-            scroll_wheel as extern "C" fn(&Object, Sel, *mut Object),
+            scroll_wheel as extern "C" fn(&mut Object, Sel, *mut Object),
         );
         decl.add_method(
             sel!(otherMouseDown:),
@@ -552,12 +540,29 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
 }
 
 // ------------------------ End View Events --------------------------
+// ------------------------ Helpers ----------------------------------
+
 pub fn submit_event(event: Event) {
     kapp_platform_common::event_receiver::send_event(event);
 }
 
 pub fn get_timestamp(event: *mut Object) -> std::time::Duration {
     let number: f64 = unsafe { msg_send![event, timestamp] };
-
     std::time::Duration::from_secs_f64(number)
+}
+
+fn get_mouse_position(_this: &Object, event: *mut Object) -> (f64, f64) {
+    unsafe {
+        let window: *mut Object = msg_send![event, window];
+
+        // Are these coordinates correct or do they not correctly account for the titlebar?
+        let backing_scale: CGFloat = msg_send![window, backingScaleFactor];
+        let window_point: NSPoint = msg_send![event, locationInWindow];
+        let view: *mut Object = msg_send![window, contentView];
+        let frame: CGRect = msg_send![view, frame];
+
+        let x = window_point.x * backing_scale;
+        let y = (frame.size.height - window_point.y) * backing_scale; // Flip y coordinate because y is 0,0 on Mac.
+        (x, y)
+    }
 }

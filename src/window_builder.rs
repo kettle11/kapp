@@ -12,7 +12,8 @@ impl<'a> WindowBuilder<'a> {
             application,
             window_parameters: WindowParameters {
                 position: None,
-                dimensions: None,
+                size: Some((500, 500)),
+                minimum_size: None,
                 resizable: true,
                 title: "Untitled".to_string(),
             },
@@ -24,6 +25,7 @@ impl<'a> WindowBuilder<'a> {
         self
     }
 
+    /// Specify if the window should be resizably by dragging the corner.
     pub fn resizable(&mut self, resizable: bool) -> &mut Self {
         self.window_parameters.resizable = resizable;
         self
@@ -35,12 +37,35 @@ impl<'a> WindowBuilder<'a> {
         self
     }
 
-    pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
-        self.window_parameters.dimensions = Some((width, height));
+    /// Sets the size of the window's content area (excluding the titlebar and borders)
+    pub fn size(&mut self, width: u32, height: u32) -> &mut Self {
+        self.window_parameters.size = Some((width, height));
+        self
+    }
+
+    /// Sets the minimum size of the window's content area (excluding the titlebar and borders)
+    pub fn minimum_size(&mut self, width: u32, height: u32) -> &mut Self {
+        self.window_parameters.minimum_size = Some((width, height));
         self
     }
 
     pub fn build(&mut self) -> Result<Window, ()> {
+        // Clamp the window size to the minimum width and height
+        if let Some(size) = &mut self.window_parameters.size {
+            if let Some((min_width, min_height)) = self.window_parameters.minimum_size {
+                *size = (size.0.max(min_width), size.1.max(min_height))
+            }
+        }
+
+        println!(
+            "self.window_parameters.size: {:?}",
+            self.window_parameters.size
+        );
+        println!(
+            "self.window_parameters.minimum_size: {:?}",
+            self.window_parameters.minimum_size
+        );
+
         Ok(Window::new(
             self.application
                 .platform_application

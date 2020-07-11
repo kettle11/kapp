@@ -1,31 +1,15 @@
 use super::apple::*;
-use super::window_mac::*;
 use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
 use kapp_platform_common::*;
 use std::cell::RefCell;
 use std::ffi::c_void;
 
-pub static INSTANCE_DATA_IVAR_ID: &str = "instance_data";
-static WINDOW_CLASS_NAME: &str = "kappWindowClass";
-static VIEW_CLASS_NAME: &str = "kappViewClass";
-static APPLICATION_CLASS_NAME: &str = "kappApplicationClass";
+thread_local!(pub(crate) static APPLICATION_DATA: RefCell<Box<ApplicationData>> = RefCell::new(Box::new(ApplicationData::new())));
 
-thread_local!(pub static APPLICATION_DATA: RefCell<Box<ApplicationData>> = RefCell::new(Box::new(ApplicationData::new())));
-
-#[allow(clippy::mut_from_ref)]
-pub fn get_window_data(this: &Object) -> &mut InnerWindowData {
-    unsafe {
-        let data: *mut std::ffi::c_void = *this.get_ivar(INSTANCE_DATA_IVAR_ID);
-        &mut *(data as *mut InnerWindowData)
-    }
-}
-
-// Global singleton data shared by all windows and the application struct.
-pub struct ApplicationData {
-    // Used to construct a new window
+// Global singleton data shared by the application struct.
+pub(crate) struct ApplicationData {
     ns_application: *mut Object,
-    pub modifier_flags: u64, // Key modifier flags
-    cursor_hidden: bool,
+    pub modifier_flags: u64,      // Key modifier flags
     pub actually_terminate: bool, // Set when quit is called. Indicates the program should quit.
 }
 
@@ -34,7 +18,6 @@ impl ApplicationData {
         Self {
             ns_application: std::ptr::null_mut(),
             modifier_flags: 0,
-            cursor_hidden: false,
             actually_terminate: false,
         }
     }
@@ -42,25 +25,22 @@ impl ApplicationData {
 
 fn window_delegate_declaration() -> *const objc::runtime::Class {
     let superclass = class!(NSResponder);
-    let mut decl = ClassDecl::new(WINDOW_CLASS_NAME, superclass).unwrap();
+    let mut decl = ClassDecl::new("kappWindowClass", superclass).unwrap();
     super::events_mac::add_window_events_to_decl(&mut decl);
-    decl.add_ivar::<*mut c_void>(INSTANCE_DATA_IVAR_ID);
     decl.register()
 }
 
 fn view_delegate_declaration() -> *const objc::runtime::Class {
     let superclass = class!(NSView);
-    let mut decl = ClassDecl::new(VIEW_CLASS_NAME, superclass).unwrap();
+    let mut decl = ClassDecl::new("kappViewClass", superclass).unwrap();
     super::events_mac::add_view_events_to_decl(&mut decl);
-    decl.add_ivar::<*mut c_void>(INSTANCE_DATA_IVAR_ID);
     decl.register()
 }
 
 fn application_delegate_declaration() -> *const objc::runtime::Class {
     let superclass = class!(NSResponder);
-    let mut decl = ClassDecl::new(APPLICATION_CLASS_NAME, superclass).unwrap();
+    let mut decl = ClassDecl::new("kappApplicationClass", superclass).unwrap();
     super::events_mac::add_application_events_to_decl(&mut decl);
-    decl.add_ivar::<*mut c_void>(INSTANCE_DATA_IVAR_ID);
     decl.register()
 }
 
@@ -84,10 +64,8 @@ extern "C" fn control_flow_end_handler(
     _: CFRunLoopActivity,
     _: *mut std::ffi::c_void,
 ) {
-    // Now process all redraw request events
     event_receiver::send_event(Event::EventsCleared);
 
-    let any_draw_requests = redraw_manager::draw_requests_count() > 0;
     redraw_manager::begin_draw_flush();
     while let Some(window_id) = redraw_manager::get_draw_request() {
         // If live resizing redraw only in response to a 'drawRect' event in order to keep
@@ -123,7 +101,8 @@ extern "C" fn control_flow_end_handler(
         }
     }
 
-    if any_draw_requests {
+    // If there are any redraw requests wake up the main loop and run it again.
+    if redraw_manager::draw_requests_count() > 0 {
         unsafe {
             let rl = CFRunLoopGetMain();
             CFRunLoopWakeUp(rl);
@@ -170,7 +149,6 @@ impl PlatformApplicationTrait for PlatformApplication {
             let ns_application_delegate_class = application_delegate_declaration();
             let ns_application_delegate: *mut Object =
                 msg_send![ns_application_delegate_class, new];
-
             let () = msg_send![ns_application, setDelegate: ns_application_delegate];
 
             let run_loop_custom_event_source = self::create_run_loop_source();
@@ -179,23 +157,15 @@ impl PlatformApplicationTrait for PlatformApplication {
                 d.borrow_mut().ns_application = ns_application;
             });
 
-            // We only used this context to pass application_data to the observer
-            // The values in this data structure will be copied out.
-            let observer_context = CFRunLoopObserverContext {
-                copyDescription: std::ptr::null(),
-                info: std::ptr::null(),
-                release: std::ptr::null(),
-                version: 0,
-                retain: std::ptr::null(),
-            };
-
+            // Create an observer that runs at the end of the event loop to
+            // produce `Draw` and `EventsCleared` events.
             let observer = CFRunLoopObserverCreate(
                 std::ptr::null_mut(),
                 kCFRunLoopBeforeWaiting,
                 YES,                  // Indicates we want this to run repeatedly
-                CFIndex::min_value(), // The lower the value, the sooner this will run
+                CFIndex::min_value(), // Prioritize this to run last.
                 control_flow_end_handler,
-                &observer_context as *const CFRunLoopObserverContext,
+                std::ptr::null(),
             );
             CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 
@@ -228,7 +198,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn set_window_dimensions(&mut self, window_id: WindowId, width: u32, height: u32) {
+    fn set_window_size(&mut self, window_id: WindowId, width: u32, height: u32) {
         unsafe {
             let backing_scale: CGFloat =
                 msg_send![window_id.raw() as *mut Object, backingScaleFactor];
@@ -318,32 +288,18 @@ impl PlatformApplicationTrait for PlatformApplication {
         let () = unsafe { msg_send![cursor, set] };
     }
 
-    // Calls to NSCursor hide and unhide must be balanced.
-    // So here we track their state and only call hide if the cursor is not already hidden.
-    //https://developer.apple.com/documentation/appkit/nscursor?language=objc
     fn hide_cursor(&mut self) {
-        APPLICATION_DATA.with(|d| {
-            let mut application_data = d.borrow_mut();
-
-            if !application_data.cursor_hidden {
-                let ns_cursor = class!(NSCursor);
-                let () = unsafe { msg_send![ns_cursor, hide] };
-                application_data.cursor_hidden = true;
-            }
-        });
+        // For every call to 'hide' an 'unhide' must be called to make the cursor visible.
+        // Because of this 'unhide' is always called before every call to hide.
+        // This ensures that there is only ever one hide active at once.
+        let ns_cursor = class!(NSCursor);
+        let () = unsafe { msg_send![ns_cursor, unhide] };
+        let () = unsafe { msg_send![ns_cursor, hide] };
     }
 
-    //https://developer.apple.com/documentation/appkit/nscursor?language=objc
     fn show_cursor(&mut self) {
-        APPLICATION_DATA.with(|d| {
-            let mut application_data = d.borrow_mut();
-
-            if application_data.cursor_hidden {
-                let ns_cursor = class!(NSCursor);
-                let () = unsafe { msg_send![ns_cursor, unhide] };
-                application_data.cursor_hidden = false;
-            }
-        });
+        let ns_cursor = class!(NSCursor);
+        let () = unsafe { msg_send![ns_cursor, unhide] };
     }
 
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
@@ -358,7 +314,8 @@ impl PlatformApplicationTrait for PlatformApplication {
             d.borrow_mut().actually_terminate = true;
         });
 
-        // Actual termination is postponed until the end of the event loop.
+        // Actual termination is postponed until the end of the event loop
+        // to give the user program a chance to process events.
     }
 
     fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle {

@@ -1,7 +1,7 @@
 use crate::Event;
 /// This file handles sending events to a thread local callback that contains the
 /// crate user's code.
-/// Some calls from within the user's code immediately issue new events.
+/// Some calls from within the user's code will immediately produce new events.
 /// In that case push the events to an overflow queue that is processed
 /// when the callback is available again.
 use std::cell::RefCell;
@@ -18,6 +18,7 @@ pub fn set_callback(callback: Box<dyn FnMut(Event)>) {
     });
 }
 
+/// Sends an event to the user callback
 pub fn send_event(event: Event) {
     // try_with because events may be sent during destruction, which should be ignored.
     let _ = PROGRAM_CALLBACK.try_with(|p| {
@@ -36,6 +37,7 @@ pub fn send_event(event: Event) {
     });
 }
 
+/// Sends events that could not be sent because the user callback was borrowed.
 fn flush_overflow_events(callback: &mut Box<dyn 'static + FnMut(Event)>) {
     // Temporarily borrow the overflow event queue and pop from it to avoid
     // holding a reference to it during the callback.
