@@ -45,7 +45,7 @@ pub fn build(
         let ns_window: *mut Object = msg_send![class!(NSWindow), alloc];
         let () = msg_send![
             ns_window,
-            initWithContentRect:rect
+            initWithContentRect:rect.clone()
             styleMask:style
             backing:NSBackingStoreBuffered
             defer:NO

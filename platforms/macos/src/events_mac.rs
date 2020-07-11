@@ -340,6 +340,15 @@ extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
         button: MouseButton::Left,
         timestamp: get_timestamp(event),
     });
+    let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
+    if click_count == 2 {
+        self::submit_event(crate::Event::MouseButtonDoubleClickDown {
+            x,
+            y,
+            button: MouseButton::Left,
+            timestamp: get_timestamp(event),
+        });
+    }
 }
 
 extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
@@ -350,6 +359,15 @@ extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
         button: MouseButton::Left,
         timestamp: get_timestamp(event),
     });
+    let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
+    if click_count == 2 {
+        self::submit_event(crate::Event::MouseButtonDoubleClickUp {
+            x,
+            y,
+            button: MouseButton::Left,
+            timestamp: get_timestamp(event),
+        });
+    }
 }
 
 extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
@@ -361,6 +379,15 @@ extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
         button: MouseButton::Right,
         timestamp: get_timestamp(event),
     });
+    let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
+    if click_count == 2 {
+        self::submit_event(crate::Event::MouseButtonDoubleClickDown {
+            x,
+            y,
+            button: MouseButton::Right,
+            timestamp: get_timestamp(event),
+        });
+    }
 }
 
 extern "C" fn right_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
@@ -372,6 +399,15 @@ extern "C" fn right_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
         button: MouseButton::Right,
         timestamp: get_timestamp(event),
     });
+    let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
+    if click_count == 2 {
+        self::submit_event(crate::Event::MouseButtonDoubleClickUp {
+            x,
+            y,
+            button: MouseButton::Right,
+            timestamp: get_timestamp(event),
+        });
+    }
 }
 
 extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
@@ -391,6 +427,15 @@ extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
         button,
         timestamp: get_timestamp(event),
     });
+    let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
+    if click_count == 2 {
+        self::submit_event(crate::Event::MouseButtonDoubleClickDown {
+            x,
+            y,
+            button,
+            timestamp: get_timestamp(event),
+        });
+    }
 }
 
 extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
@@ -410,6 +455,15 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
         button,
         timestamp: get_timestamp(event),
     });
+    let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
+    if click_count == 2 {
+        self::submit_event(crate::Event::MouseButtonDoubleClickUp {
+            x,
+            y,
+            button,
+            timestamp: get_timestamp(event),
+        });
+    }
 }
 
 extern "C" fn mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {

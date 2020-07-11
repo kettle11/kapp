@@ -64,6 +64,26 @@ pub enum Event {
         button: MouseButton,
         timestamp: Duration,
     },
+    /// Occurs when pressing a mouse button twice in quick succession.
+    /// This event occurs after the second click but before its release.
+    /// This event should be used to make double clicks feel more responsive,
+    /// but `MouseButtonDoubleClickUp` more closely matches the behavior of browser double click.
+    /// Unimplemented on Web and Windows
+    MouseButtonDoubleClickDown {
+        x: f64,
+        y: f64,
+        button: MouseButton,
+        timestamp: Duration,
+    },
+    /// Occurs when pressing a mouse button twice in quick succession.
+    /// This event occurs after two click and release pairs in quick succession.
+    /// Unimplemented on Web and Windows
+    MouseButtonDoubleClickUp {
+        x: f64,
+        y: f64,
+        button: MouseButton,
+        timestamp: Duration,
+    },
     /// If delta_x is set it horizontal scrolling from something like a trackpad.
     /// Momentum may be added to this value
     // This event should report WindowId in the future.

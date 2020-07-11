@@ -1,6 +1,8 @@
 // This file is a bunch of stuff needed for calling into MacOS code.
 use objc::runtime::Class;
 
+pub type c_int = i64;
+
 pub static mut NSResponderClass: *const Class = null();
 pub static mut NSViewClass: *const Class = null();
 pub static mut NSApplicationClass: *const Class = null();
@@ -91,12 +93,14 @@ pub mod Sels {
     pub static mut flagsChanged: *const c_void = null();
     pub static mut timestamp: *const c_void = null();
     pub static mut locationInWindow: *const c_void = null();
+    pub static mut clickCount: *const c_void = null();
 
     pub fn get_sel(name: &str) -> *const c_void {
         objc::runtime::Sel::register(name).as_ptr()
     }
 
     pub unsafe fn load_all() {
+        clickCount = get_sel("clickCount");
         inLiveResize = get_sel("inLiveResize");
         contentView = get_sel("contentView");
         setNeedsDisplay = get_sel("setNeedsDisplay:");
@@ -250,7 +254,6 @@ pub const NSBackingStoreBuffered: NSUInteger = 2;
 pub const UTF8_ENCODING: usize = 4;
 
 #[repr(i64)]
-#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSApplicationActivationPolicy {
     NSApplicationActivationPolicyRegular = 0,
 }
@@ -333,7 +336,7 @@ pub struct CFRunLoopObserverContext {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone)]
 pub struct CGPoint {
     pub x: CGFloat,
     pub y: CGFloat,
@@ -350,14 +353,14 @@ pub type NSPoint = CGPoint;
 pub type CGFloat = c_double;
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone)]
 pub struct CGRect {
     pub origin: CGPoint,
     pub size: CGSize,
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone)]
 pub struct CGSize {
     pub width: CGFloat,
     pub height: CGFloat,
