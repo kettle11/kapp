@@ -1,5 +1,8 @@
 // This file is a bunch of stuff needed for calling into MacOS code.
 
+#[link(name = "AppKit", kind = "framework")]
+extern "C" {}
+
 pub type c_long = i64;
 pub type c_ulong = u64;
 

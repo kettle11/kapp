@@ -19,7 +19,7 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::WindowCloseRequested {
                 window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
             });
-            // Return 0 because the user application must approve the close.
+            // Return 0 to reject the close because the user application must approve the close.
             return 0;
         }
         WM_KEYDOWN => produce_event(process_key_down(w_param, l_param)),

@@ -1,89 +1,105 @@
 use super::apple::*;
 use super::application_mac::{get_window_data, APPLICATION_DATA};
-use super::window_mac::WindowState;
 use crate::{Event, Key, MouseButton, WindowId};
 use std::ffi::c_void;
 
 // ------------------------ Window Events --------------------------
-
-extern "C" fn window_did_move(this: &Object, _sel: Sel, _ns_notification: *mut Object) {
-    let window_data = get_window_data(this);
+extern "C" fn window_did_move(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
     unsafe {
-        let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
-        let frame: CGRect = msg_send![window_data.ns_window, frame];
-        let screen: *const Object = msg_send![window_data.ns_window, screen];
+        let window: *const Object = msg_send![ns_notification, object];
+
+        // Get backing scale to adjust for DPI.
+        let backing_scale: CGFloat = msg_send![window, backingScaleFactor];
+        let frame: CGRect = msg_send![window, frame];
+        let screen: *const Object = msg_send![window, screen];
         let screen_frame: CGRect = msg_send![screen, frame];
 
         self::submit_event(crate::Event::WindowMoved {
             x: (frame.origin.x * backing_scale) as u32,
             y: ((screen_frame.size.height - frame.origin.y) * backing_scale) as u32, // Flip y coordinate because 0,0 is bottom left on Mac
-            window_id: WindowId::new(window_data.ns_window as *mut c_void),
+            window_id: WindowId::new(window as *mut c_void),
         });
     }
 }
-extern "C" fn window_did_miniaturize(this: &Object, _sel: Sel, _ns_notification: *mut Object) {
-    let window_data = get_window_data(this);
-    window_data.window_state = WindowState::Minimized;
+extern "C" fn window_did_miniaturize(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
+    let window: *mut c_void = unsafe { msg_send![ns_notification, object] };
     self::submit_event(Event::WindowMinimized {
-        window_id: WindowId::new(window_data.ns_window as *mut c_void),
+        window_id: WindowId::new(window),
     });
 }
 
-extern "C" fn window_did_deminiaturize(this: &Object, _sel: Sel, _ns_notification: *mut Object) {
-    let window_data = get_window_data(this);
-    window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately fullscreens?
+extern "C" fn window_did_deminiaturize(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
+    let window: *mut c_void = unsafe { msg_send![ns_notification, object] };
     self::submit_event(Event::WindowRestored {
-        window_id: WindowId::new(window_data.ns_window as *mut c_void),
+        window_id: WindowId::new(window),
     });
 }
 
-extern "C" fn window_did_enter_fullscreen(this: &Object, _sel: Sel, _ns_notification: *mut Object) {
-    let window_data = get_window_data(this);
-    window_data.window_state = WindowState::Fullscreen;
+extern "C" fn window_did_enter_fullscreen(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
+    let window: *mut c_void = unsafe { msg_send![ns_notification, object] };
     self::submit_event(Event::WindowFullscreened {
-        window_id: WindowId::new(window_data.ns_window as *mut c_void),
+        window_id: WindowId::new(window),
     });
 }
-extern "C" fn window_did_exit_fullscreen(this: &Object, _sel: Sel, _ns_notification: *mut Object) {
-    let window_data = get_window_data(this);
-    window_data.window_state = WindowState::Windowed; // Is this correct if the window immediately minimizes?
+extern "C" fn window_did_exit_fullscreen(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
+    let window: *mut c_void = unsafe { msg_send![ns_notification, object] };
     self::submit_event(Event::WindowRestored {
-        window_id: WindowId::new(window_data.ns_window as *mut c_void),
+        window_id: WindowId::new(window),
     });
 }
 
 extern "C" fn window_will_start_live_resize(
-    this: &Object,
+    _this: &Object,
     _sel: Sel,
-    _ns_notification: *mut Object,
+    ns_notification: *mut Object,
 ) {
-    let window_data = get_window_data(this);
-
+    let window: *mut c_void = unsafe { msg_send![ns_notification, object] };
     self::submit_event(crate::Event::WindowStartResize {
-        window_id: WindowId::new(window_data.ns_window as *mut c_void),
+        window_id: WindowId::new(window),
     });
 }
 
-extern "C" fn window_did_end_live_resize(this: &Object, _sel: Sel, _ns_notification: *mut Object) {
-    let window_data = get_window_data(this);
-
+extern "C" fn window_did_end_live_resize(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
+    let window: *mut c_void = unsafe { msg_send![ns_notification, object] };
     self::submit_event(crate::Event::WindowEndResize {
-        window_id: WindowId::new(window_data.ns_window as *mut c_void),
+        window_id: WindowId::new(window),
     });
 }
 
-extern "C" fn window_did_resize(this: &Object, _sel: Sel, _ns_notification: *mut Object) {
-    let window_data = get_window_data(this);
-
+extern "C" fn window_did_resize(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
     unsafe {
-        let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
-        let frame: CGRect = msg_send![window_data.ns_view, frame];
+        let window: *mut Object = msg_send![ns_notification, object];
+        let view: *mut Object = msg_send![window, contentView];
+
+        let backing_scale: CGFloat = msg_send![window, backingScaleFactor];
+        let frame: CGRect = msg_send![view, frame];
         self::submit_event(crate::Event::WindowResized {
             width: (frame.size.width * backing_scale) as u32,
             height: (frame.size.height * backing_scale) as u32,
-            window_id: WindowId::new(window_data.ns_window as *mut c_void),
+            window_id: WindowId::new(window as *mut c_void),
         });
     }
+}
+
+extern "C" fn window_did_become_key(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
+    let window: *mut c_void = unsafe { msg_send![ns_notification, object] };
+    self::submit_event(crate::Event::WindowGainedFocus {
+        window_id: WindowId::new(window),
+    });
+}
+
+extern "C" fn window_did_resign_key(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
+    let window: *mut c_void = unsafe { msg_send![ns_notification, object] };
+    self::submit_event(crate::Event::WindowLostFocus {
+        window_id: WindowId::new(window),
+    });
+}
+
+extern "C" fn window_should_close(_this: &Object, _sel: Sel, sender: *mut Object) -> BOOL {
+    self::submit_event(crate::Event::WindowCloseRequested {
+        window_id: WindowId::new(sender as *mut c_void),
+    });
+    NO // No because the program must drop its handle to close the window.
 }
 
 extern "C" fn window_did_change_backing_properties(_this: &Object, _sel: Sel, _event: *mut Object) {
@@ -105,28 +121,6 @@ extern "C" fn window_did_change_backing_properties(_this: &Object, _sel: Sel, _e
     }
     */
     // }
-}
-
-extern "C" fn window_did_become_key(this: &Object, _sel: Sel, _ns_notification: *mut Object) {
-    let window_data = get_window_data(this);
-    self::submit_event(crate::Event::WindowGainedFocus {
-        window_id: WindowId::new(window_data.ns_window as *mut c_void),
-    });
-}
-
-extern "C" fn window_did_resign_key(this: &Object, _sel: Sel, _ns_notification: *mut Object) {
-    let window_data = get_window_data(this);
-    self::submit_event(crate::Event::WindowLostFocus {
-        window_id: WindowId::new(window_data.ns_window as *mut c_void),
-    });
-}
-
-extern "C" fn window_should_close(this: &Object, _sel: Sel, _sender: *mut Object) -> BOOL {
-    let window_data = get_window_data(this);
-    self::submit_event(crate::Event::WindowCloseRequested {
-        window_id: WindowId::new(window_data.ns_window as *mut c_void),
-    });
-    NO // No because the program must drop its handle to close the window.
 }
 
 pub fn add_window_events_to_decl(decl: &mut ClassDecl) {

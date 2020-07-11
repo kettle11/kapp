@@ -3,13 +3,6 @@ use super::application_mac::INSTANCE_DATA_IVAR_ID;
 use crate::WindowId;
 use std::ffi::c_void;
 
-// Not exposed outside the crate
-pub enum WindowState {
-    Minimized,
-    Windowed, // The typical state a window is in.
-    Fullscreen,
-}
-
 // All of this data and the instances must be all be dropped together.
 // Window and GLContext can hold a strong ref to this data, ns_window and ns_view will hold a raw pointer to this data.
 // Because ns_window and ns_view will only be released only when this is dropped, the raw pointers should always be valid.
@@ -18,9 +11,7 @@ pub struct InnerWindowData {
     pub ns_view: *mut Object, // Used later by GLContext.
     window_delegate: *mut Object,
     tracking_area: *mut Object,
-
     //pub backing_scale: f64, // On Mac this while likely be either 2.0 or 1.0
-    pub window_state: WindowState,
 }
 
 impl Drop for InnerWindowData {
@@ -116,7 +107,6 @@ pub fn build(
             window_delegate,
             tracking_area,
             // backing_scale,
-            window_state: WindowState::Windowed,
         });
 
         // This is never dropped, but should be.
