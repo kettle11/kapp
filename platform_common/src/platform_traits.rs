@@ -18,7 +18,7 @@ pub trait PlatformApplicationTrait {
     fn restore_window(&mut self, window_id: WindowId);
     fn close_window(&mut self, window_id: WindowId);
 
-    fn get_window_size(&mut self, _window_id: WindowId) -> (f32, f32);
+    fn get_window_size(&mut self, _window_id: WindowId) -> (u32, u32);
 
     /// Requests that the a Draw event be sent for the window.
     /// Draw events should either be sent at the end of an event loop,

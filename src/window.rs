@@ -69,7 +69,7 @@ impl Window {
 
     /// Get the window's width and height excluding the titlebar.
     /// Unimplemented on Windows and Web.
-    pub fn size(&self) -> (f32, f32) {
+    pub fn size(&self) -> (u32, u32) {
         self.platform_application
             .borrow_mut()
             .get_window_size(self.id)

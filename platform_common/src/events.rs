@@ -86,7 +86,9 @@ pub enum Event {
     },
     /// If delta_x is set it horizontal scrolling from something like a trackpad.
     /// Momentum may be added to this value
-    // This event should report WindowId in the future.
+    /// 
+    /// Note that on web this doesn't correspond to "scroll" events and instead
+    /// corresponds to "wheel". Web "scroll" events can be triggered by moving the scrollbar
     Scroll {
         delta_x: f64,
         delta_y: f64,

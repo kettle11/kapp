@@ -1,5 +1,7 @@
 use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
 use kapp_platform_common::*;
+use wasm_bindgen::JsCast;
+
 pub struct PlatformApplication {}
 
 impl PlatformApplicationTrait for PlatformApplication {
@@ -19,8 +21,17 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn set_window_title(&mut self, _window_id: WindowId, _title: &str) {}
     fn minimize_window(&mut self, _window_id: WindowId) {}
     fn maximize_window(&mut self, _window_id: WindowId) {}
-    fn get_window_size(&mut self, _window_id: WindowId) -> (f32, f32) {
-        unimplemented!()
+    fn get_window_size(&mut self, _window_id: WindowId) -> (u32, u32) {
+        // This approach does not work for multiple canvases.
+        let document = web_sys::window().unwrap().document().unwrap();
+        let canvas = document
+            .get_element_by_id("canvas")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .unwrap();
+        let canvas_client_width = canvas.client_width() as u32;
+        let canvas_client_height = canvas.client_height() as u32;
+        (canvas_client_width, canvas_client_height)
     }
     fn fullscreen_window(&mut self, _window_id: WindowId) {
         super::event_loop_web::request_fullscreen()

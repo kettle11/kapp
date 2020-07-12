@@ -154,7 +154,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn get_window_size(&mut self, _window_id: WindowId) -> (f32, f32) {
+    fn get_window_size(&mut self, _window_id: WindowId) -> (u32, u32) {
         unimplemented!()
     }
 

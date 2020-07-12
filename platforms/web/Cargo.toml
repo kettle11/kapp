@@ -18,6 +18,7 @@ features = [
     "HtmlCanvasElement",
     "MouseEvent",
     "KeyboardEvent",
+    "WheelEvent",
     "Event",
     "WebGlContextAttributes",
     "Window"

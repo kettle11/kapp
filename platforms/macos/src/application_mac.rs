@@ -265,7 +265,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         redraw_manager::add_draw_request(window_id);
     }
 
-    fn get_window_size(&mut self, window_id: WindowId) -> (f32, f32) {
+    fn get_window_size(&mut self, window_id: WindowId) -> (u32, u32) {
         unsafe {
             let backing_scale = get_backing_scale(window_id);
             let content_view: *mut Object =
@@ -273,8 +273,8 @@ impl PlatformApplicationTrait for PlatformApplication {
             let frame: CGRect = msg(content_view, Sels::frame, ());
 
             (
-                (frame.size.width * backing_scale) as f32,
-                (frame.size.height * backing_scale) as f32,
+                (frame.size.width * backing_scale) as u32,
+                (frame.size.height * backing_scale) as u32,
             )
         }
     }

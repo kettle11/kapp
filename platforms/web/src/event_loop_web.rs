@@ -159,14 +159,49 @@ where
         }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
         document.set_onkeyup(Some(keyup.as_ref().unchecked_ref()));
         keyup.forget();
+
+        // Scroll event (from browser 'wheel' event)
+        // Note that the actual browser 'scroll' events aren't used here as they can
+        // occur with the scrollbar.
+        // Values are reversed because they were the opposite of native MacOS.
+        // However it'd be better to know what the cross platform expectation is.
+        let wheel = Closure::wrap(Box::new(move |event: web_sys::WheelEvent| {
+            if event.ctrl_key() {
+                // This is a bit weird, but if a pinch gesture is performed
+                // the ctrl modifier is set. 
+                // This is the simplest way to disambiguate it.
+                send_event(Event::PinchGesture {
+                    // 0.02 is a completely arbitrary number to make this value more similar
+                    // to what native MacOS produces.
+                    // Is this a good idea at all?
+                    // Should this library even make such adjustments? 
+                    // Is there a way to find an actual scale factor instead of a guess?
+                    delta: -event.delta_y() * 0.02,
+                    timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
+                });
+            } else {
+                send_event(Event::Scroll {
+                    delta_x: -event.delta_x(),
+                    delta_y: -event.delta_y(),
+                    window_id: WindowId::new(0 as *mut std::ffi::c_void),
+                    timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
+                });
+            }
+            event
+                .dyn_into::<web_sys::Event>()
+                .unwrap()
+                .prevent_default();
+        }) as Box<dyn FnMut(web_sys::WheelEvent)>);
+        canvas.set_onwheel(Some(wheel.as_ref().unchecked_ref()));
+        wheel.forget();
         // Finally, start the draw loop.
         request_frame();
     }
 }
 
-fn get_mouse_position(event: &web_sys::MouseEvent) -> (f32, f32) {
+fn get_mouse_position(event: &web_sys::MouseEvent) -> (f64, f64) {
     // 0,0 is the upper left of the canvas on web, so no transformations need to be performed.
-    (event.client_x() as f32, event.client_y() as u32 as f32)
+    (event.client_x().into(), event.client_y().into())
 }
 
 fn request_animation_frame(f: &Closure<dyn FnMut()>) {
