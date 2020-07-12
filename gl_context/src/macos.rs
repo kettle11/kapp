@@ -78,7 +78,6 @@ impl GLContext {
 }
 
 impl GLContextTrait for GLContext {
-    
     fn set_window(
         &mut self,
         window: Option<&impl raw_window_handle::HasRawWindowHandle>,
@@ -87,14 +86,19 @@ impl GLContextTrait for GLContext {
         // but this context remains.
         use raw_window_handle::*;
 
-        let window = window.map(|w| match w.raw_window_handle() {
-            RawWindowHandle::MacOS(handle) => handle.ns_window as *mut Object,
+        let window_and_view = window.map(|w| match w.raw_window_handle() {
+            RawWindowHandle::MacOS(handle) => (
+                handle.ns_window as *mut Object,
+                handle.ns_view as *mut Object,
+            ),
             _ => unreachable!(),
         });
 
-        if let Some(window) = window {
-            let window_view: *mut Object = unsafe { msg_send![window, contentView] };
-            let () = unsafe { msg_send![self.gl_context, setView: window_view] };
+        if let Some((_window, window_view)) = window_and_view {
+            let () = unsafe {
+                msg_send![self.gl_context, performSelectorOnMainThread:sel!(setView:) withObject:window_view waitUntilDone:YES]
+            };
+
             self.set_vsync(self.vsync).unwrap();
         } else {
             let () = unsafe { msg_send![self.gl_context, clearDrawable] };
