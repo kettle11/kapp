@@ -1,9 +1,0 @@
-[package]
-name = "ogl33"
-version = "0.1.0"
-authors = ["Ian Kettlewell"]
-edition = "2018"
-
-[dependencies]
-kapp = {path = "../../", default-features = true}
-ogl33 = {version = "0.2.0"}

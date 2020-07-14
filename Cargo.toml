@@ -11,9 +11,6 @@ default = ["gl_context"]
 [dependencies]
 kapp_gl_context = { path = "./gl_context", optional = true }
 
-[dev-dependencies]
-glow = {version = "0.4.0"}
-
 [target.'cfg(target_os="macos")'.dependencies]
 kapp_platform_macos = { path = "./platforms/macos" }
 
