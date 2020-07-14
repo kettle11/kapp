@@ -52,8 +52,8 @@ pub unsafe extern "system" fn window_callback(
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonDown {
-                x: x as f32,
-                y: y as f32,
+                x: x as f64,
+                y: y as f64,
                 timestamp: get_message_time(),
                 button: MouseButton::Left,
             });
@@ -62,8 +62,8 @@ pub unsafe extern "system" fn window_callback(
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonDown {
-                x: x as f32,
-                y: y as f32,
+                x: x as f64,
+                y: y as f64,
                 timestamp: get_message_time(),
                 button: MouseButton::Middle,
             });
@@ -72,8 +72,8 @@ pub unsafe extern "system" fn window_callback(
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonDown {
-                x: x as f32,
-                y: y as f32,
+                x: x as f64,
+                y: y as f64,
                 timestamp: get_message_time(),
                 button: MouseButton::Right,
             });
@@ -82,8 +82,8 @@ pub unsafe extern "system" fn window_callback(
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonDown {
-                x: x as f32,
-                y: y as f32,
+                x: x as f64,
+                y: y as f64,
                 timestamp: get_message_time(),
                 button: match HIWORD(w_param as u32) {
                     XBUTTON1 => MouseButton::Extra1,
@@ -97,8 +97,8 @@ pub unsafe extern "system" fn window_callback(
             let y = GET_Y_LPARAM(l_param);
 
             produce_event(Event::MouseButtonUp {
-                x: x as f32,
-                y: y as f32,
+                x: x as f64,
+                y: y as f64,
                 timestamp: get_message_time(),
                 button: MouseButton::Left,
             });
@@ -108,8 +108,8 @@ pub unsafe extern "system" fn window_callback(
             let y = GET_Y_LPARAM(l_param);
 
             produce_event(Event::MouseButtonUp {
-                x: x as f32,
-                y: y as f32,
+                x: x as f64,
+                y: y as f64,
                 timestamp: get_message_time(),
                 button: MouseButton::Middle,
             });
@@ -119,8 +119,8 @@ pub unsafe extern "system" fn window_callback(
             let y = GET_Y_LPARAM(l_param);
 
             produce_event(Event::MouseButtonUp {
-                x: x as f32,
-                y: y as f32,
+                x: x as f64,
+                y: y as f64,
                 timestamp: get_message_time(),
                 button: MouseButton::Right,
             });
@@ -129,8 +129,8 @@ pub unsafe extern "system" fn window_callback(
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             produce_event(Event::MouseButtonUp {
-                x: x as f32,
-                y: y as f32,
+                x: x as f64,
+                y: y as f64,
                 timestamp: get_message_time(),
                 button: match HIWORD(w_param as u32) {
                     XBUTTON1 => MouseButton::Extra1,
@@ -196,8 +196,8 @@ fn process_mouse_move_event(_hwnd: HWND, l_param: LPARAM) -> Event {
     let y = GET_Y_LPARAM(l_param);
 
     Event::MouseMoved {
-        x: x as f32,
-        y: y as f32,
+        x: x as f64,
+        y: y as f64,
         timestamp: get_message_time(),
     }
 }
