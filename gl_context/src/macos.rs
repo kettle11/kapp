@@ -96,6 +96,9 @@ impl GLContextTrait for GLContext {
 
         if let Some((_window, window_view)) = window_and_view {
             let () = unsafe {
+                // Apparently this defaults to YES even without this call
+                let () = msg_send![window_view, setWantsBestResolutionOpenGLSurface: YES];
+
                 msg_send![self.gl_context, performSelectorOnMainThread:sel!(setView:) withObject:window_view waitUntilDone:YES]
             };
 

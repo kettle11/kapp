@@ -85,10 +85,8 @@ pub fn build(
         // Setup view
         // This allocation will be released when the window is dropped.
         let ns_view: *mut Object = msg_send![view_class, alloc];
-
-        // Apparently this defaults to YES even without this call
-        let () = msg_send![ns_view, setWantsBestResolutionOpenGLSurface: YES];
-
+        let () = msg_send![ns_view, initWithFrame: rect.clone()];
+        
         // Setup a tracking area to receive mouse events within
         // This allocation will be released when the window is dropped.
         let tracking_area: *mut Object = msg_send![class!(NSTrackingArea), alloc];
