@@ -1,17 +1,19 @@
 # kApp
-A pure Rust window and input library for MacOS, Web, and Windows.
-
-Strives to be unsurprising, quick to build, and straightforward to maintain.
 
 kApp is a work in progress. There are rough edges, unimplemented functions, and many bugs.
 
+kApp is a pure Rust window and input library for MacOS, Web, and Windows.
+
+kApp trives to be unsurprising, quick to build, and straightforward to maintain.
+
 ## Example
+
 ```rust
 use kapp::*;
 
 fn main() {
-    let (mut app, mut event_loop) = initialize();
-    let _window = app.new_window().build();
+    let (app, event_loop) = initialize();
+    let _window = app.new_window().build().unwrap();
 
     event_loop.run(move |event| match event {
         Event::WindowCloseRequested { .. } => app.quit(),
@@ -24,13 +26,14 @@ fn main() {
 ```
 
 ## Features
-* Create multiple windows
+
+* Create windows
 * Mouse input
 * Keyboard input
-* OpenGL context creation
-
+* Event timestamps
 
 ## Similar Projects
+
 The following projects were valuable resources that inspired kApp.
 
 [Winit](https://github.com/rust-windowing/winit)
