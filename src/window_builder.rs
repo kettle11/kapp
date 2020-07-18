@@ -15,6 +15,7 @@ impl<'a> WindowBuilder<'a> {
                 size: Some((500, 500)),
                 minimum_size: None,
                 resizable: true,
+                without_titlebar: false,
                 title: "Untitled".to_string(),
             },
         }
@@ -46,6 +47,13 @@ impl<'a> WindowBuilder<'a> {
     /// Sets the minimum size of the window's content area (excluding the titlebar and borders)
     pub fn minimum_size(&mut self, width: u32, height: u32) -> &mut Self {
         self.window_parameters.minimum_size = Some((width, height));
+        self
+    }
+
+    /// Only available on MacOS for now.
+    /// This feature isn't well tested and may result in sizing errors.
+    pub fn without_titlebar(&mut self) -> &mut Self {
+        self.window_parameters.without_titlebar = true;
         self
     }
 

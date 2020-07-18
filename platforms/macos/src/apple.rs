@@ -249,6 +249,7 @@ pub const NSWindowStyleMaskTitled: NSUInteger = 1;
 pub const NSWindowStyleMaskClosable: NSUInteger = 1 << 1;
 pub const NSWindowStyleMaskMiniaturizable: NSUInteger = 1 << 2;
 pub const NSWindowStyleMaskResizable: NSUInteger = 1 << 3;
+pub const NSWindowStyleMaskFullSizeContentView: NSUInteger = 1 << 15;
 
 pub const NSBackingStoreBuffered: NSUInteger = 2;
 pub const UTF8_ENCODING: usize = 4;

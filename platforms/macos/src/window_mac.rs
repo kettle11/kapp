@@ -41,6 +41,10 @@ pub fn build(
             style |= NSWindowStyleMaskResizable;
         }
 
+        if window_parameters.without_titlebar {
+            style |= NSWindowStyleMaskFullSizeContentView
+        }
+
         // This allocation will be released when the window is dropped.
         let ns_window: *mut Object = msg_send![class!(NSWindow), alloc];
         let () = msg_send![
@@ -50,6 +54,12 @@ pub fn build(
             backing:NSBackingStoreBuffered
             defer:NO
         ];
+
+        if window_parameters.without_titlebar {
+            let () = msg_send![ns_window, setTitlebarAppearsTransparent: 1];
+            let () = msg_send![ns_window, setTitleVisibility: 1];
+        }
+
         let backing_scale: CGFloat = msg_send![ns_window, backingScaleFactor];
 
         if let Some(position) = window_parameters.position {
@@ -86,7 +96,7 @@ pub fn build(
         // This allocation will be released when the window is dropped.
         let ns_view: *mut Object = msg_send![view_class, alloc];
         let () = msg_send![ns_view, initWithFrame: rect.clone()];
-        
+
         // Setup a tracking area to receive mouse events within
         // This allocation will be released when the window is dropped.
         let tracking_area: *mut Object = msg_send![class!(NSTrackingArea), alloc];
