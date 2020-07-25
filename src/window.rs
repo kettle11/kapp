@@ -61,6 +61,7 @@ impl Window {
     }
 
     /// Set the window's width and height, excluding the titlebar
+    /// Width and height are specified with physical coordinates.
     pub fn set_size(&self, width: u32, height: u32) {
         self.platform_application
             .borrow_mut()

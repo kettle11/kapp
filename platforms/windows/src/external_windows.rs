@@ -233,6 +233,15 @@ extern "system" {
     pub fn TranslateMessage(lpmsg: *const MSG) -> BOOL;
 }
 
+#[link(name = "Shcore")]
+extern "system" {
+    pub fn SetProcessDpiAwareness(value: PROCESS_DPI_AWARENESS) -> HRESULT;
+}
+
+pub const PROCESS_PER_MONITOR_DPI_AWARE: PROCESS_DPI_AWARENESS = 2;
+type PROCESS_DPI_AWARENESS = u32;
+type HRESULT = c_long;
+
 STRUCT! {struct MSG {
     hwnd: HWND,
     message: UINT,
@@ -450,6 +459,7 @@ pub const WM_LBUTTONDBLCLK: UINT = 0x0203;
 pub const WM_MBUTTONDBLCLK: UINT = 0x0209;
 pub const WM_RBUTTONDBLCLK: UINT = 0x0206;
 pub const WM_XBUTTONDBLCLK: UINT = 0x020D;
+pub const WM_DPICHANGED: UINT = 0x02E0;
 
 pub const XBUTTON1: WORD = 0x0001;
 pub const XBUTTON2: WORD = 0x0002;

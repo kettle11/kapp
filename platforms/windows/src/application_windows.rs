@@ -20,6 +20,8 @@ impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
     fn new() -> Self {
         unsafe {
+            SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+            
             // Register the window class.
             let window_class_name = win32_string("windowing_rust");
             let h_instance = GetModuleHandleW(null_mut());
@@ -205,7 +207,6 @@ impl PlatformApplicationTrait for PlatformApplication {
 
                         (rect.right - rect.left, rect.bottom - rect.top)
                     });
-            println!("HEIGHT: {:?}", height);
 
             let window_handle = CreateWindowExW(
                 extended_style,
@@ -223,8 +224,6 @@ impl PlatformApplicationTrait for PlatformApplication {
             );
 
             let window_id = WindowId::new(window_handle as *mut std::ffi::c_void);
-
-            println!("window size{:?}", self.get_window_size(window_id));
 
             WINDOWS_TO_REDRAW.push(window_id); // Send the window an initial Draw event.
             window_id

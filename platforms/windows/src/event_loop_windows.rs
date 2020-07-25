@@ -227,6 +227,15 @@ pub unsafe extern "system" fn window_callback(
                 timestamp: get_message_time(),
             });
         }
+        WM_DPICHANGED => {
+            let scale_dpi_width = LOWORD(w_param as u32) as u32;
+            // 96.0 is considered the default scale.
+            let scale = scale_dpi_width as f64 / 96.0;
+            produce_event(Event::WindowScaleChanged {
+                scale,
+                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
+            });
+        }
         _ => {}
     }
     // DefWindowProcW is the default Window event handler.

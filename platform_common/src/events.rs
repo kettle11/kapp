@@ -149,6 +149,13 @@ pub enum Event {
     WindowCloseRequested {
         window_id: WindowId,
     },
+    /// When a window moves between monitors the operating system may
+    /// report that the window's user interface should be scaled differently. 
+    /// Multiply this scale by the UI size to properly scale the UI.
+    WindowScaleChanged {
+        scale: f64,
+        window_id: WindowId,
+    },
     // ------------------- Application Events  ---------------------
     /// The application is going to quit immediately after this event is processed.
     /// Perform any final cleanup that's necessary. The quit cannot be cancelled.
