@@ -7,7 +7,7 @@ mod utils_windows;
 mod external_windows;
 
 use kapp_platform_common::{
-    raw_window_handle, Cursor, Event, Key, MouseButton, PlatformApplicationTrait,
+    raw_window_handle, Cursor, Event, Key, PointerSource, PointerButton, PlatformApplicationTrait,
     PlatformEventLoopTrait, RawWindowHandle, WindowId, WindowParameters,
 };
 

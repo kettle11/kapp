@@ -1,10 +1,7 @@
-use super::WindowId;
-use crate::external_windows::*;
-/// All windows share a pixel format and an OpenGlContext.
-use crate::keys_windows::virtual_keycode_to_key;
-use crate::Event;
-use crate::Key;
-use crate::MouseButton;
+use crate::{
+    external_windows::*, keys_windows::virtual_keycode_to_key, Event, Key, PointerButton,
+    PointerSource, WindowId,
+};
 use kapp_platform_common::event_receiver;
 use std::ptr::null_mut;
 
@@ -51,92 +48,100 @@ pub unsafe extern "system" fn window_callback(
         WM_LBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
-            produce_event(Event::MouseButtonDown {
+            produce_event(Event::PointerDown {
                 x: x as f64,
                 y: y as f64,
+                source: PointerSource::Mouse,
+                button: PointerButton::Primary,
                 timestamp: get_message_time(),
-                button: MouseButton::Left,
             });
         }
         WM_MBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
-            produce_event(Event::MouseButtonDown {
+            produce_event(Event::PointerDown {
                 x: x as f64,
                 y: y as f64,
+                source: PointerSource::Mouse,
+                button: PointerButton::Auxillary,
                 timestamp: get_message_time(),
-                button: MouseButton::Middle,
             });
         }
         WM_RBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
-            produce_event(Event::MouseButtonDown {
+            produce_event(Event::PointerDown {
                 x: x as f64,
                 y: y as f64,
+                source: PointerSource::Mouse,
+                button: PointerButton::Secondary,
                 timestamp: get_message_time(),
-                button: MouseButton::Right,
             });
         }
         WM_XBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
-            produce_event(Event::MouseButtonDown {
+            produce_event(Event::PointerDown {
                 x: x as f64,
                 y: y as f64,
-                timestamp: get_message_time(),
+                source: PointerSource::Mouse,
                 button: match HIWORD(w_param as u32) {
-                    XBUTTON1 => MouseButton::Extra1,
-                    XBUTTON2 => MouseButton::Extra2,
+                    XBUTTON1 => PointerButton::Extra1,
+                    XBUTTON2 => PointerButton::Extra2,
                     _ => unreachable!(),
                 },
+                timestamp: get_message_time(),
             });
         }
         WM_LBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
 
-            produce_event(Event::MouseButtonUp {
+            produce_event(Event::PointerUp {
                 x: x as f64,
                 y: y as f64,
+                source: PointerSource::Mouse,
+                button: PointerButton::Primary,
                 timestamp: get_message_time(),
-                button: MouseButton::Left,
             });
         }
         WM_MBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
 
-            produce_event(Event::MouseButtonUp {
+            produce_event(Event::PointerUp {
                 x: x as f64,
                 y: y as f64,
+                source: PointerSource::Mouse,
+                button: PointerButton::Auxillary,
                 timestamp: get_message_time(),
-                button: MouseButton::Middle,
             });
         }
         WM_RBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
 
-            produce_event(Event::MouseButtonUp {
+            produce_event(Event::PointerUp {
                 x: x as f64,
                 y: y as f64,
+                source: PointerSource::Mouse,
+                button: PointerButton::Secondary,
                 timestamp: get_message_time(),
-                button: MouseButton::Right,
             });
         }
         WM_XBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
-            produce_event(Event::MouseButtonUp {
+            produce_event(Event::PointerUp {
                 x: x as f64,
                 y: y as f64,
-                timestamp: get_message_time(),
+                source: PointerSource::Mouse,
                 button: match HIWORD(w_param as u32) {
-                    XBUTTON1 => MouseButton::Extra1,
-                    XBUTTON2 => MouseButton::Extra2,
+                    XBUTTON1 => PointerButton::Extra1,
+                    XBUTTON2 => PointerButton::Extra2,
                     _ => unreachable!(),
                 },
+                timestamp: get_message_time(),
             });
         }
         WM_MOUSEMOVE => produce_event(process_mouse_move_event(hwnd, l_param)),
@@ -195,9 +200,10 @@ fn process_mouse_move_event(_hwnd: HWND, l_param: LPARAM) -> Event {
     let x = GET_X_LPARAM(l_param);
     let y = GET_Y_LPARAM(l_param);
 
-    Event::MouseMoved {
+    Event::PointerMoved {
         x: x as f64,
         y: y as f64,
+        source: PointerSource::Mouse,
         timestamp: get_message_time(),
     }
 }
