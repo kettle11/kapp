@@ -344,7 +344,7 @@ extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(crate::Event::MouseButtonDoubleClickDown {
+        self::submit_event(crate::Event::DoubleClickDown {
             x,
             y,
             button: PointerButton::Primary,
@@ -385,7 +385,7 @@ extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(crate::Event::MouseButtonDoubleClickDown {
+        self::submit_event(crate::Event::DoubleClickDown {
             x,
             y,
             button: PointerButton::Secondary,
@@ -435,7 +435,7 @@ extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(crate::Event::MouseButtonDoubleClickDown {
+        self::submit_event(crate::Event::DoubleClickDown {
             x,
             y,
             button,

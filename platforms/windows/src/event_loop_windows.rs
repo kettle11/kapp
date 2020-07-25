@@ -145,6 +145,88 @@ pub unsafe extern "system" fn window_callback(
             });
         }
         WM_MOUSEMOVE => produce_event(process_mouse_move_event(hwnd, l_param)),
+        WM_LBUTTONDBLCLK => {
+            // When double click is enabled on a window Windows will consume the second down event
+            // so send a synthetic one here to ensure that no clicks are missed.
+            let x = GET_X_LPARAM(l_param);
+            let y = GET_Y_LPARAM(l_param);
+            produce_event(Event::PointerDown {
+                x: x as f64,
+                y: y as f64,
+                source: PointerSource::Mouse,
+                button: PointerButton::Primary,
+                timestamp: get_message_time(),
+            });
+            produce_event(Event::DoubleClickDown {
+                x: x as f64,
+                y: y as f64,
+                button: PointerButton::Primary,
+                timestamp: get_message_time(),
+            });
+        }
+        WM_MBUTTONDBLCLK => {
+            // When double click is enabled on a window Windows will consume the second down event
+            // so send a synthetic one here to ensure that no clicks are missed.
+            let x = GET_X_LPARAM(l_param);
+            let y = GET_Y_LPARAM(l_param);
+            produce_event(Event::PointerDown {
+                x: x as f64,
+                y: y as f64,
+                source: PointerSource::Mouse,
+                button: PointerButton::Auxillary,
+                timestamp: get_message_time(),
+            });
+            produce_event(Event::DoubleClickDown {
+                x: x as f64,
+                y: y as f64,
+                button: PointerButton::Auxillary,
+                timestamp: get_message_time(),
+            });
+        }
+        WM_RBUTTONDBLCLK => {
+            // When double click is enabled on a window Windows will consume the second down event
+            // so send a synthetic one here to ensure that no clicks are missed.
+            let x = GET_X_LPARAM(l_param);
+            let y = GET_Y_LPARAM(l_param);
+            produce_event(Event::PointerDown {
+                x: x as f64,
+                y: y as f64,
+                source: PointerSource::Mouse,
+                button: PointerButton::Secondary,
+                timestamp: get_message_time(),
+            });
+            produce_event(Event::DoubleClickDown {
+                x: x as f64,
+                y: y as f64,
+                button: PointerButton::Secondary,
+                timestamp: get_message_time(),
+            });
+        }
+        WM_XBUTTONDBLCLK => {
+            // When double click is enabled on a window Windows will consume the second down event
+            // so send a synthetic one here to ensure that no clicks are missed.
+            let x = GET_X_LPARAM(l_param);
+            let y = GET_Y_LPARAM(l_param);
+            let button = match HIWORD(w_param as u32) {
+                XBUTTON1 => PointerButton::Extra1,
+                XBUTTON2 => PointerButton::Extra2,
+                _ => unreachable!(),
+            };
+
+            produce_event(Event::PointerDown {
+                x: x as f64,
+                y: y as f64,
+                source: PointerSource::Mouse,
+                button,
+                timestamp: get_message_time(),
+            });
+            produce_event(Event::DoubleClickDown {
+                x: x as f64,
+                y: y as f64,
+                button,
+                timestamp: get_message_time(),
+            });
+        }
         _ => {}
     }
     // DefWindowProcW is the default Window event handler.

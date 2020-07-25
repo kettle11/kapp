@@ -271,6 +271,7 @@ pub const WS_OVERLAPPEDWINDOW: DWORD =
 
 pub const WS_EX_APPWINDOW: DWORD = 0x00040000;
 pub const CS_OWNDC: UINT = 0x0020;
+pub const CS_DBLCLKS: UINT = 0x0008;
 
 #[allow(overflowing_literals)]
 pub const CW_USEDEFAULT: c_int = 0x80000000;
@@ -444,6 +445,10 @@ pub const WM_RBUTTONUP: UINT = 0x0205;
 pub const WM_SIZING: UINT = 0x0214;
 pub const WM_XBUTTONDOWN: UINT = 0x020B;
 pub const WM_XBUTTONUP: UINT = 0x020C;
+pub const WM_LBUTTONDBLCLK: UINT = 0x0203;
+pub const WM_MBUTTONDBLCLK: UINT = 0x0209;
+pub const WM_RBUTTONDBLCLK: UINT = 0x0206;
+pub const WM_XBUTTONDBLCLK: UINT = 0x020D;
 
 pub const XBUTTON1: WORD = 0x0001;
 pub const XBUTTON2: WORD = 0x0002;

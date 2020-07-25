@@ -70,8 +70,8 @@ pub enum Event {
     /// This event occurs after the second click but before its release.
     /// This event should be used to make double clicks feel more responsive,
     /// but `MouseButtonDoubleClickUp` more closely matches the behavior of browser double click.
-    /// Unimplemented on Web and Windows
-    MouseButtonDoubleClickDown {
+    /// Unimplemented on Web
+    DoubleClickDown {
         x: f64,
         y: f64,
         button: PointerButton,

@@ -25,7 +25,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             let h_instance = GetModuleHandleW(null_mut());
 
             let window_class = WNDCLASSW {
-                style: 0,
+                style: CS_DBLCLKS, // Handle double clicks
                 lpfnWndProc: Some(super::event_loop_windows::window_callback),
                 cbClsExtra: 0,
                 cbWndExtra: 0,
