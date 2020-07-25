@@ -1,5 +1,5 @@
 use super::keys_web;
-use crate::{Event, MouseButton, WindowId};
+use crate::{Event, PointerButton, PointerSource, WindowId};
 use std::time::Duration;
 
 use wasm_bindgen::prelude::*;
@@ -69,59 +69,62 @@ where
                 ));
         }
 
-        // Mouse move event
-        let mouse_move = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            let (x, y) = get_mouse_position(&event);
-            send_event(Event::MouseMoved {
+        // Pointer move event
+        let pointer_move = Closure::wrap(Box::new(move |event: web_sys::PointerEvent| {
+            let (x, y) = get_pointer_position(&event);
+            send_event(Event::PointerMoved {
                 x,
                 y,
+                source: get_pointer_type(&event),
                 timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
             });
-        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-        canvas.set_onmousemove(Some(mouse_move.as_ref().unchecked_ref()));
-        mouse_move.forget();
+        }) as Box<dyn FnMut(web_sys::PointerEvent)>);
+        canvas.set_onpointermove(Some(pointer_move.as_ref().unchecked_ref()));
+        pointer_move.forget();
 
-        // Mouse down event
-        let mouse_down = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            let (x, y) = get_mouse_position(&event);
+        // Pointer down event
+        let pointer_down = Closure::wrap(Box::new(move |event: web_sys::PointerEvent| {
+            let (x, y) = get_pointer_position(&event);
 
-            send_event(Event::MouseButtonDown {
+            send_event(Event::PointerDown {
                 x,
                 y,
+                source: get_pointer_type(&event),
                 button: match event.button() {
-                    0 => MouseButton::Left,
-                    1 => MouseButton::Middle,
-                    2 => MouseButton::Right,
-                    3 => MouseButton::Extra1,
-                    4 => MouseButton::Extra2,
-                    _ => MouseButton::Unknown,
+                    0 => PointerButton::Primary,
+                    1 => PointerButton::Auxillary,
+                    2 => PointerButton::Secondary,
+                    3 => PointerButton::Extra1,
+                    4 => PointerButton::Extra2,
+                    _ => PointerButton::Unknown,
                 },
                 timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
             });
-        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-        canvas.set_onmousedown(Some(mouse_down.as_ref().unchecked_ref()));
-        mouse_down.forget();
+        }) as Box<dyn FnMut(web_sys::PointerEvent)>);
+        canvas.set_onpointerdown(Some(pointer_down.as_ref().unchecked_ref()));
+        pointer_down.forget();
 
-        // Mouse up event
-        let mouse_up = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            let (x, y) = get_mouse_position(&event);
+        // Pointer up event
+        let pointer_up = Closure::wrap(Box::new(move |event: web_sys::PointerEvent| {
+            let (x, y) = get_pointer_position(&event);
 
-            send_event(Event::MouseButtonUp {
+            send_event(Event::PointerUp {
                 x,
                 y,
+                source: get_pointer_type(&event),
                 button: match event.button() {
-                    0 => MouseButton::Left,
-                    1 => MouseButton::Middle,
-                    2 => MouseButton::Right,
-                    3 => MouseButton::Extra1,
-                    4 => MouseButton::Extra2,
-                    _ => MouseButton::Unknown,
+                    0 => PointerButton::Primary,
+                    1 => PointerButton::Auxillary,
+                    2 => PointerButton::Secondary,
+                    3 => PointerButton::Extra1,
+                    4 => PointerButton::Extra2,
+                    _ => PointerButton::Unknown,
                 },
                 timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
             });
-        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-        canvas.set_onmouseup(Some(mouse_up.as_ref().unchecked_ref()));
-        mouse_up.forget();
+        }) as Box<dyn FnMut(web_sys::PointerEvent)>);
+        canvas.set_onpointerup(Some(pointer_up.as_ref().unchecked_ref()));
+        pointer_up.forget();
 
         // Key down event
         let keydown = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
@@ -168,13 +171,13 @@ where
         let wheel = Closure::wrap(Box::new(move |event: web_sys::WheelEvent| {
             if event.ctrl_key() {
                 // This is a bit weird, but if a pinch gesture is performed
-                // the ctrl modifier is set. 
+                // the ctrl modifier is set.
                 // This is the simplest way to disambiguate it.
                 send_event(Event::PinchGesture {
                     // 0.02 is a completely arbitrary number to make this value more similar
                     // to what native MacOS produces.
                     // Is this a good idea at all?
-                    // Should this library even make such adjustments? 
+                    // Should this library even make such adjustments?
                     // Is there a way to find an actual scale factor instead of a guess?
                     delta: -event.delta_y() * 0.02,
                     timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
@@ -199,7 +202,16 @@ where
     }
 }
 
-fn get_mouse_position(event: &web_sys::MouseEvent) -> (f64, f64) {
+fn get_pointer_type(event: &web_sys::PointerEvent) -> PointerSource {
+    match event.pointer_type().as_str() {
+        "mouse" => PointerSource::Mouse,
+        "pen" => PointerSource::Pen,
+        "touch" => PointerSource::Touch,
+        _ => PointerSource::Unknown,
+    }
+}
+
+fn get_pointer_position(event: &web_sys::PointerEvent) -> (f64, f64) {
     // 0,0 is the upper left of the canvas on web, so no transformations need to be performed.
     (event.client_x().into(), event.client_y().into())
 }

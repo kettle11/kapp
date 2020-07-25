@@ -7,7 +7,7 @@ fn main() {
 
     event_loop.run(move |event| match event {
         // EventsCleared and MouseMoved log a lots, so ignore them.
-        Event::EventsCleared | Event::MouseMoved { .. } => {}
+        Event::EventsCleared | Event::PointerMoved { .. } => {}
         Event::WindowCloseRequested { .. } => app.quit(),
         _ => {
             println!("{:?}", event);

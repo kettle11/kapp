@@ -1,7 +1,6 @@
-use crate::{Event, Key, MouseButton};
+use crate::{Event, Key, PointerButton, PointerSource};
 use std::collections::HashMap;
 use std::time::Duration;
-
 
 // In the future this could be extended to track:
 // * Window positions and status.
@@ -12,8 +11,8 @@ use std::time::Duration;
 pub struct StateTracker {
     keys_down_since_last_frame: HashMap<Key, Duration>, // Key was pressed since the last draw event for any window.
     keys_pressed: HashMap<Key, Duration>,
-    mouse_buttons_down_since_last_frame: HashMap<MouseButton, Duration>, // Mouse was pressed since the last draw event for any window.
-    mouse_buttons_pressed: HashMap<MouseButton, Duration>,
+    mouse_buttons_down_since_last_frame: HashMap<PointerButton, Duration>, // Mouse was pressed since the last draw event for any window.
+    mouse_buttons_pressed: HashMap<PointerButton, Duration>,
     mouse_position: (f64, f64),
 }
 
@@ -37,17 +36,29 @@ impl StateTracker {
             Event::KeyUp { key, .. } => {
                 self.keys_pressed.remove(&key);
             }
-            Event::MouseButtonDown {
-                button, timestamp, ..
+            Event::PointerDown {
+                button,
+                source: PointerSource::Mouse,
+                timestamp,
+                ..
             } => {
                 self.mouse_buttons_pressed.insert(button, timestamp);
                 self.mouse_buttons_down_since_last_frame
                     .insert(button, timestamp);
             }
-            Event::MouseButtonUp { button, .. } => {
+            Event::PointerUp {
+                button,
+                source: PointerSource::Mouse,
+                ..
+            } => {
                 self.mouse_buttons_pressed.remove(&button);
             }
-            Event::MouseMoved { x, y, .. } => self.mouse_position = (x, y),
+            Event::PointerMoved {
+                x,
+                y,
+                source: PointerSource::Mouse,
+                ..
+            } => self.mouse_position = (x, y),
             _ => {}
         };
     }
@@ -85,13 +96,13 @@ impl StateTracker {
     }
 
     /// Returns true if the mouse button has been pressed since the last draw
-    pub fn mouse_button_down(&self, button: MouseButton) -> bool {
+    pub fn mouse_button_down(&self, button: PointerButton) -> bool {
         self.mouse_buttons_down_since_last_frame
             .contains_key(&button)
     }
 
     /// Returns true if the mouse button is pressed
-    pub fn mouse_button(&self, button: MouseButton) -> bool {
+    pub fn mouse_button(&self, button: PointerButton) -> bool {
         self.mouse_buttons_pressed.contains_key(&button)
     }
 

@@ -17,6 +17,7 @@ features = [
     "HtmlElement",
     "HtmlCanvasElement",
     "MouseEvent",
+    "PointerEvent",
     "KeyboardEvent",
     "WheelEvent",
     "Event",

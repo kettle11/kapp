@@ -1,6 +1,6 @@
 use super::apple::*;
 use super::application_mac::APPLICATION_DATA;
-use crate::{Event, Key, MouseButton, WindowId};
+use crate::{Event, Key, PointerButton, PointerSource, WindowId};
 use std::ffi::c_void;
 
 // ------------------------ Window Events --------------------------
@@ -325,19 +325,21 @@ extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::MouseMoved {
+    self::submit_event(crate::Event::PointerMoved {
         x,
         y,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
 }
 
 extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::MouseButtonDown {
+    self::submit_event(crate::Event::PointerDown {
         x,
         y,
-        button: MouseButton::Left,
+        button: PointerButton::Primary,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
@@ -345,7 +347,7 @@ extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
         self::submit_event(crate::Event::MouseButtonDoubleClickDown {
             x,
             y,
-            button: MouseButton::Left,
+            button: PointerButton::Primary,
             timestamp: get_timestamp(event),
         });
     }
@@ -353,10 +355,11 @@ extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::MouseButtonUp {
+    self::submit_event(crate::Event::PointerUp {
         x,
         y,
-        button: MouseButton::Left,
+        button: PointerButton::Primary,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
@@ -364,7 +367,7 @@ extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
         self::submit_event(crate::Event::MouseButtonDoubleClickUp {
             x,
             y,
-            button: MouseButton::Left,
+            button: PointerButton::Primary,
             timestamp: get_timestamp(event),
         });
     }
@@ -373,10 +376,11 @@ extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
 extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
 
-    self::submit_event(crate::Event::MouseButtonDown {
+    self::submit_event(crate::Event::PointerDown {
         x,
         y,
-        button: MouseButton::Right,
+        button: PointerButton::Secondary,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
@@ -384,7 +388,7 @@ extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
         self::submit_event(crate::Event::MouseButtonDoubleClickDown {
             x,
             y,
-            button: MouseButton::Right,
+            button: PointerButton::Secondary,
             timestamp: get_timestamp(event),
         });
     }
@@ -393,10 +397,11 @@ extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
 extern "C" fn right_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
 
-    self::submit_event(crate::Event::MouseButtonUp {
+    self::submit_event(crate::Event::PointerUp {
         x,
         y,
-        button: MouseButton::Right,
+        button: PointerButton::Secondary,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
@@ -404,7 +409,7 @@ extern "C" fn right_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
         self::submit_event(crate::Event::MouseButtonDoubleClickUp {
             x,
             y,
-            button: MouseButton::Right,
+            button: PointerButton::Secondary,
             timestamp: get_timestamp(event),
         });
     }
@@ -416,15 +421,16 @@ extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     let number: NSInteger = unsafe { msg(event, Sels::buttonNumber, ()) };
     let button = match number {
         // Are these correct?
-        4 => MouseButton::Middle,
-        8 => MouseButton::Extra1,
-        16 => MouseButton::Extra2,
-        _ => MouseButton::Unknown,
+        4 => PointerButton::Auxillary,
+        8 => PointerButton::Extra1,
+        16 => PointerButton::Extra2,
+        _ => PointerButton::Unknown,
     };
-    self::submit_event(crate::Event::MouseButtonDown {
+    self::submit_event(crate::Event::PointerDown {
         x,
         y,
         button,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
@@ -442,17 +448,18 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     let number: NSInteger = unsafe { msg(event, Sels::buttonNumber, ()) };
     let button = match number {
         // Are these correct?
-        4 => MouseButton::Middle,
-        8 => MouseButton::Extra1,
-        16 => MouseButton::Extra2,
-        _ => MouseButton::Unknown,
+        4 => PointerButton::Auxillary,
+        8 => PointerButton::Extra1,
+        16 => PointerButton::Extra2,
+        _ => PointerButton::Unknown,
     };
 
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::MouseButtonUp {
+    self::submit_event(crate::Event::PointerUp {
         x,
         y,
         button,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
@@ -468,27 +475,30 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::MouseMoved {
+    self::submit_event(crate::Event::PointerMoved {
         x,
         y,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
 }
 
 extern "C" fn right_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::MouseMoved {
+    self::submit_event(crate::Event::PointerMoved {
         x,
         y,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
 }
 
 extern "C" fn other_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::MouseMoved {
+    self::submit_event(crate::Event::PointerMoved {
         x,
         y,
+        source: PointerSource::Mouse,
         timestamp: get_timestamp(event),
     });
 }

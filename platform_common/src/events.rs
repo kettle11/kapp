@@ -1,5 +1,4 @@
 use crate::keys::Key;
-use crate::mouse_buttons::MouseButton;
 use crate::WindowId;
 use std::time::Duration;
 /// Input and system events
@@ -11,7 +10,6 @@ use std::time::Duration;
 // Event members are ordered by how important the information is.
 // f64 is used for all input events.
 // u32 is used for window positioning and movements.
-
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub enum Event {
@@ -43,25 +41,29 @@ pub enum Event {
         key: Key,
         timestamp: Duration,
     },
-    /// The mouse position has changed.
-    /// Reports physical coordinates in relation to the mouse's window
-    MouseMoved {
+    /// The pointer position has changed.
+    /// Reports physical coordinates in relation to the pointer's window
+    PointerMoved {
         x: f64,
         y: f64,
+        source: PointerSource,
         timestamp: Duration,
     },
-    /// Reports physical coordinates in relation to the mouse's window
-    MouseButtonDown {
+    /// A pointer, mouse, touch or, or stylus has been pressed down.
+    /// Note that this is sent by multiple web events, not just web's "pointerdown" event.
+    PointerDown {
         x: f64,
         y: f64,
-        button: MouseButton,
+        source: PointerSource,
+        button: PointerButton,
         timestamp: Duration,
     },
-    /// Reports physical coordinates in relation to the mouse's window
-    MouseButtonUp {
+    /// Reports physical coordinates in relation to the pointer's window
+    PointerUp {
         x: f64,
         y: f64,
-        button: MouseButton,
+        source: PointerSource,
+        button: PointerButton,
         timestamp: Duration,
     },
     /// Occurs when pressing a mouse button twice in quick succession.
@@ -72,7 +74,7 @@ pub enum Event {
     MouseButtonDoubleClickDown {
         x: f64,
         y: f64,
-        button: MouseButton,
+        button: PointerButton,
         timestamp: Duration,
     },
     /// Occurs when pressing a mouse button twice in quick succession.
@@ -81,12 +83,12 @@ pub enum Event {
     MouseButtonDoubleClickUp {
         x: f64,
         y: f64,
-        button: MouseButton,
+        button: PointerButton,
         timestamp: Duration,
     },
     /// If delta_x is set it horizontal scrolling from something like a trackpad.
     /// Momentum may be added to this value
-    /// 
+    ///
     /// Note that on web this doesn't correspond to "scroll" events and instead
     /// corresponds to "wheel". Web "scroll" events can be triggered by moving the scrollbar
     Scroll {
@@ -155,4 +157,23 @@ pub enum Event {
     QuitRequested,
     /// When the event loop sends its last event
     EventsCleared,
+}
+
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+pub enum PointerSource {
+    Mouse,
+    Touch,
+    Pen,
+    Unknown,
+}
+
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+pub enum PointerButton {
+    None,
+    Primary,
+    Secondary,
+    Auxillary,
+    Extra1,
+    Extra2,
+    Unknown,
 }

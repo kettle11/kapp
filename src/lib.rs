@@ -68,7 +68,7 @@ use kapp_platform_windows::prelude as platform;
 #[cfg(feature = "gl_context")]
 pub use kapp_gl_context::prelude::*;
 
-pub use platform::{Cursor, Event, Key, MouseButton, WindowId};
+pub use platform::{Cursor, Event, Key, PointerButton, PointerSource, WindowId};
 
 pub use application::{initialize, Application, EventLoop};
 

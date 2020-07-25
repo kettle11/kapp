@@ -80,12 +80,12 @@ impl Application {
     }
 
     /// Returns true if the mouse button is pressed
-    pub fn mouse_button(&self, button: MouseButton) -> bool {
+    pub fn mouse_button(&self, button: PointerButton) -> bool {
         self.state_tracker.borrow().mouse_button(button)
     }
 
     /// Returns true if the mouse button has been pressed since the last draw
-    pub fn mouse_button_down(&self, button: MouseButton) -> bool {
+    pub fn mouse_button_down(&self, button: PointerButton) -> bool {
         self.state_tracker.borrow().mouse_button_down(button)
     }
 
