@@ -214,6 +214,7 @@ extern "system" {
     pub fn GetMessageTime() -> LONG;
     pub fn GetSystemMetrics(nIndex: c_int) -> c_int;
     pub fn GetWindowRect(hWnd: HWND, lpRect: LPRECT) -> BOOL;
+    pub fn GetClientRect(hWnd: HWND, lpRect: LPRECT) -> BOOL;
     pub fn LoadCursorW(hInstance: HINSTANCE, lpCursorName: LPCWSTR) -> HCURSOR;
     pub fn PeekMessageW(
         lpMsg: LPMSG,

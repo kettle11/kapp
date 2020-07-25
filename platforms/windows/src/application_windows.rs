@@ -154,8 +154,20 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn get_window_size(&mut self, _window_id: WindowId) -> (u32, u32) {
-        unimplemented!()
+    fn get_window_size(&mut self, window_id: WindowId) -> (u32, u32) {
+        let mut rect = RECT {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        };
+        unsafe {
+            GetClientRect(window_id.raw() as HWND, &mut rect);
+        }
+        (
+            (rect.right - rect.left) as u32,
+            (rect.bottom - rect.top) as u32,
+        )
     }
 
     fn set_mouse_position(&mut self, x: u32, y: u32) {
@@ -193,6 +205,7 @@ impl PlatformApplicationTrait for PlatformApplication {
 
                         (rect.right - rect.left, rect.bottom - rect.top)
                     });
+            println!("HEIGHT: {:?}", height);
 
             let window_handle = CreateWindowExW(
                 extended_style,
@@ -210,6 +223,9 @@ impl PlatformApplicationTrait for PlatformApplication {
             );
 
             let window_id = WindowId::new(window_handle as *mut std::ffi::c_void);
+
+            println!("window size{:?}", self.get_window_size(window_id));
+
             WINDOWS_TO_REDRAW.push(window_id); // Send the window an initial Draw event.
             window_id
         }
