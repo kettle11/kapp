@@ -240,6 +240,7 @@ extern "system" {
         wMsgFilterMax: UINT,
         wRemoveMsg: UINT,
     ) -> BOOL;
+    pub fn GetMessageW(lpMsg: LPMSG, hWnd: HWND, wMsgFilterMin: UINT, wMsgFilterMax: UINT) -> BOOL;
     pub fn RegisterClassW(lpWndClass: *const WNDCLASSW) -> ATOM;
     pub fn SetCursor(hCursor: HCURSOR) -> HCURSOR;
     pub fn SetCursorPos(X: c_int, Y: c_int) -> BOOL;

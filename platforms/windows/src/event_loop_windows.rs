@@ -3,7 +3,7 @@ use crate::{
     external_windows::*, keys_windows::virtual_keycode_to_key, Event, Key, PointerButton,
     PointerSource, WindowId,
 };
-use kapp_platform_common::event_receiver;
+use kapp_platform_common::{event_receiver, redraw_manager};
 use std::ptr::null_mut;
 pub unsafe extern "system" fn window_callback(
     hwnd: HWND,
@@ -307,9 +307,9 @@ fn resize_event(hwnd: HWND, l_param: LPARAM, w_param: WPARAM) {
             produce_event(Event::WindowRestored {
                 window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
             });
-            produce_event(Event::Draw {
-                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
-            });
+            kapp_platform_common::redraw_manager::draw(WindowId::new(
+                hwnd as *mut std::ffi::c_void,
+            ));
         }
         _ => {}
     }
@@ -376,25 +376,32 @@ pub fn run(callback: Box<dyn FnMut(crate::Event)>) {
 
         let mut message: MSG = std::mem::zeroed();
 
-        let mut temp_draw_request_buffer = Vec::new();
         while message.message != WM_QUIT {
+            // Block and wait for messages unless there is a redraw request.
+            // GetMessageW will return 0 if WM_QUIT is encountered
+            while redraw_manager::draw_requests_count() == 0
+                && GetMessageW(&mut message, null_mut(), 0, 0) > 0
+            {
+                TranslateMessage(&message as *const MSG);
+                DispatchMessageW(&message as *const MSG);
+            }
+
+            if message.message == WM_QUIT {
+                break;
+            }
+
+            // We only reach here if there are redraw requests.
+            // Iterate through all messages without blocking.
             while PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
                 TranslateMessage(&message as *const MSG);
                 DispatchMessageW(&message as *const MSG);
             }
 
-            // The draw request buffer cannot be the same as the one read below
-            // because otherwise requesting a draw creates an infinite loop.
-            std::mem::swap(
-                &mut temp_draw_request_buffer,
-                &mut super::application_windows::WINDOWS_TO_REDRAW,
-            );
-
-            while let Some(window_id) = &temp_draw_request_buffer.pop() {
-                produce_event(Event::Draw {
-                    window_id: *window_id,
-                });
+            redraw_manager::begin_draw_flush();
+            while let Some(window_id) = redraw_manager::get_draw_request() {
+                produce_event(Event::Draw { window_id });
             }
+            // Need to rerun event loop here if there are any redraw requests.
         }
     }
 }

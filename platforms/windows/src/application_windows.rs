@@ -7,6 +7,8 @@ use crate::{
     WindowId, WindowParameters,
 };
 
+use kapp_platform_common::redraw_manager;
+
 // These should be made into something safe.
 pub static mut CURRENT_CURSOR: HCURSOR = null_mut();
 pub static mut WINDOWS_TO_REDRAW: Vec<WindowId> = Vec::new();
@@ -154,11 +156,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn redraw_window(&mut self, window_id: WindowId) {
-        unsafe {
-            if !WINDOWS_TO_REDRAW.contains(&window_id) {
-                WINDOWS_TO_REDRAW.push(window_id);
-            }
-        }
+        redraw_manager::add_draw_request(window_id);
     }
 
     fn get_window_size(&mut self, window_id: WindowId) -> (u32, u32) {
@@ -241,6 +239,8 @@ impl PlatformApplicationTrait for PlatformApplication {
             );
 
             let window_id = WindowId::new(window_handle as *mut std::ffi::c_void);
+            // When a window is created immediately request that it should redraw
+            redraw_manager::add_draw_request(window_id);
             WINDOWS_TO_REDRAW.push(window_id); // Send the window an initial Draw event.
             window_id
         }
