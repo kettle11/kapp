@@ -1,10 +1,10 @@
+use crate::application_windows::WindowData;
 use crate::{
     external_windows::*, keys_windows::virtual_keycode_to_key, Event, Key, PointerButton,
     PointerSource, WindowId,
 };
 use kapp_platform_common::event_receiver;
 use std::ptr::null_mut;
-
 pub unsafe extern "system" fn window_callback(
     hwnd: HWND,
     u_msg: UINT,
@@ -12,6 +12,14 @@ pub unsafe extern "system" fn window_callback(
     l_param: LPARAM,
 ) -> LRESULT {
     match u_msg {
+        WM_CREATE => {
+            // This will be called before any other window functions.
+            // Store the WindowData pointer passed as the last parameter in
+            // CreateWindowExW
+            let data =
+                (*(l_param as *mut std::ffi::c_void as *mut CREATESTRUCTA)).lpCreateParams as isize;
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, data);
+        }
         WM_CLOSE => {
             produce_event(Event::WindowCloseRequested {
                 window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
@@ -229,12 +237,29 @@ pub unsafe extern "system" fn window_callback(
         }
         WM_DPICHANGED => {
             let scale_dpi_width = LOWORD(w_param as u32) as u32;
-            // 96.0 is considered the default scale.
-            let scale = scale_dpi_width as f64 / 96.0;
+            // USER_DEFAULT_SCREEN_DPI is 96.
+            // 96 is considered the default scale.
+            let scale = scale_dpi_width as f64 / USER_DEFAULT_SCREEN_DPI as f64;
             produce_event(Event::WindowScaleChanged {
                 scale,
                 window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
             });
+        }
+        WM_GETMINMAXINFO => {
+            // This is the first message sent to a new window.
+            // But it does not seem like it's safe to assume that.
+
+            // It is not safe to assume that window data is initialized yet.
+            let window_data = get_window_data(hwnd);
+            if let Some(window_data) = window_data {
+                let min_max_info = l_param as *mut MINMAXINFO;
+                (*min_max_info).ptMinTrackSize.x = (*window_data).minimum_width as i32;
+                (*min_max_info).ptMinTrackSize.y = (*window_data).minimum_height as i32;
+            }
+        }
+        WM_NCDESTROY => {
+            // Deallocate data associated with this window.
+            let _ = Box::from_raw(GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut WindowData);
         }
         _ => {}
     }
@@ -242,6 +267,14 @@ pub unsafe extern "system" fn window_callback(
     DefWindowProcW(hwnd, u_msg, w_param, l_param)
 }
 
+fn get_window_data(hwnd: HWND) -> Option<*mut WindowData> {
+    let data = unsafe { GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut WindowData };
+    if data == std::ptr::null_mut() {
+        None
+    } else {
+        Some(data)
+    }
+}
 /// Gets the message time with millisecond precision
 /// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagetime
 fn get_message_time() -> std::time::Duration {

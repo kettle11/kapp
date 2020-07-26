@@ -16,12 +16,17 @@ pub struct PlatformApplication {
     h_instance: HINSTANCE,
 }
 
+pub(crate) struct WindowData {
+    pub minimum_width: u32,
+    pub minimum_height: u32,
+}
+
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
     fn new() -> Self {
         unsafe {
             SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-            
+
             // Register the window class.
             let window_class_name = win32_string("windowing_rust");
             let h_instance = GetModuleHandleW(null_mut());
@@ -172,6 +177,11 @@ impl PlatformApplicationTrait for PlatformApplication {
         )
     }
 
+    fn get_window_scale(&mut self, window_id: WindowId) -> f64 {
+        let dpi = unsafe { GetDpiForWindow(window_id.raw() as HWND) };
+        dpi as f64 / USER_DEFAULT_SCREEN_DPI as f64
+    }
+
     fn set_mouse_position(&mut self, x: u32, y: u32) {
         unsafe {
             SetCursorPos(x as i32, y as i32);
@@ -208,6 +218,13 @@ impl PlatformApplicationTrait for PlatformApplication {
                         (rect.right - rect.left, rect.bottom - rect.top)
                     });
 
+            let (minimum_width, minimum_height) = window_parameters.minimum_size.unwrap_or((0, 0));
+            let window_data = Box::new(WindowData {
+                minimum_width,
+                minimum_height,
+            });
+
+            let data = Box::leak(window_data) as *mut WindowData as *mut std::ffi::c_void;
             let window_handle = CreateWindowExW(
                 extended_style,
                 self.window_class_name.as_ptr(),
@@ -220,11 +237,10 @@ impl PlatformApplicationTrait for PlatformApplication {
                 null_mut(),
                 null_mut(),
                 self.h_instance,
-                null_mut(),
+                data,
             );
 
             let window_id = WindowId::new(window_handle as *mut std::ffi::c_void);
-
             WINDOWS_TO_REDRAW.push(window_id); // Send the window an initial Draw event.
             window_id
         }

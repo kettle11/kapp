@@ -109,7 +109,7 @@ pub const TRUE: BOOL = 1;
 pub type DWORD = c_ulong;
 pub type BOOL = c_int;
 pub type WORD = c_ushort;
-pub type LPVOID = *mut c_void;
+pub type LPVOID = *mut std::ffi::c_void;
 pub type UINT = c_uint;
 pub type WPARAM = UINT_PTR;
 pub type LPARAM = LONG_PTR;
@@ -149,6 +149,23 @@ STRUCT! {#[debug] struct RECT {
     right: LONG,
     bottom: LONG,
 }}
+
+STRUCT! {struct CREATESTRUCTA {
+    lpCreateParams: LPVOID,
+    hInstance: HINSTANCE,
+    hMenu: HMENU,
+    hwndParent: HWND,
+    cy: c_int,
+    cx: c_int,
+    y: c_int,
+    x: c_int,
+    style: LONG,
+    lpszName: LPCSTR,
+    lpszClass: LPCSTR,
+    dwExStyle: DWORD,
+}}
+
+type LPCSTR = *const i8;
 
 // Copied from https://github.com/retep998/winapi-rs/blob/0.3/src/shared/windowsx.rs
 #[inline]
@@ -229,8 +246,10 @@ extern "system" {
     pub fn ShowCursor(bShow: BOOL) -> c_int;
     #[cfg(target_pointer_width = "64")]
     pub fn SetWindowLongPtrW(hWnd: HWND, nIndex: c_int, dwNewLong: LONG_PTR) -> LONG_PTR;
+    pub fn GetWindowLongPtrW(hWnd: HWND, nIndex: c_int) -> LONG_PTR;
     pub fn SetWindowTextW(hWnd: HWND, lpString: LPCWSTR) -> BOOL;
     pub fn TranslateMessage(lpmsg: *const MSG) -> BOOL;
+    pub fn GetDpiForWindow(hwnd: HWND) -> UINT;
 }
 
 #[link(name = "Shcore")]
@@ -238,6 +257,7 @@ extern "system" {
     pub fn SetProcessDpiAwareness(value: PROCESS_DPI_AWARENESS) -> HRESULT;
 }
 
+pub const USER_DEFAULT_SCREEN_DPI: c_long = 96;
 pub const PROCESS_PER_MONITOR_DPI_AWARE: PROCESS_DPI_AWARENESS = 2;
 type PROCESS_DPI_AWARENESS = u32;
 type HRESULT = c_long;
@@ -264,6 +284,14 @@ STRUCT! {struct WNDCLASSW {
     lpszClassName: LPCWSTR,
 }}
 
+STRUCT! {struct MINMAXINFO {
+    ptReserved: POINT,
+    ptMaxSize: POINT,
+    ptMaxPosition: POINT,
+    ptMinTrackSize: POINT,
+    ptMaxTrackSize: POINT,
+}}
+
 pub const WS_OVERLAPPED: DWORD = 0x00000000;
 pub const WS_POPUP: DWORD = 0x80000000;
 
@@ -286,6 +314,7 @@ pub const CS_DBLCLKS: UINT = 0x0008;
 #[allow(overflowing_literals)]
 pub const CW_USEDEFAULT: c_int = 0x80000000;
 pub const GWL_STYLE: c_int = -16;
+pub const GWLP_USERDATA: c_int = -21;
 
 pub const IDC_ARROW: LPCWSTR = 32512 as LPCWSTR;
 pub const IDC_IBEAM: LPCWSTR = 32513 as LPCWSTR;
@@ -460,6 +489,10 @@ pub const WM_MBUTTONDBLCLK: UINT = 0x0209;
 pub const WM_RBUTTONDBLCLK: UINT = 0x0206;
 pub const WM_XBUTTONDBLCLK: UINT = 0x020D;
 pub const WM_DPICHANGED: UINT = 0x02E0;
+pub const WM_NCDESTROY: UINT = 0x0082;
+pub const WM_GETMINMAXINFO: UINT = 0x0024;
+pub const WM_NCCREATE: UINT = 0x0081;
+pub const WM_CREATE: UINT = 0x0001;
 
 pub const XBUTTON1: WORD = 0x0001;
 pub const XBUTTON2: WORD = 0x0002;

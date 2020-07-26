@@ -76,6 +76,13 @@ impl Window {
             .get_window_size(self.id)
     }
 
+    /// Get the scale factor the window should apply to UI.
+    pub fn scale(&self) -> f64 {
+        self.platform_application
+            .borrow_mut()
+            .get_window_scale(self.id)
+    }
+
     /// Requests that this window receive another `Draw` event.
     /// Extra redraw requests will be ignored.
     pub fn request_redraw(&self) {
