@@ -39,6 +39,7 @@ impl<'a> WindowBuilder<'a> {
     }
 
     /// Sets the size of the window's content area (excluding the titlebar and borders)
+    /// Specified with physical coordinates
     pub fn size(&mut self, width: u32, height: u32) -> &mut Self {
         self.window_parameters.size = Some((width, height));
         self

@@ -1,10 +1,10 @@
+use crate::application_windows::WindowData;
 use crate::{
     external_windows::*, keys_windows::virtual_keycode_to_key, Event, Key, PointerButton,
     PointerSource, WindowId,
 };
-use kapp_platform_common::event_receiver;
+use kapp_platform_common::{event_receiver, redraw_manager};
 use std::ptr::null_mut;
-
 pub unsafe extern "system" fn window_callback(
     hwnd: HWND,
     u_msg: UINT,
@@ -12,6 +12,14 @@ pub unsafe extern "system" fn window_callback(
     l_param: LPARAM,
 ) -> LRESULT {
     match u_msg {
+        WM_CREATE => {
+            // This will be called before any other window functions.
+            // Store the WindowData pointer passed as the last parameter in
+            // CreateWindowExW
+            let data =
+                (*(l_param as *mut std::ffi::c_void as *mut CREATESTRUCTA)).lpCreateParams as isize;
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, data);
+        }
         WM_CLOSE => {
             produce_event(Event::WindowCloseRequested {
                 window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
@@ -39,12 +47,19 @@ pub unsafe extern "system" fn window_callback(
         }
         WM_SIZE => {
             resize_event(hwnd, l_param, w_param);
-            produce_event(Event::Draw {
-                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
-            });
+
+            // Redrawing here is required to maintain smooth resizing
+            // Resizing does not stretch with VSync on, but is more responsive with VSync off.
+            kapp_platform_common::redraw_manager::draw(WindowId::new(
+                hwnd as *mut std::ffi::c_void,
+            ));
+
             return 0;
         }
-        WM_PAINT => {}
+        WM_PAINT => {
+            // Drawing here seems to only make resizing more jittery.
+            // So don't bother
+        }
         WM_LBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
@@ -227,12 +242,46 @@ pub unsafe extern "system" fn window_callback(
                 timestamp: get_message_time(),
             });
         }
+        WM_DPICHANGED => {
+            let scale_dpi_width = LOWORD(w_param as u32) as u32;
+            // USER_DEFAULT_SCREEN_DPI is 96.
+            // 96 is considered the default scale.
+            let scale = scale_dpi_width as f64 / USER_DEFAULT_SCREEN_DPI as f64;
+            produce_event(Event::WindowScaleChanged {
+                scale,
+                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
+            });
+        }
+        WM_GETMINMAXINFO => {
+            // This is the first message sent to a new window.
+            // But it does not seem like it's safe to assume that.
+
+            // It is not safe to assume that window data is initialized yet.
+            let window_data = get_window_data(hwnd);
+            if let Some(window_data) = window_data {
+                let min_max_info = l_param as *mut MINMAXINFO;
+                (*min_max_info).ptMinTrackSize.x = (*window_data).minimum_width as i32;
+                (*min_max_info).ptMinTrackSize.y = (*window_data).minimum_height as i32;
+            }
+        }
+        WM_NCDESTROY => {
+            // Deallocate data associated with this window.
+            let _ = Box::from_raw(GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut WindowData);
+        }
         _ => {}
     }
     // DefWindowProcW is the default Window event handler.
     DefWindowProcW(hwnd, u_msg, w_param, l_param)
 }
 
+fn get_window_data(hwnd: HWND) -> Option<*mut WindowData> {
+    let data = unsafe { GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut WindowData };
+    if data == std::ptr::null_mut() {
+        None
+    } else {
+        Some(data)
+    }
+}
 /// Gets the message time with millisecond precision
 /// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagetime
 fn get_message_time() -> std::time::Duration {
@@ -265,9 +314,9 @@ fn resize_event(hwnd: HWND, l_param: LPARAM, w_param: WPARAM) {
             produce_event(Event::WindowRestored {
                 window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
             });
-            produce_event(Event::Draw {
-                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
-            });
+            kapp_platform_common::redraw_manager::draw(WindowId::new(
+                hwnd as *mut std::ffi::c_void,
+            ));
         }
         _ => {}
     }
@@ -334,25 +383,32 @@ pub fn run(callback: Box<dyn FnMut(crate::Event)>) {
 
         let mut message: MSG = std::mem::zeroed();
 
-        let mut temp_draw_request_buffer = Vec::new();
         while message.message != WM_QUIT {
+            // Block and wait for messages unless there is a redraw request.
+            // GetMessageW will return 0 if WM_QUIT is encountered
+            while redraw_manager::draw_requests_count() == 0
+                && GetMessageW(&mut message, null_mut(), 0, 0) > 0
+            {
+                TranslateMessage(&message as *const MSG);
+                DispatchMessageW(&message as *const MSG);
+            }
+
+            if message.message == WM_QUIT {
+                break;
+            }
+
+            // We only reach here if there are redraw requests.
+            // Iterate through all messages without blocking.
             while PeekMessageW(&mut message, null_mut(), 0, 0, PM_REMOVE) > 0 {
                 TranslateMessage(&message as *const MSG);
                 DispatchMessageW(&message as *const MSG);
             }
 
-            // The draw request buffer cannot be the same as the one read below
-            // because otherwise requesting a draw creates an infinite loop.
-            std::mem::swap(
-                &mut temp_draw_request_buffer,
-                &mut super::application_windows::WINDOWS_TO_REDRAW,
-            );
-
-            while let Some(window_id) = &temp_draw_request_buffer.pop() {
-                produce_event(Event::Draw {
-                    window_id: *window_id,
-                });
+            redraw_manager::begin_draw_flush();
+            while let Some(window_id) = redraw_manager::get_draw_request() {
+                produce_event(Event::Draw { window_id });
             }
+            // Need to rerun event loop here if there are any redraw requests.
         }
     }
 }

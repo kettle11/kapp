@@ -37,7 +37,7 @@ fn main() {
                 // but calling request_frame ensures the program redraws continuously.
                 window.request_redraw();
             }
-            Event::MouseMoved{ .. } | Event::EventsCleared => {},
+            Event::PointerMoved { .. } | Event::EventsCleared => {}
             _ => {
                 println!("event: {:?}", event);
             }

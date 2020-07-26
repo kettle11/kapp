@@ -7,6 +7,8 @@ use crate::{
     WindowId, WindowParameters,
 };
 
+use kapp_platform_common::redraw_manager;
+
 // These should be made into something safe.
 pub static mut CURRENT_CURSOR: HCURSOR = null_mut();
 pub static mut WINDOWS_TO_REDRAW: Vec<WindowId> = Vec::new();
@@ -16,10 +18,17 @@ pub struct PlatformApplication {
     h_instance: HINSTANCE,
 }
 
+pub(crate) struct WindowData {
+    pub minimum_width: u32,
+    pub minimum_height: u32,
+}
+
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
     fn new() -> Self {
         unsafe {
+            SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+
             // Register the window class.
             let window_class_name = win32_string("windowing_rust");
             let h_instance = GetModuleHandleW(null_mut());
@@ -147,11 +156,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn redraw_window(&mut self, window_id: WindowId) {
-        unsafe {
-            if !WINDOWS_TO_REDRAW.contains(&window_id) {
-                WINDOWS_TO_REDRAW.push(window_id);
-            }
-        }
+        redraw_manager::add_draw_request(window_id);
     }
 
     fn get_window_size(&mut self, window_id: WindowId) -> (u32, u32) {
@@ -168,6 +173,11 @@ impl PlatformApplicationTrait for PlatformApplication {
             (rect.right - rect.left) as u32,
             (rect.bottom - rect.top) as u32,
         )
+    }
+
+    fn get_window_scale(&mut self, window_id: WindowId) -> f64 {
+        let dpi = unsafe { GetDpiForWindow(window_id.raw() as HWND) };
+        dpi as f64 / USER_DEFAULT_SCREEN_DPI as f64
     }
 
     fn set_mouse_position(&mut self, x: u32, y: u32) {
@@ -205,8 +215,14 @@ impl PlatformApplicationTrait for PlatformApplication {
 
                         (rect.right - rect.left, rect.bottom - rect.top)
                     });
-            println!("HEIGHT: {:?}", height);
 
+            let (minimum_width, minimum_height) = window_parameters.minimum_size.unwrap_or((0, 0));
+            let window_data = Box::new(WindowData {
+                minimum_width,
+                minimum_height,
+            });
+
+            let data = Box::leak(window_data) as *mut WindowData as *mut std::ffi::c_void;
             let window_handle = CreateWindowExW(
                 extended_style,
                 self.window_class_name.as_ptr(),
@@ -219,13 +235,12 @@ impl PlatformApplicationTrait for PlatformApplication {
                 null_mut(),
                 null_mut(),
                 self.h_instance,
-                null_mut(),
+                data,
             );
 
             let window_id = WindowId::new(window_handle as *mut std::ffi::c_void);
-
-            println!("window size{:?}", self.get_window_size(window_id));
-
+            // When a window is created immediately request that it should redraw
+            redraw_manager::add_draw_request(window_id);
             WINDOWS_TO_REDRAW.push(window_id); // Send the window an initial Draw event.
             window_id
         }

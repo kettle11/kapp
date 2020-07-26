@@ -104,25 +104,36 @@ extern "C" fn window_should_close(_this: &Object, _sel: Sel, sender: *mut Object
     NO // No because the program must drop its handle to close the window.
 }
 
-extern "C" fn window_did_change_backing_properties(_this: &Object, _sel: Sel, _event: *mut Object) {
+extern "C" fn window_did_change_backing_properties(
+    _this: &Object,
+    _sel: Sel,
+    ns_notification: *mut Object,
+) {
+    let window: *mut c_void = unsafe { msg(ns_notification, Sels::object, ()) };
+
+    // Check if the backing scale has changed.
+    unsafe {
+        let user_info: *mut Object = msg(ns_notification, Sels::userInfo, ());
+        let old_backing_scale: *mut Object = msg(
+            user_info,
+            Sels::valueForKey,
+            (NSBackingPropertyOldScaleFactorKey,),
+        );
+
+        let old_backing_scale: f64 = msg(old_backing_scale, Sels::floatValue, ());
+        let backing_scale = get_backing_scale(window as *mut Object);
+
+        if old_backing_scale != backing_scale {
+            self::submit_event(Event::WindowScaleChanged {
+                scale: backing_scale,
+                window_id: WindowId::new(window),
+            });
+        }
+    }
+
     // Color space changes need to be detected here.
     // Info about how to check the old color space:
     // https://developer.apple.com/documentation/appkit/nswindowdelegate/1419517-windowdidchangebackingproperties
-
-    // unsafe {
-    // let window_data = get_window_data(this);
-    // let backing_scale: CGFloat = msg_send![window_data.ns_window, backingScaleFactor];
-    // let new_scale: CGFloat = msg_send![this, backingScaleFactor];
-
-    // The color space could have changed, not the backing scale.
-    // So check here to make sure the scale has actually changed.
-    // However the check doesn't matter as no event is sent (yet!)
-    /*
-    if old_scale != new_scale {
-        window_data.backing_scale = new_scale;
-    }
-    */
-    // }
 }
 
 pub fn add_window_events_to_decl(decl: &mut ClassDecl) {

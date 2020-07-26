@@ -279,6 +279,10 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
+    fn get_window_scale(&mut self, window_id: WindowId) -> f64 {
+        get_backing_scale(window_id)
+    }
+
     fn set_mouse_position(&mut self, _x: u32, _y: u32) {
         // Need to account for backing scale here!
 

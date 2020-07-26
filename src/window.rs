@@ -61,6 +61,7 @@ impl Window {
     }
 
     /// Set the window's width and height, excluding the titlebar
+    /// Width and height are specified with physical coordinates.
     pub fn set_size(&self, width: u32, height: u32) {
         self.platform_application
             .borrow_mut()
@@ -73,6 +74,13 @@ impl Window {
         self.platform_application
             .borrow_mut()
             .get_window_size(self.id)
+    }
+
+    /// Get the scale factor the window should apply to UI.
+    pub fn scale(&self) -> f64 {
+        self.platform_application
+            .borrow_mut()
+            .get_window_scale(self.id)
     }
 
     /// Requests that this window receive another `Draw` event.
