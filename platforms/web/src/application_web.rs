@@ -33,6 +33,9 @@ impl PlatformApplicationTrait for PlatformApplication {
         let canvas_client_height = canvas.client_height() as u32;
         (canvas_client_width, canvas_client_height)
     }
+    fn get_window_scale(&mut self, _window_id: WindowId) -> f64 {
+        unimplemented!()
+    }
     fn fullscreen_window(&mut self, _window_id: WindowId) {
         super::event_loop_web::request_fullscreen()
     }
