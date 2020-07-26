@@ -94,6 +94,9 @@ pub mod Sels {
     pub static mut timestamp: *const c_void = null();
     pub static mut locationInWindow: *const c_void = null();
     pub static mut clickCount: *const c_void = null();
+    pub static mut userInfo: *const c_void = null();
+    pub static mut valueForKey: *const c_void = null();
+    pub static mut floatValue: *const c_void = null();
 
     pub fn get_sel(name: &str) -> *const c_void {
         objc::runtime::Sel::register(name).as_ptr()
@@ -171,6 +174,9 @@ pub mod Sels {
         flagsChanged = get_sel("flagsChanged:");
         timestamp = get_sel("timestamp");
         locationInWindow = get_sel("locationInWindow");
+        userInfo = get_sel("userInfo");
+        valueForKey = get_sel("valueForKey:");
+        floatValue = get_sel("floatValue");
     }
 }
 
@@ -207,7 +213,9 @@ pub use objc::{
 };
 
 #[link(name = "AppKit", kind = "framework")]
-extern "C" {}
+extern "C" {
+    pub static NSBackingPropertyOldScaleFactorKey: *const c_void;
+}
 
 #[cfg(target_pointer_width = "32")]
 pub type NSInteger = c_int;
