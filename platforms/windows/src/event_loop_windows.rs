@@ -47,12 +47,19 @@ pub unsafe extern "system" fn window_callback(
         }
         WM_SIZE => {
             resize_event(hwnd, l_param, w_param);
-            produce_event(Event::Draw {
-                window_id: WindowId::new(hwnd as *mut std::ffi::c_void),
-            });
+
+            // Redrawing here is required to maintain smooth resizing
+            // Resizing does not stretch with VSync on, but is more responsive with VSync off.
+            kapp_platform_common::redraw_manager::draw(WindowId::new(
+                hwnd as *mut std::ffi::c_void,
+            ));
+
             return 0;
         }
-        WM_PAINT => {}
+        WM_PAINT => {
+            // Drawing here seems to only make resizing more jittery.
+            // So don't bother
+        }
         WM_LBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
