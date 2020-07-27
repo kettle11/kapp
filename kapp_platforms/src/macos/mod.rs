@@ -6,6 +6,6 @@ mod keys_mac;
 mod window_mac;
 
 pub mod prelude {
-    pub use super::{application_mac::PlatformApplication, application_mac::*};
+    pub use super::application_mac::*;
     pub use kapp_platform_common::*;
 }
