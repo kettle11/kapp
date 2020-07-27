@@ -5,11 +5,6 @@ mod application_web;
 mod event_loop_web;
 mod keys_web;
 
-use kapp_platform_common::{
-    Cursor, Event, Key, PlatformApplicationTrait, PlatformEventLoopTrait, PointerButton,
-    PointerSource, WindowId, WindowParameters,
-};
-
 pub mod prelude {
     pub use super::application_web::{PlatformApplication, PlatformEventLoop};
     pub use kapp_platform_common::*;

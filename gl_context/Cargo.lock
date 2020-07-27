@@ -54,9 +54,7 @@ name = "kapp"
 version = "0.1.0"
 dependencies = [
  "kapp_gl_context 0.1.0",
- "kapp_platform_macos 0.1.0",
- "kapp_platform_web 0.1.0",
- "kapp_platform_windows 0.1.0",
+ "kapp_platforms 0.1.0",
 ]
 
 [[package]]
@@ -81,28 +79,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "kapp_platform_macos"
-version = "0.1.0"
-dependencies = [
- "kapp_platform_common 0.1.0",
- "objc 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "kapp_platform_web"
+name = "kapp_platforms"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "kapp_platform_common 0.1.0",
+ "objc 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "raw-window-handle 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.64 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-sys 0.3.37 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "kapp_platform_windows"
-version = "0.1.0"
-dependencies = [
- "kapp_platform_common 0.1.0",
 ]
 
 [[package]]

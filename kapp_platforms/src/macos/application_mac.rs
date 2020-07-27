@@ -1,5 +1,4 @@
 use super::apple::*;
-use crate::{Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, WindowId, WindowParameters};
 use kapp_platform_common::*;
 use std::cell::RefCell;
 use std::ffi::c_void;
@@ -117,7 +116,7 @@ pub struct PlatformEventLoop {
 }
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
-    fn run(&self, callback: Box<dyn FnMut(crate::Event)>) {
+    fn run(&self, callback: Box<dyn FnMut(Event)>) {
         event_receiver::set_callback(callback);
 
         unsafe {
