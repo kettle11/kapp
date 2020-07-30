@@ -1,6 +1,6 @@
 use super::apple::*;
 use super::application_mac::APPLICATION_DATA;
-use crate::{Event, Key, PointerButton, PointerSource, WindowId};
+use kapp_platform_common::{Event, Key, PointerButton, PointerSource, WindowId};
 use std::ffi::c_void;
 
 // ------------------------ Window Events --------------------------
@@ -14,7 +14,7 @@ extern "C" fn window_did_move(_this: &Object, _sel: Sel, ns_notification: *mut O
         let screen: *const Object = msg(window, Sels::screen, ());
         let screen_frame: CGRect = msg(screen, Sels::frame, ());
 
-        self::submit_event(crate::Event::WindowMoved {
+        self::submit_event(Event::WindowMoved {
             x: (frame.origin.x * backing_scale) as u32,
             y: ((screen_frame.size.height - frame.origin.y) * backing_scale) as u32, // Flip y coordinate because 0,0 is bottom left on Mac
             window_id: WindowId::new(window as *mut c_void),
@@ -55,14 +55,14 @@ extern "C" fn window_will_start_live_resize(
     ns_notification: *mut Object,
 ) {
     let window: *mut c_void = unsafe { msg(ns_notification, Sels::object, ()) };
-    self::submit_event(crate::Event::WindowStartResize {
+    self::submit_event(Event::WindowStartResize {
         window_id: WindowId::new(window),
     });
 }
 
 extern "C" fn window_did_end_live_resize(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
     let window: *mut c_void = unsafe { msg(ns_notification, Sels::object, ()) };
-    self::submit_event(crate::Event::WindowEndResize {
+    self::submit_event(Event::WindowEndResize {
         window_id: WindowId::new(window),
     });
 }
@@ -75,7 +75,7 @@ extern "C" fn window_did_resize(_this: &Object, _sel: Sel, ns_notification: *mut
         let backing_scale = get_backing_scale(window);
         let frame: CGRect = msg(view, Sels::frame, ());
 
-        self::submit_event(crate::Event::WindowResized {
+        self::submit_event(Event::WindowResized {
             width: (frame.size.width * backing_scale) as u32,
             height: (frame.size.height * backing_scale) as u32,
             window_id: WindowId::new(window as *mut c_void),
@@ -85,20 +85,20 @@ extern "C" fn window_did_resize(_this: &Object, _sel: Sel, ns_notification: *mut
 
 extern "C" fn window_did_become_key(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
     let window: *mut c_void = unsafe { msg(ns_notification, Sels::object, ()) };
-    self::submit_event(crate::Event::WindowGainedFocus {
+    self::submit_event(Event::WindowGainedFocus {
         window_id: WindowId::new(window),
     });
 }
 
 extern "C" fn window_did_resign_key(_this: &Object, _sel: Sel, ns_notification: *mut Object) {
     let window: *mut c_void = unsafe { msg(ns_notification, Sels::object, ()) };
-    self::submit_event(crate::Event::WindowLostFocus {
+    self::submit_event(Event::WindowLostFocus {
         window_id: WindowId::new(window),
     });
 }
 
 extern "C" fn window_should_close(_this: &Object, _sel: Sel, sender: *mut Object) -> BOOL {
-    self::submit_event(crate::Event::WindowCloseRequested {
+    self::submit_event(Event::WindowCloseRequested {
         window_id: WindowId::new(sender as *mut c_void),
     });
     NO // No because the program must drop its handle to close the window.
@@ -251,12 +251,12 @@ extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
         let repeat: bool = msg(event, Sels::isARepeat, ());
         let key = super::keys_mac::virtual_keycode_to_key(key_code);
         let event = if repeat {
-            crate::Event::KeyRepeat {
+            Event::KeyRepeat {
                 key,
                 timestamp: get_timestamp(event),
             }
         } else {
-            crate::Event::KeyDown {
+            Event::KeyDown {
                 key,
                 timestamp: get_timestamp(event),
             }
@@ -268,7 +268,7 @@ extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
 extern "C" fn key_up(_this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg(event, Sels::keyCode, ());
-        self::submit_event(crate::Event::KeyUp {
+        self::submit_event(Event::KeyUp {
             key: super::keys_mac::virtual_keycode_to_key(key_code),
             timestamp: get_timestamp(event),
         });
@@ -315,14 +315,14 @@ extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
 
     for i in 0..8 {
         if !flag_state_old[i] && flag_state_new[i] {
-            self::submit_event(crate::Event::KeyDown {
+            self::submit_event(Event::KeyDown {
                 key: KEYS[i],
                 timestamp: get_timestamp(event),
             })
         }
 
         if flag_state_old[i] && !flag_state_new[i] {
-            self::submit_event(crate::Event::KeyUp {
+            self::submit_event(Event::KeyUp {
                 key: KEYS[i],
                 timestamp: get_timestamp(event),
             })
@@ -336,7 +336,7 @@ extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::PointerMoved {
+    self::submit_event(Event::PointerMoved {
         x,
         y,
         source: PointerSource::Mouse,
@@ -346,7 +346,7 @@ extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::PointerDown {
+    self::submit_event(Event::PointerDown {
         x,
         y,
         button: PointerButton::Primary,
@@ -355,7 +355,7 @@ extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(crate::Event::DoubleClickDown {
+        self::submit_event(Event::DoubleClickDown {
             x,
             y,
             button: PointerButton::Primary,
@@ -366,7 +366,7 @@ extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::PointerUp {
+    self::submit_event(Event::PointerUp {
         x,
         y,
         button: PointerButton::Primary,
@@ -375,7 +375,7 @@ extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(crate::Event::MouseButtonDoubleClickUp {
+        self::submit_event(Event::MouseButtonDoubleClickUp {
             x,
             y,
             button: PointerButton::Primary,
@@ -387,7 +387,7 @@ extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
 extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
 
-    self::submit_event(crate::Event::PointerDown {
+    self::submit_event(Event::PointerDown {
         x,
         y,
         button: PointerButton::Secondary,
@@ -396,7 +396,7 @@ extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(crate::Event::DoubleClickDown {
+        self::submit_event(Event::DoubleClickDown {
             x,
             y,
             button: PointerButton::Secondary,
@@ -408,7 +408,7 @@ extern "C" fn right_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
 extern "C" fn right_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
 
-    self::submit_event(crate::Event::PointerUp {
+    self::submit_event(Event::PointerUp {
         x,
         y,
         button: PointerButton::Secondary,
@@ -417,7 +417,7 @@ extern "C" fn right_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(crate::Event::MouseButtonDoubleClickUp {
+        self::submit_event(Event::MouseButtonDoubleClickUp {
             x,
             y,
             button: PointerButton::Secondary,
@@ -437,7 +437,7 @@ extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
         16 => PointerButton::Extra2,
         _ => PointerButton::Unknown,
     };
-    self::submit_event(crate::Event::PointerDown {
+    self::submit_event(Event::PointerDown {
         x,
         y,
         button,
@@ -446,7 +446,7 @@ extern "C" fn other_mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(crate::Event::DoubleClickDown {
+        self::submit_event(Event::DoubleClickDown {
             x,
             y,
             button,
@@ -466,7 +466,7 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     };
 
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::PointerUp {
+    self::submit_event(Event::PointerUp {
         x,
         y,
         button,
@@ -475,7 +475,7 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(crate::Event::MouseButtonDoubleClickUp {
+        self::submit_event(Event::MouseButtonDoubleClickUp {
             x,
             y,
             button,
@@ -486,7 +486,7 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::PointerMoved {
+    self::submit_event(Event::PointerMoved {
         x,
         y,
         source: PointerSource::Mouse,
@@ -496,7 +496,7 @@ extern "C" fn mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
 
 extern "C" fn right_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::PointerMoved {
+    self::submit_event(Event::PointerMoved {
         x,
         y,
         source: PointerSource::Mouse,
@@ -506,7 +506,7 @@ extern "C" fn right_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) 
 
 extern "C" fn other_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
     let (x, y) = get_mouse_position(this, event);
-    self::submit_event(crate::Event::PointerMoved {
+    self::submit_event(Event::PointerMoved {
         x,
         y,
         source: PointerSource::Mouse,
@@ -521,7 +521,7 @@ extern "C" fn scroll_wheel(_this: &mut Object, _sel: Sel, event: *mut Object) {
         let delta_y: CGFloat = msg(event, Sels::scrollingDeltaY, ());
         let window: *mut c_void = msg(event, Sels::window, ());
 
-        self::submit_event(crate::Event::Scroll {
+        self::submit_event(Event::Scroll {
             delta_x,
             delta_y,
             timestamp: get_timestamp(event),
@@ -538,7 +538,7 @@ extern "C" fn accepts_first_responder(_this: &Object, _sel: Sel) -> BOOL {
 extern "C" fn magnify_with_event(_this: &Object, _sel: Sel, event: *mut Object) {
     let magnification: CGFloat = unsafe { msg(event, Sels::magnification, ()) };
 
-    self::submit_event(crate::Event::PinchGesture {
+    self::submit_event(Event::PinchGesture {
         delta: magnification,
         timestamp: get_timestamp(event),
     });

@@ -1,4 +1,4 @@
-use crate::{Key, Key::*};
+use kapp_platform_common::{Key, Key::*};
 
 pub fn virtual_keycode_to_key(key_in: u16) -> Key {
     match key_in {

@@ -2,12 +2,7 @@ use crate::external_windows::*;
 use crate::utils_windows::*;
 use std::ptr::null_mut;
 
-use crate::{
-    raw_window_handle, Cursor, PlatformApplicationTrait, PlatformEventLoopTrait, RawWindowHandle,
-    WindowId, WindowParameters,
-};
-
-use kapp_platform_common::redraw_manager;
+use kapp_platform_common::*;
 
 // These should be made into something safe.
 pub static mut CURRENT_CURSOR: HCURSOR = null_mut();

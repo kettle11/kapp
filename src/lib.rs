@@ -56,8 +56,7 @@ mod state_tracker;
 mod window;
 mod window_builder;
 
-#[cfg(target_os = "macos")]
-use kapp_platform_macos::prelude as platform;
+use kapp_platforms::prelude as platform;
 
 #[cfg(target_arch = "wasm32")]
 use kapp_platform_web::prelude as platform;

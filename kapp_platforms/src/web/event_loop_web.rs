@@ -1,5 +1,6 @@
 use super::keys_web;
-use crate::{Event, PointerButton, PointerSource, WindowId};
+use kapp_platform_common::*;
+
 use std::time::Duration;
 
 use wasm_bindgen::prelude::*;
@@ -22,7 +23,7 @@ fn send_event(event: Event) {
 
 pub fn run<T>(callback: T)
 where
-    T: 'static + FnMut(crate::Event),
+    T: 'static + FnMut(Event),
 {
     let document = web_sys::window().unwrap().document().unwrap();
     let canvas = document

@@ -1,9 +1,7 @@
 use crate::application_windows::WindowData;
-use crate::{
-    external_windows::*, keys_windows::virtual_keycode_to_key, Event, Key, PointerButton,
-    PointerSource, WindowId,
-};
-use kapp_platform_common::{event_receiver, redraw_manager};
+use crate::{external_windows::*, keys_windows::virtual_keycode_to_key};
+use kapp_platform_common::*;
+
 use std::ptr::null_mut;
 pub unsafe extern "system" fn window_callback(
     hwnd: HWND,

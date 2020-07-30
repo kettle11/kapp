@@ -1,5 +1,5 @@
 use super::apple::*;
-use crate::WindowId;
+use kapp_platform_common::{WindowId, WindowParameters};
 use std::ffi::c_void;
 
 // All of this data and the instances must be all be dropped together.
@@ -25,7 +25,7 @@ impl Drop for InnerWindowData {
 }
 
 pub fn build(
-    window_parameters: &crate::WindowParameters,
+    window_parameters: &WindowParameters,
     window_class: *const objc::runtime::Class,
     view_class: *const objc::runtime::Class,
 ) -> Result<WindowId, ()> {

@@ -1,4 +1,4 @@
-use crate::{Key, Key::*};
+use kapp_platform_common::{Key, Key::*};
 
 // Hand transcribed from here:
 // https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values

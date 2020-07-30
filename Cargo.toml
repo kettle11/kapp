@@ -10,13 +10,4 @@ default = ["gl_context"]
 
 [dependencies]
 kapp_gl_context = { path = "./gl_context", optional = true }
-
-[target.'cfg(target_os="macos")'.dependencies]
-kapp_platform_macos = { path = "./platforms/macos" }
-
-[target.'cfg(target_os="windows")'.dependencies]
-kapp_platform_windows = { path = "./platforms/windows" }
-
-[target.'cfg(target_arch="wasm32")'.dependencies]
-kapp_platform_web = { path = "./platforms/web" }
-
+kapp_platforms = { path = "./kapp_platforms" }

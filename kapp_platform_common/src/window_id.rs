@@ -8,15 +8,14 @@ impl WindowId {
     /// Constructs a new WindowId
     /// There should never be a reason to call this directly.
     pub fn new(raw_id: *mut std::ffi::c_void) -> Self {
-        Self {
-            raw_id,
-        }
+        Self { raw_id }
     }
 
     /// # Safety
     ///
     /// Returns the raw window pointer.
     /// On MacOS this is a pointer to the NSWindow object.
+    /// On iOS this is a pointer to a UIWindow
     /// On Web this is just '0'
     pub unsafe fn raw(self) -> *mut std::ffi::c_void {
         self.raw_id
