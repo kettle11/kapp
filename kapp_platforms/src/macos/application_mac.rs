@@ -141,7 +141,13 @@ impl PlatformApplicationTrait for PlatformApplication {
             // Requests and loads the relevant Objc classes.
             initialize_classes();
 
+            // https://developer.apple.com/documentation/appkit/nsapplication
+            // Retrieve the global 'sharedApplication'
             let ns_application: *mut Object = msg(NSApplicationClass, Sels::sharedApplication, ());
+
+            // https://developer.apple.com/documentation/appkit/nsapplicationactivationpolicy/nsapplicationactivationpolicyregular?language=objc
+            // "The application is an ordinary app that appears in the Dock and may have a user interface."
+            // Apple claims this is the default, but without manually setting it the application does not appear.
             let () = msg(
                 ns_application,
                 Sels::setActivationPolicy,
@@ -150,22 +156,19 @@ impl PlatformApplicationTrait for PlatformApplication {
 
             // Setup the application delegate to handle application events.
             let ns_application_delegate_class = application_delegate_declaration();
+            // Create an instance of the delegate. The delegate's functions receives events for the application.
             let ns_application_delegate: *mut Object =
                 msg(ns_application_delegate_class, Sels::new, ());
+            // Assign the delegate to the application.
             let () = msg(
                 ns_application,
                 Sels::setDelegate,
                 (ns_application_delegate,),
             );
 
-            let run_loop_custom_event_source = self::create_run_loop_source();
-
-            APPLICATION_DATA.with(|d| {
-                d.borrow_mut().ns_application = ns_application;
-            });
-
             // Create an observer that runs at the end of the event loop to
             // produce `Draw` and `EventsCleared` events.
+            let run_loop_custom_event_source = self::create_run_loop_source();
             let observer = CFRunLoopObserverCreate(
                 std::ptr::null_mut(),
                 kCFRunLoopBeforeWaiting,
@@ -175,6 +178,11 @@ impl PlatformApplicationTrait for PlatformApplication {
                 std::ptr::null(),
             );
             CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
+
+            // Store the application in a thread local.
+            APPLICATION_DATA.with(|d| {
+                d.borrow_mut().ns_application = ns_application;
+            });
 
             Self {
                 window_class: window_delegate_declaration(),
