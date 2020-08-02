@@ -19,15 +19,25 @@ impl PlatformApplicationTrait for PlatformApplication {
         PlatformEventLoop {}
     }
 
-    fn set_window_position(&mut self, window_id: WindowId, x: u32, y: u32) {}
+    fn set_window_position(&mut self, window_id: WindowId, x: u32, y: u32) {
+        unimplemented!();
+    }
 
-    fn set_window_size(&mut self, window_id: WindowId, width: u32, height: u32) {}
+    fn set_window_size(&mut self, window_id: WindowId, width: u32, height: u32) {
+        unimplemented!();
+    }
 
-    fn set_window_title(&mut self, window_id: WindowId, title: &str) {}
+    fn set_window_title(&mut self, window_id: WindowId, title: &str) {
+        unimplemented!();
+    }
 
-    fn minimize_window(&mut self, window_id: WindowId) {}
+    fn minimize_window(&mut self, window_id: WindowId) {
+        unimplemented!();
+    }
 
-    fn maximize_window(&mut self, _window_id: WindowId) {}
+    fn maximize_window(&mut self, _window_id: WindowId) {
+        unimplemented!();
+    }
 
     fn fullscreen_window(&mut self, window_id: WindowId) {
         unimplemented!();
@@ -37,7 +47,9 @@ impl PlatformApplicationTrait for PlatformApplication {
         unimplemented!()
     }
 
-    fn close_window(&mut self, window_id: WindowId) {}
+    fn close_window(&mut self, window_id: WindowId) {
+        unimplemented!();
+    }
 
     fn redraw_window(&mut self, window_id: WindowId) {
         unimplemented!();
@@ -72,7 +84,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn quit(&self) {
-        // No analogous behavior
+        unimplemented!();
     }
 
     fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle {
