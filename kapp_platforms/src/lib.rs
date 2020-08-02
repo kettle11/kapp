@@ -16,7 +16,6 @@ pub use ios::*;
 #[macro_use]
 extern crate objc;
 
-
 #[cfg(target_arch = "wasm32")]
 mod web;
 #[cfg(target_arch = "wasm32")]
@@ -26,3 +25,8 @@ pub use web::*;
 mod windows;
 #[cfg(target_os = "windows")]
 pub use windows::*;
+
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+pub use linux::*;

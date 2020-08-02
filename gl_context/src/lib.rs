@@ -24,6 +24,9 @@ mod web;
 #[cfg(target_arch = "wasm32")]
 pub use web::GLContext;
 
+#[cfg(target_os = "linux")]
+pub struct GLContext {}
+
 pub mod prelude {
     pub use super::common::{GLContextBuilder, GLContextTrait, SetWindowError, VSync};
     pub use super::GLContext;
