@@ -2,10 +2,21 @@ use kapp_platform_common::*;
 use std::ffi::CString;
 use std::ptr::{null, null_mut};
 
-pub struct PlatformEventLoop {}
+pub struct PlatformEventLoop {
+    x_display: *mut c_void,
+}
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
-    fn run(&self, callback: Box<dyn FnMut(Event)>) {}
+    fn run(&self, callback: Box<dyn FnMut(Event)>) {
+        let mut event = XEvent {
+            max_aligned_size: [0; 24],
+        };
+        loop {
+            unsafe {
+                XNextEvent(self.x_display, &mut event);
+            }
+        }
+    }
 }
 
 pub struct PlatformApplication {
@@ -24,7 +35,9 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn event_loop(&mut self) -> Self::EventLoop {
-        PlatformEventLoop {}
+        PlatformEventLoop {
+            x_display: self.x_display,
+        }
     }
 
     fn set_window_position(&mut self, window_id: WindowId, x: u32, y: u32) {
@@ -56,6 +69,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn close_window(&mut self, window_id: WindowId) {
+        // XDestroyWindow
         unimplemented!();
     }
 
@@ -172,6 +186,11 @@ impl PlatformApplicationTrait for PlatformApplication {
 impl Drop for PlatformApplication {
     fn drop(&mut self) {
         self.quit();
+
+        // Is this the right spot for this?
+        unsafe {
+            XCloseDisplay(self.x_display);
+        }
     }
 }
 
@@ -243,6 +262,8 @@ extern "C" {
     ) -> c_int;
     fn XSelectInput(display: *mut c_void, window: Window, event_mask: c_long) -> c_int;
     fn XFlush(display: *mut c_void);
+    fn XCloseDisplay(display: *mut c_void) -> c_int;
+    fn XNextEvent(display: *mut c_void, event: *mut XEvent) -> c_int;
 }
 
 pub type XID = c_ulong;
@@ -251,3 +272,14 @@ pub type Window = XID;
 pub const KeyPressMask: c_long = 1 << 0;
 pub const ButtonPressMask: c_long = 1 << 2;
 pub const ExposureMask: c_long = 1 << 15;
+
+pub const KeyPress: c_int = 2;
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union XEvent {
+    // Every XEvent variant implements 'type' as its first member so this variant is always valid.
+    pub type_: c_int,
+    /* Many XEvent union variant are excluded here */
+    max_aligned_size: [u64; 24usize],
+}
