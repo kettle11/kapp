@@ -29,6 +29,10 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
                         // then it's a repeat.
                         // This occurs because a flag is set during initialization with a call to:
                         // XkbSetDetectableAutoRepeat
+                        // Are uppercase and lower case repeats properly accounted for?
+                        // It seems that if a key down of 'a' occurs followed by a key up of 'A'
+                        // that a bunch of key repeat events are received continuously. Which 
+                        // feels like a bug, but not of this library. 
                         if key_down[event.key.keycode as usize] {
                             key_down[event.key.keycode as usize] = true;
                             callback(Event::KeyRepeat {
