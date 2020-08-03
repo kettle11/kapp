@@ -1,19 +1,38 @@
+use super::keys_linux::*;
 use kapp_platform_common::*;
 use std::ffi::CString;
 use std::ptr::{null, null_mut};
+use std::time::Duration;
 
 pub struct PlatformEventLoop {
     x_display: *mut c_void,
 }
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
-    fn run(&self, callback: Box<dyn FnMut(Event)>) {
+    fn run(&self, mut callback: Box<dyn FnMut(Event)>) {
         let mut event = XEvent {
             max_aligned_size: [0; 24],
         };
         loop {
             unsafe {
                 XNextEvent(self.x_display, &mut event);
+                match event.type_ {
+                    KeyPress => {
+                        let mut _length = 0;
+                        let key = *XGetKeyboardMapping(
+                            self.x_display,
+                            event.key.keycode as c_uchar,
+                            1,
+                            &mut _length,
+                        );
+                        let key = virtual_keycode_to_key(key);
+                        callback(Event::KeyDown {
+                            key,
+                            timestamp: Duration::new(0, 0),
+                        })
+                    }
+                    _ => {}
+                }
             }
         }
     }
@@ -219,7 +238,7 @@ fn check_not_zero(p: c_ulong) -> Result<c_ulong, ()> {
 }
 
 use std::ffi::c_void;
-use std::os::raw::{c_char, c_int, c_long, c_uint, c_ulong};
+use std::os::raw::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong};
 
 #[link(name = "X11")]
 extern "C" {
@@ -264,6 +283,12 @@ extern "C" {
     fn XFlush(display: *mut c_void);
     fn XCloseDisplay(display: *mut c_void) -> c_int;
     fn XNextEvent(display: *mut c_void, event: *mut XEvent) -> c_int;
+    fn XGetKeyboardMapping(
+        display: *mut c_void,
+        first_keycode: c_uchar,
+        keycode_count: c_int,
+        keysyms_per_keycode_return: *mut c_int,
+    ) -> *mut c_ulong;
 }
 
 pub type XID = c_ulong;
@@ -272,7 +297,6 @@ pub type Window = XID;
 pub const KeyPressMask: c_long = 1 << 0;
 pub const ButtonPressMask: c_long = 1 << 2;
 pub const ExposureMask: c_long = 1 << 15;
-
 pub const KeyPress: c_int = 2;
 
 #[repr(C)]
@@ -280,6 +304,27 @@ pub const KeyPress: c_int = 2;
 pub union XEvent {
     // Every XEvent variant implements 'type' as its first member so this variant is always valid.
     pub type_: c_int,
+    pub key: XKeyEvent,
     /* Many XEvent union variant are excluded here */
     max_aligned_size: [u64; 24usize],
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct XKeyEvent {
+    pub type_: c_int,
+    pub serial: c_ulong,
+    pub send_event: bool,
+    pub display: *mut c_void,
+    pub window: Window,
+    pub root: Window,
+    pub subwindow: Window,
+    pub time: c_ulong,
+    pub x: c_int,
+    pub y: c_int,
+    pub x_root: c_int,
+    pub y_root: c_int,
+    pub state: c_uint,
+    pub keycode: c_uint,
+    pub same_screen: bool,
 }
