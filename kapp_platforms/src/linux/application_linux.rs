@@ -13,23 +13,42 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
         let mut event = XEvent {
             max_aligned_size: [0; 24],
         };
+        // Used to peek ahead
+        let mut next_event = XEvent {
+            max_aligned_size: [0; 24],
+        };
+
+        let mut key_down = [false; 255];
+
         loop {
             unsafe {
                 XNextEvent(self.x_display, &mut event);
                 match event.type_ {
                     KeyPress => {
-                        let mut _length = 0;
-                        let key = *XGetKeyboardMapping(
-                            self.x_display,
-                            event.key.keycode as c_uchar,
-                            1,
-                            &mut _length,
-                        );
-                        let key = virtual_keycode_to_key(key);
-                        callback(Event::KeyDown {
-                            key,
-                            timestamp: Duration::new(0, 0),
-                        })
+                        // If a key down occurs without a matching key key up
+                        // then it's a repeat.
+                        // This occurs because a flag is set during initialization with a call to:
+                        // XkbSetDetectableAutoRepeat
+                        if key_down[event.key.keycode as usize] {
+                            key_down[event.key.keycode as usize] = true;
+                            callback(Event::KeyRepeat {
+                                key: self.get_key(event.key.keycode),
+                                timestamp: Duration::from_millis(event.key.time),
+                            });
+                        } else {
+                            key_down[event.key.keycode as usize] = true;
+                            callback(Event::KeyDown {
+                                key: self.get_key(event.key.keycode),
+                                timestamp: Duration::from_millis(event.key.time),
+                            });
+                        }
+                    }
+                    KeyRelease => {
+                        key_down[event.key.keycode as usize] = false;
+                        callback(Event::KeyUp {
+                            key: self.get_key(event.key.keycode),
+                            timestamp: Duration::from_millis(event.key.time),
+                        });
                     }
                     _ => {}
                 }
@@ -38,6 +57,13 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
     }
 }
 
+impl PlatformEventLoop {
+    unsafe fn get_key(&self, key: c_uint) -> Key {
+        let mut _length = 0;
+        let key = *XGetKeyboardMapping(self.x_display, key as c_uchar, 1, &mut _length);
+        virtual_keycode_to_key(key)
+    }
+}
 pub struct PlatformApplication {
     x_display: *mut c_void,
 }
@@ -49,6 +75,15 @@ impl PlatformApplicationTrait for PlatformApplication {
         unsafe {
             // Open a connection to the display server
             let x_display = check_not_null(XOpenDisplay(null())).unwrap();
+
+            // Ensure that we can detect auto-repeated keys without funky code.
+            let mut supported = false;
+            XkbSetDetectableAutoRepeat(x_display, true, &mut supported);
+            if !supported {
+                // How likely is this?
+                panic!("Detectable auto key repeat not supported");
+            }
+
             PlatformApplication { x_display }
         }
     }
@@ -168,7 +203,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             XSelectInput(
                 self.x_display,
                 window,
-                ExposureMask | ButtonPressMask | KeyPressMask,
+                ExposureMask | ButtonPressMask | KeyPressMask | KeyReleaseMask,
             );
 
             let graphics_context = XCreateGC(
@@ -283,21 +318,35 @@ extern "C" {
     fn XFlush(display: *mut c_void);
     fn XCloseDisplay(display: *mut c_void) -> c_int;
     fn XNextEvent(display: *mut c_void, event: *mut XEvent) -> c_int;
+    //fn XPeekEvent(display: *mut c_void, event: *mut XEvent) -> c_int;
+    //fn XEventsQueued(display: *mut c_void, mode: c_int) -> c_int;
     fn XGetKeyboardMapping(
         display: *mut c_void,
         first_keycode: c_uchar,
         keycode_count: c_int,
         keysyms_per_keycode_return: *mut c_int,
     ) -> *mut c_ulong;
+
+    fn XkbSetDetectableAutoRepeat(
+        display: *mut c_void,
+        detectable: bool,
+        supported_rtrn: *mut bool,
+    ) -> bool;
 }
 
 pub type XID = c_ulong;
 pub type Window = XID;
 
 pub const KeyPressMask: c_long = 1 << 0;
+pub const KeyReleaseMask: c_long = 2;
+
 pub const ButtonPressMask: c_long = 1 << 2;
 pub const ExposureMask: c_long = 1 << 15;
+
 pub const KeyPress: c_int = 2;
+pub const KeyRelease: c_int = 3;
+
+pub const QueuedAfterReading: c_int = 1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
