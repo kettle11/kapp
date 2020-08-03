@@ -19,67 +19,6 @@ impl PlatformApplicationTrait for PlatformApplication {
         unsafe {
             // Open a connection to the display server
             let x_display = check_not_null(XOpenDisplay(null())).unwrap();
-
-            // Get the default screen
-            let screen = XDefaultScreen(x_display);
-
-            // Get colors to use for the window foreground and background.
-            let black = XBlackPixel(x_display, screen);
-            let white = XWhitePixel(x_display, screen);
-
-            // In X11 all windows are children of another window.
-            // The full-screen is considered a window, so our window will be a child of the
-            // default full-screen 'root' window.
-            let default_root_window = check_not_zero(XDefaultRootWindow(x_display)).unwrap();
-
-            let window = check_not_zero(XCreateSimpleWindow(
-                x_display,
-                default_root_window,
-                10,    /* x */
-                10,    /* y */
-                300,   /* width */
-                300,   /* height */
-                1,     /* border width */
-                white, /* border color */
-                black, /* background color */
-            ))
-            .unwrap();
-
-            let window_name = CString::new("My Window").unwrap();
-            let icon_name = CString::new("Hi").unwrap();
-
-            // Note that these calls can return '1' but that is not an error.
-            // However it's unclear what '1' means.
-            XSetStandardProperties(
-                x_display,
-                window,
-                window_name.as_ptr(),
-                null_mut(), /* Icon name */
-                0,          /* Pixel icon. 0 is 'None' */
-                null_mut(), /* argv */
-                0,          /* argc */
-                null_mut(), /* Size hints */
-            );
-
-            XSelectInput(
-                x_display,
-                window,
-                ExposureMask | ButtonPressMask | KeyPressMask,
-            );
-
-            let graphics_context = XCreateGC(
-                x_display,
-                window,
-                0,          /* A value mask of the flags to set */
-                null_mut(), /* A pointer to values to set as specified by the value mask */
-            );
-
-            XClearWindow(x_display, window);
-            XMapRaised(x_display, window);
-            // XMapWindow(x_display, window);
-
-            XFlush(x_display);
-
             PlatformApplication { x_display }
         }
     }
@@ -149,7 +88,75 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
-        unimplemented!();
+        unsafe {
+            let (width, height) = window_parameters.size.map_or((500, 500), |size| size);
+
+            // Get the default screen
+            let screen = XDefaultScreen(self.x_display);
+
+            // Get colors to use for the window foreground and background.
+            let black = XBlackPixel(self.x_display, screen);
+            let white = XWhitePixel(self.x_display, screen);
+
+            // In X11 all windows are children of another window.
+            // The full-screen is considered a window, so our window will be a child of the
+            // default full-screen 'root' window.
+            let default_root_window = check_not_zero(XDefaultRootWindow(self.x_display)).unwrap();
+
+            let window = check_not_zero(XCreateSimpleWindow(
+                self.x_display,
+                default_root_window,
+                10,    /* x */
+                10,    /* y */
+                300,   /* width */
+                300,   /* height */
+                1,     /* border width */
+                white, /* border color */
+                black, /* background color */
+            ))
+            .unwrap();
+
+            let window_name = CString::new(window_parameters.title.to_owned()).unwrap();
+            let icon_name = CString::new("Hi").unwrap();
+
+            // Note that these calls can return '1' but that is not an error.
+            // However it's unclear what '1' means.
+            XSetStandardProperties(
+                self.x_display,
+                window,
+                window_name.as_ptr(),
+                null_mut(), /* Icon name */
+                0,          /* Pixel icon. 0 is 'None' */
+                null_mut(), /* argv */
+                0,          /* argc */
+                null_mut(), /* Size hints */
+            );
+
+            XSelectInput(
+                self.x_display,
+                window,
+                ExposureMask | ButtonPressMask | KeyPressMask,
+            );
+
+            let graphics_context = XCreateGC(
+                self.x_display,
+                window,
+                0,          /* A value mask of the flags to set */
+                null_mut(), /* A pointer to values to set as specified by the value mask */
+            );
+
+            // Clears the window to its backing color
+            XClearWindow(self.x_display, window);
+
+            // Make the window visible and raises it to the top
+            XMapRaised(self.x_display, window);
+            // XMapWindow(x_display, window);
+
+            // X11 buffers commands until it reaches certain points, but we
+            // can force it to flush the commands here and perform them immediately.
+            XFlush(self.x_display);
+            WindowId::new(window as *mut c_void)
+        }
     }
 
     fn quit(&self) {

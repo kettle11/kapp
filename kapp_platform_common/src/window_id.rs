@@ -17,6 +17,7 @@ impl WindowId {
     /// On MacOS this is a pointer to the NSWindow object.
     /// On iOS this is a pointer to a UIWindow
     /// On Web this is just '0'
+    /// On Linux with X11 this is the Xlib Window XID.
     pub unsafe fn raw(self) -> *mut std::ffi::c_void {
         self.raw_id
     }
