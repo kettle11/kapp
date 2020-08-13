@@ -81,7 +81,16 @@ extern "C" fn control_flow_end_handler(
                 let () = msg(content_view, Sels::setNeedsDisplay, (YES,));
             }
         } else {
-            event_receiver::send_event(Event::Draw { window_id });
+            unsafe {
+                let window_view: *mut Object =
+                    msg_send![window_id.raw() as *mut Object, contentView];
+                let () = msg_send![window_view, setNeedsDisplay: YES];
+            }
+
+            // If the event were directly sent here that would effectively disable VSync for this window.
+            // However this seems to introduce lag when used with VSync.
+            // By using the above code instead this prevents VSync from being disabled on MacOS.
+            // event_receiver::send_event(Event::Draw { window_id });
         }
     }
 

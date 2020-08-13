@@ -544,8 +544,18 @@ extern "C" fn magnify_with_event(_this: &Object, _sel: Sel, event: *mut Object) 
     });
 }
 
+extern "C" fn display_layer(this: &Object, _sel: Sel, _layer: *mut Object) {
+    let window: *const Object = unsafe { msg(this, Sels::window, ()) };
+    kapp_platform_common::redraw_manager::draw(WindowId::new(window as *mut c_void));
+}
+
 pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
+        decl.add_method(
+            sel!(displayLayer:),
+            display_layer as extern "C" fn(&Object, Sel, *mut Object),
+        );
+
         decl.add_method(
             Sel::from_ptr(Sels::magnifyWithEvent),
             magnify_with_event as extern "C" fn(&Object, Sel, *mut Object),
@@ -555,6 +565,7 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
             Sel::from_ptr(Sels::drawRect),
             draw_rect as extern "C" fn(&Object, Sel, CGRect),
         );
+
         decl.add_method(
             Sel::from_ptr(Sels::acceptsFirstResponder),
             accepts_first_responder as extern "C" fn(&Object, Sel) -> BOOL,
