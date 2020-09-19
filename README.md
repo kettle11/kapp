@@ -2,9 +2,11 @@
 
 kApp is a work in progress. There are rough edges, unimplemented functions, and many bugs.
 
-kApp is a pure Rust window and input library for MacOS, Web, and Windows.
+kApp is a pure Rust window and input library for macOS, Web, and Windows.
 
 kApp strives to be unsurprising, quick to build, and straightforward to maintain.
+
+A clean build of kApp on macOS takes  about 3.5 seconds.
 
 ## Example
 
