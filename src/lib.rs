@@ -58,12 +58,6 @@ mod window_builder;
 
 use kapp_platforms::prelude as platform;
 
-#[cfg(target_arch = "wasm32")]
-use kapp_platform_web::prelude as platform;
-
-#[cfg(target_os = "windows")]
-use kapp_platform_windows::prelude as platform;
-
 #[cfg(feature = "gl_context")]
 pub use kapp_gl_context::prelude::*;
 

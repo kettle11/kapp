@@ -77,18 +77,17 @@ extern "C" fn control_flow_end_handler(
             unsafe {
                 let content_view: *mut Object =
                     msg(window_id.raw() as *mut Object, Sels::contentView, ());
-
                 let () = msg(content_view, Sels::setNeedsDisplay, (YES,));
             }
         } else {
             unsafe {
-                let window_view: *mut Object =
+                let content_view: *mut Object =
                     msg_send![window_id.raw() as *mut Object, contentView];
-                let () = msg_send![window_view, setNeedsDisplay: YES];
+                let () = msg_send![content_view, setNeedsDisplay: YES];
             }
 
             // If the event were directly sent here that would effectively disable VSync for this window.
-            // However this seems to introduce lag when used with VSync.
+            // However this seems to introduce lag moving the window when used with VSync.
             // By using the above code instead this prevents VSync from being disabled on MacOS.
             // event_receiver::send_event(Event::Draw { window_id });
         }
@@ -278,6 +277,8 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn redraw_window(&mut self, window_id: WindowId) {
+        // If we were to call 'setNeedsDisplay' here it would immediately trigger and create a potentially infinite loop.
+        // Instead 'setNeedsDisplay' is called at the end of the loop where it seems to be immune to such dangers.
         redraw_manager::add_draw_request(window_id);
     }
 
