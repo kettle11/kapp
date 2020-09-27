@@ -1,8 +1,7 @@
 /// This example demonstrates using kapp's built in async support
 use kapp::*;
 fn main() {
-    let (app, event_loop) = initialize();
-    event_loop.run_async(app, run);
+    run_async(run);
 }
 
 async fn run(app: Application, events: Events) {

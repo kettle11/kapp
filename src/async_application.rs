@@ -8,6 +8,14 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, Poll};
 
+pub fn run_async<F>(run: impl Fn(Application, Events) -> F)
+where
+    F: 'static + Future<Output = ()>,
+{
+    let (application, event_loop) = crate::initialize();
+    event_loop.run_async(application, run);
+}
+
 pub struct EventFuture<'a> {
     events: &'a Events,
 }
@@ -103,10 +111,10 @@ impl AsyncProgram {
         let waker = waker::create();
         let mut context = Context::from_waker(&waker);
 
-        // The user main loop is polled here. 
+        // The user main loop is polled here.
         // If it's awaiting something else this will immediately return 'pending'.
         // For an example if the main loop is blocked waiting for something to load
-        // and a 'Draw' is requested it will not immediately occur which can cause 
+        // and a 'Draw' is requested it will not immediately occur which can cause
         // window resizing to flicker.
         if Poll::Ready(()) == self.program.as_mut().poll(&mut context) {
             // The main application loop has exited.
