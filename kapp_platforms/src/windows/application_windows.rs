@@ -1,5 +1,5 @@
-use crate::external_windows::*;
-use crate::utils_windows::*;
+use super::external_windows::*;
+use super::utils_windows::*;
 use std::ptr::null_mut;
 
 use kapp_platform_common::*;
@@ -305,7 +305,7 @@ impl Drop for PlatformApplication {
 pub struct PlatformEventLoop {}
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
-    fn run(&self, callback: Box<dyn FnMut(crate::Event)>) {
+    fn run(&self, callback: Box<dyn FnMut(kapp_platform_common::Event)>) {
         super::event_loop_windows::run(callback);
     }
 }

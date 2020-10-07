@@ -78,8 +78,8 @@ pub type LPCWSTR = *const WCHAR;
 pub mod ctypes {
     #[cfg(feature = "std")]
     pub use std::os::raw::c_void;
-    #[cfg(not(feature = "std"))]
-    pub enum c_void {}
+   // #[cfg(not(feature = "std"))]
+   // pub enum c_void {}
     pub type c_short = i16;
     pub type c_ushort = u16;
     pub type c_int = i32;
@@ -492,7 +492,7 @@ pub const WM_XBUTTONDBLCLK: UINT = 0x020D;
 pub const WM_DPICHANGED: UINT = 0x02E0;
 pub const WM_NCDESTROY: UINT = 0x0082;
 pub const WM_GETMINMAXINFO: UINT = 0x0024;
-pub const WM_NCCREATE: UINT = 0x0081;
+//pub const WM_NCCREATE: UINT = 0x0081;
 pub const WM_CREATE: UINT = 0x0001;
 
 pub const XBUTTON1: WORD = 0x0001;

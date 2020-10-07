@@ -1,5 +1,5 @@
-use crate::external_windows::*;
-use crate::{Key, Key::*};
+use super::external_windows::*;
+use kapp_platform_common::{Key, Key::*};
 
 // Hand transcribed from here:
 // It took a while

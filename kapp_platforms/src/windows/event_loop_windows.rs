@@ -1,5 +1,5 @@
-use crate::application_windows::WindowData;
-use crate::{external_windows::*, keys_windows::virtual_keycode_to_key};
+use super::application_windows::WindowData;
+use super::{external_windows::*, keys_windows::virtual_keycode_to_key};
 use kapp_platform_common::*;
 
 use std::ptr::null_mut;
@@ -375,7 +375,7 @@ fn process_key_event(w_param: WPARAM, l_param: LPARAM) -> (UINT, Key, bool) {
     (scancode, key, repeat)
 }
 
-pub fn run(callback: Box<dyn FnMut(crate::Event)>) {
+pub fn run(callback: Box<dyn FnMut(kapp_platform_common::Event)>) {
     unsafe {
         event_receiver::set_callback(callback);
 
