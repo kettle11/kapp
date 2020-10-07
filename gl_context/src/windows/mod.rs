@@ -544,29 +544,29 @@ fn wglCreateContextAttribsARB(
 // Once again these are all from here:
 // https://www.khronos.org/registry/OpenGL/api/GL/wglext.h
 // A few are commented out that may be useful later.
-static WGL_DRAW_TO_WINDOW_ARB: c_int = 0x2001;
-// static WGL_DRAW_TO_BITMAP_ARB: c_int = 0x2002;
-static WGL_ACCELERATION_ARB: c_int = 0x2003;
-static WGL_SUPPORT_OPENGL_ARB: c_int = 0x2010;
-static WGL_DOUBLE_BUFFER_ARB: c_int = 0x2011;
-static WGL_PIXEL_TYPE_ARB: c_int = 0x2013;
-static WGL_COLOR_BITS_ARB: c_int = 0x2014;
-// static WGL_RED_BITS_ARB: c_int = 0x2015;
-// static WGL_GREEN_BITS_ARB: c_int = 0x2017;
-// static WGL_BLUE_BITS_ARB: c_int = 0x2019;
-static WGL_ALPHA_BITS_ARB: c_int = 0x201B;
-static WGL_DEPTH_BITS_ARB: c_int = 0x2022;
-static WGL_STENCIL_BITS_ARB: c_int = 0x2023;
-static WGL_FULL_ACCELERATION_ARB: c_int = 0x2027;
-static WGL_TYPE_RGBA_ARB: c_int = 0x202B;
-static WGL_SAMPLE_BUFFERS_ARB: c_int = 0x2041;
-static WGL_SAMPLES_ARB: c_int = 0x2042;
-static WGL_CONTEXT_MAJOR_VERSION_ARB: c_int = 0x2091;
-static WGL_CONTEXT_MINOR_VERSION_ARB: c_int = 0x2092;
-static WGL_CONTEXT_PROFILE_MASK_ARB: c_int = 0x9126;
-static WGL_CONTEXT_CORE_PROFILE_BIT_ARB: c_int = 0x00000001;
-// static WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB: c_int = 0x00000002;
-static WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB: c_int = 0x20A9;
+const WGL_DRAW_TO_WINDOW_ARB: c_int = 0x2001;
+// const WGL_DRAW_TO_BITMAP_ARB: c_int = 0x2002;
+const WGL_ACCELERATION_ARB: c_int = 0x2003;
+const WGL_SUPPORT_OPENGL_ARB: c_int = 0x2010;
+const WGL_DOUBLE_BUFFER_ARB: c_int = 0x2011;
+const WGL_PIXEL_TYPE_ARB: c_int = 0x2013;
+const WGL_COLOR_BITS_ARB: c_int = 0x2014;
+// const WGL_RED_BITS_ARB: c_int = 0x2015;
+// const WGL_GREEN_BITS_ARB: c_int = 0x2017;
+// const WGL_BLUE_BITS_ARB: c_int = 0x2019;
+const WGL_ALPHA_BITS_ARB: c_int = 0x201B;
+const WGL_DEPTH_BITS_ARB: c_int = 0x2022;
+const WGL_STENCIL_BITS_ARB: c_int = 0x2023;
+const WGL_FULL_ACCELERATION_ARB: c_int = 0x2027;
+const WGL_TYPE_RGBA_ARB: c_int = 0x202B;
+const WGL_SAMPLE_BUFFERS_ARB: c_int = 0x2041;
+const WGL_SAMPLES_ARB: c_int = 0x2042;
+const WGL_CONTEXT_MAJOR_VERSION_ARB: c_int = 0x2091;
+const WGL_CONTEXT_MINOR_VERSION_ARB: c_int = 0x2092;
+const WGL_CONTEXT_PROFILE_MASK_ARB: c_int = 0x9126;
+const WGL_CONTEXT_CORE_PROFILE_BIT_ARB: c_int = 0x00000001;
+// const WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB: c_int = 0x00000002;
+const WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB: c_int = 0x20A9;
 
 // This is a C extension function requested on load.
 #[allow(non_upper_case_globals)]
