@@ -25,8 +25,8 @@ pub unsafe extern "system" fn window_callback(
             // Return 0 to reject the close because the user application must approve the close.
             return 0;
         }
-        WM_KEYDOWN => produce_event(process_key_down(w_param, l_param)),
-        WM_KEYUP => produce_event(process_key_up(w_param, l_param)),
+        WM_KEYDOWN | WM_SYSKEYDOWN => produce_event(process_key_down(w_param, l_param)),
+        WM_KEYUP | WM_SYSKEYUP => produce_event(process_key_up(w_param, l_param)),
         WM_SIZING => return TRUE as isize,
         WM_SETCURSOR => {
             // Give the OS a chance to set the cursor first, and don't override it if it sets it.
