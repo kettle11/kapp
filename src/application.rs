@@ -113,7 +113,13 @@ impl EventLoop {
         let callback_wrapper = move |event| {
             state_tracker.borrow_mut().handle_event(event);
             callback(event);
-            state_tracker.borrow_mut().post_program_callback(event);
+
+            match event {
+                Event::Draw { .. } => {
+                    state_tracker.borrow_mut().clear();
+                }
+                _ => {}
+            };
         };
         self.platform_event_loop.run(Box::new(callback_wrapper));
     }

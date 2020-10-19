@@ -9,9 +9,9 @@ use std::time::Duration;
 
 /// Tracks key and mouse input state based on events.
 pub struct StateTracker {
-    keys_down_since_last_frame: HashMap<Key, Duration>, // Key was pressed since the last draw event for any window.
+    keys_down_since_last_frame: HashMap<Key, Duration>, // Key was pressed since the last clear for any window.
     keys_pressed: HashMap<Key, Duration>,
-    mouse_buttons_down_since_last_frame: HashMap<PointerButton, Duration>, // Mouse was pressed since the last draw event for any window.
+    mouse_buttons_down_since_last_frame: HashMap<PointerButton, Duration>, // Mouse was pressed since the last clear for any window.
     mouse_buttons_pressed: HashMap<PointerButton, Duration>,
     mouse_position: (f64, f64),
 }
@@ -63,23 +63,18 @@ impl StateTracker {
         };
     }
 
-    /// Occurs after the program event handler
-    pub fn post_program_callback(&mut self, event: Event) {
-        match event {
-            Event::Draw { .. } => {
-                self.mouse_buttons_down_since_last_frame.clear();
-                self.keys_down_since_last_frame.clear();
-            }
-            _ => {}
-        };
+    /// Reset any "button down" states
+    pub fn clear(&mut self) {
+        self.mouse_buttons_down_since_last_frame.clear();
+        self.keys_down_since_last_frame.clear();
     }
 
-    /// Returns true if the key has been pressed since the last draw
+    /// Returns true if the key has been pressed since the last call to clear.
     pub fn key_down(&self, key: Key) -> bool {
         self.keys_down_since_last_frame.contains_key(&key)
     }
 
-    /// Returns true if all the keys specified been pressed since the last draw.
+    /// Returns true if all the keys specified been pressed since the last call to clear.
     /// Right now this doesn't work perfectly for keyboard shortcuts because
     /// the different modifier keys are split out into their left and right versions.
     pub fn keys_down(&self, keys: &[Key]) -> bool {
@@ -95,7 +90,7 @@ impl StateTracker {
         self.keys_pressed.contains_key(&key)
     }
 
-    /// Returns true if the mouse button has been pressed since the last draw
+    /// Returns true if the mouse button has been pressed since the last call to clear.
     pub fn mouse_button_down(&self, button: PointerButton) -> bool {
         self.mouse_buttons_down_since_last_frame
             .contains_key(&button)
