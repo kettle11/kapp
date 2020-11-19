@@ -7,13 +7,13 @@ use std::time::Duration;
 // * Window scale factors
 // * Window color spaces
 
-/// Tracks key and mouse input state based on events.
+/// Tracks key and pointer input state based on events.
 pub struct StateTracker {
     keys_down_since_last_frame: HashMap<Key, Duration>, // Key was pressed since the last clear for any window.
     keys_pressed: HashMap<Key, Duration>,
-    mouse_buttons_down_since_last_frame: HashMap<PointerButton, Duration>, // Mouse was pressed since the last clear for any window.
-    mouse_buttons_pressed: HashMap<PointerButton, Duration>,
-    mouse_position: (f64, f64),
+    pointer_buttons_down_since_last_frame: HashMap<PointerButton, Duration>, // pointer was pressed since the last clear for any window.
+    pointer_buttons_pressed: HashMap<PointerButton, Duration>,
+    pointer_position: (f64, f64),
 }
 
 impl StateTracker {
@@ -21,9 +21,9 @@ impl StateTracker {
         Self {
             keys_down_since_last_frame: HashMap::with_capacity(256), // Arbitrary numbers to avoid resize
             keys_pressed: HashMap::with_capacity(256),
-            mouse_buttons_down_since_last_frame: HashMap::with_capacity(16),
-            mouse_buttons_pressed: HashMap::with_capacity(16),
-            mouse_position: (0., 0.),
+            pointer_buttons_down_since_last_frame: HashMap::with_capacity(16),
+            pointer_buttons_pressed: HashMap::with_capacity(16),
+            pointer_position: (0., 0.),
         }
     }
 
@@ -38,34 +38,34 @@ impl StateTracker {
             }
             Event::PointerDown {
                 button,
-                source: PointerSource::Mouse,
+                source: PointerSource::pointer,
                 timestamp,
                 ..
             } => {
-                self.mouse_buttons_pressed.insert(button, timestamp);
-                self.mouse_buttons_down_since_last_frame
+                self.pointer_buttons_pressed.insert(button, timestamp);
+                self.pointer_buttons_down_since_last_frame
                     .insert(button, timestamp);
             }
             Event::PointerUp {
                 button,
-                source: PointerSource::Mouse,
+                source: PointerSource::pointer,
                 ..
             } => {
-                self.mouse_buttons_pressed.remove(&button);
+                self.pointer_buttons_pressed.remove(&button);
             }
             Event::PointerMoved {
                 x,
                 y,
-                source: PointerSource::Mouse,
+                source: PointerSource::pointer,
                 ..
-            } => self.mouse_position = (x, y),
+            } => self.pointer_position = (x, y),
             _ => {}
         };
     }
 
     /// Reset any "button down" states
     pub fn clear(&mut self) {
-        self.mouse_buttons_down_since_last_frame.clear();
+        self.pointer_buttons_down_since_last_frame.clear();
         self.keys_down_since_last_frame.clear();
     }
 
@@ -90,18 +90,18 @@ impl StateTracker {
         self.keys_pressed.contains_key(&key)
     }
 
-    /// Returns true if the mouse button has been pressed since the last call to clear.
-    pub fn mouse_button_down(&self, button: PointerButton) -> bool {
-        self.mouse_buttons_down_since_last_frame
+    /// Returns true if the pointer button has been pressed since the last call to clear.
+    pub fn pointer_button_down(&self, button: PointerButton) -> bool {
+        self.pointer_buttons_down_since_last_frame
             .contains_key(&button)
     }
 
-    /// Returns true if the mouse button is pressed
-    pub fn mouse_button(&self, button: PointerButton) -> bool {
-        self.mouse_buttons_pressed.contains_key(&button)
+    /// Returns true if the pointer button is pressed
+    pub fn pointer_button(&self, button: PointerButton) -> bool {
+        self.pointer_buttons_pressed.contains_key(&button)
     }
 
-    pub fn mouse_position(&self) -> (f64, f64) {
-        self.mouse_position
+    pub fn pointer_position(&self) -> (f64, f64) {
+        self.pointer_position
     }
 }
