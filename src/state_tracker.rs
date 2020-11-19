@@ -1,4 +1,4 @@
-use crate::{Event, Key, PointerButton, PointerSource};
+use crate::{Event, Key, PointerButton};
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -37,28 +37,16 @@ impl StateTracker {
                 self.keys_pressed.remove(&key);
             }
             Event::PointerDown {
-                button,
-                source: PointerSource::pointer,
-                timestamp,
-                ..
+                button, timestamp, ..
             } => {
                 self.pointer_buttons_pressed.insert(button, timestamp);
                 self.pointer_buttons_down_since_last_frame
                     .insert(button, timestamp);
             }
-            Event::PointerUp {
-                button,
-                source: PointerSource::pointer,
-                ..
-            } => {
+            Event::PointerUp { button, .. } => {
                 self.pointer_buttons_pressed.remove(&button);
             }
-            Event::PointerMoved {
-                x,
-                y,
-                source: PointerSource::pointer,
-                ..
-            } => self.pointer_position = (x, y),
+            Event::PointerMoved { x, y, .. } => self.pointer_position = (x, y),
             _ => {}
         };
     }

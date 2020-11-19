@@ -79,21 +79,21 @@ impl Application {
         self.state_tracker.borrow().keys_down(keys)
     }
 
-    /// Returns true if the mouse button is pressed
-    pub fn mouse_button(&self, button: PointerButton) -> bool {
-        self.state_tracker.borrow().mouse_button(button)
+    /// Returns true if the pointer button is pressed
+    pub fn pointer_button(&self, button: PointerButton) -> bool {
+        self.state_tracker.borrow().pointer_button(button)
     }
 
-    /// Returns true if the mouse button has been pressed since the last draw
-    pub fn mouse_button_down(&self, button: PointerButton) -> bool {
-        self.state_tracker.borrow().mouse_button_down(button)
+    /// Returns true if the pointer button has been pressed since the last draw
+    pub fn pointer_button_down(&self, button: PointerButton) -> bool {
+        self.state_tracker.borrow().pointer_button_down(button)
     }
 
-    /// Returns the current mouse position
+    /// Returns the current pointer position
     /// The current screen is unspecified, but perhaps that should change
     /// in the future.
-    pub fn mouse_position(&self) -> (f64, f64) {
-        self.state_tracker.borrow().mouse_position()
+    pub fn pointer_position(&self) -> (f64, f64) {
+        self.state_tracker.borrow().pointer_position()
     }
 }
 
