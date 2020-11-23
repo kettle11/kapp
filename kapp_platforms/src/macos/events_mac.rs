@@ -1,6 +1,7 @@
 use super::apple::*;
 use super::application_mac::APPLICATION_DATA;
 use kapp_platform_common::{Event, Key, PointerButton, PointerSource, WindowId};
+use objc::runtime::Protocol;
 use std::ffi::c_void;
 
 // ------------------------ Window Events --------------------------
@@ -549,6 +550,70 @@ extern "C" fn display_layer(this: &Object, _sel: Sel, _layer: *mut Object) {
     kapp_platform_common::redraw_manager::draw(WindowId::new(window as *mut c_void));
 }
 
+extern "C" fn has_marked_text(this: &Object, _sel: Sel) -> BOOL {
+    unimplemented!()
+}
+
+extern "C" fn marked_range(this: &Object, _sel: Sel) -> NSRange {
+    unimplemented!()
+}
+
+extern "C" fn selected_range(this: &Object, _sel: Sel) -> NSRange {
+    unimplemented!()
+}
+
+extern "C" fn set_marked_text(
+    this: &Object,
+    _sel: Sel,
+    string: *mut Object,
+    selected_range: NSRange,
+    replacement_range: NSRange,
+) {
+    unimplemented!()
+}
+
+extern "C" fn unmark_text(this: &Object, _sel: Sel) {
+    unimplemented!()
+}
+
+extern "C" fn valid_attributes_for_marked_text(this: &Object, _sel: Sel) -> *mut Object {
+    unsafe { msg_send![class!(NSArray), array] }
+}
+
+extern "C" fn attributed_substring_for_proposed_range(
+    this: &Object,
+    _sel: Sel,
+    range: NSRange,
+    actual_range: *mut c_void, // *mut NSRange
+) -> *mut Object {
+    unimplemented!()
+}
+
+extern "C" fn insert_text(
+    this: &Object,
+    _sel: Sel,
+    string: *mut Object,
+    replacement_range: NSRange,
+) {
+    unimplemented!()
+}
+
+extern "C" fn character_index_for_point(this: &Object, _sel: Sel, point: NSPoint) -> NSUInteger {
+    unimplemented!()
+}
+
+extern "C" fn first_rect_for_character_range(
+    this: &Object,
+    _sel: Sel,
+    range: NSRange,
+    actual_range: *mut c_void, // *mut NSRange
+) -> NSRect {
+    unimplemented!()
+}
+extern "C" fn do_command_by_selector(this: &Object, _sel: Sel, _selector: Sel) {
+    unimplemented!()
+}
+
 pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
         decl.add_method(
@@ -626,6 +691,52 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
             Sel::from_ptr(Sels::flagsChanged),
             flags_changed as extern "C" fn(&Object, Sel, *mut Object),
         );
+
+        // NSTextInputClient
+        decl.add_method(
+            sel!(hasMarkedText),
+            has_marked_text as extern "C" fn(&Object, Sel) -> BOOL,
+        );
+        decl.add_method(
+            sel!(markedRange),
+            marked_range as extern "C" fn(&Object, Sel) -> NSRange,
+        );
+        decl.add_method(
+            sel!(selectedRange),
+            selected_range as extern "C" fn(&Object, Sel) -> NSRange,
+        );
+        decl.add_method(
+            sel!(setMarkedText: selectedRange: replacementRange:),
+            set_marked_text as extern "C" fn(&Object, Sel, *mut Object, NSRange, NSRange),
+        );
+        decl.add_method(sel!(unmarkText), unmark_text as extern "C" fn(&Object, Sel));
+        decl.add_method(
+            sel!(validAttributesForMarkedText),
+            valid_attributes_for_marked_text as extern "C" fn(&Object, Sel) -> *mut Object,
+        );
+        decl.add_method(
+            sel!(attributedSubstringForProposedRange: actualRange:),
+            attributed_substring_for_proposed_range
+                as extern "C" fn(&Object, Sel, NSRange, *mut c_void) -> *mut Object,
+        );
+        decl.add_method(
+            sel!(insertText: replacementRange:),
+            insert_text as extern "C" fn(&Object, Sel, *mut Object, NSRange),
+        );
+        decl.add_method(
+            sel!(characterIndexForPoint:),
+            character_index_for_point as extern "C" fn(&Object, Sel, NSPoint) -> NSUInteger,
+        );
+        decl.add_method(
+            sel!(firstRectForCharacterRange: actualRange:),
+            first_rect_for_character_range
+                as extern "C" fn(&Object, Sel, NSRange, *mut c_void) -> NSRect,
+        );
+        decl.add_method(
+            sel!(doCommandBySelector:),
+            do_command_by_selector as extern "C" fn(&Object, Sel, Sel),
+        );
+        decl.add_protocol(Protocol::get("NSTextInputClient").unwrap());
     }
 }
 
