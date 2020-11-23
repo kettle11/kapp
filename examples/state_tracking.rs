@@ -6,7 +6,7 @@ fn main() {
     let _window = app.new_window().build().unwrap();
 
     event_loop.run(move |event| {
-        if app.mouse_button(PointerButton::Primary) {
+        if app.pointer_button(PointerButton::Primary) {
             println!("Mouse pressed");
         }
 
