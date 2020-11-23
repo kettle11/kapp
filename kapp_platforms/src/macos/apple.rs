@@ -451,3 +451,20 @@ impl Drop for NSString {
         }
     }
 }
+
+#[repr(C)]
+pub struct NSRange {
+    pub location: NSUInteger,
+    pub length: NSUInteger,
+}
+
+unsafe impl objc::Encode for NSRange {
+    fn encode() -> objc::Encoding {
+        let encoding = format!(
+            "{{NSRange={}{}}}",
+            NSUInteger::encode().as_str(),
+            NSUInteger::encode().as_str(),
+        );
+        unsafe { objc::Encoding::from_str(&encoding) }
+    }
+}

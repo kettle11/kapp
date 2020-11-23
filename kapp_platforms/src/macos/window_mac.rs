@@ -2,28 +2,6 @@ use super::apple::*;
 use kapp_platform_common::{WindowId, WindowParameters};
 use std::ffi::c_void;
 
-// All of this data and the instances must be all be dropped together.
-// Window and GLContext can hold a strong ref to this data, ns_window and ns_view will hold a raw pointer to this data.
-// Because ns_window and ns_view will only be released only when this is dropped, the raw pointers should always be valid.
-pub struct InnerWindowData {
-    pub ns_window: *mut Object,
-    pub ns_view: *mut Object, // Used later by GLContext.
-    window_delegate: *mut Object,
-    tracking_area: *mut Object,
-    //pub backing_scale: f64, // On Mac this while likely be either 2.0 or 1.0
-}
-
-impl Drop for InnerWindowData {
-    fn drop(&mut self) {
-        unsafe {
-            let () = msg_send![self.ns_window, close];
-            let () = msg_send![self.window_delegate, release];
-            let () = msg_send![self.ns_view, release];
-            let () = msg_send![self.tracking_area, release];
-        }
-    }
-}
-
 pub fn build(
     window_parameters: &WindowParameters,
     window_class: *const objc::runtime::Class,
@@ -95,6 +73,10 @@ pub fn build(
         // Setup view
         // This allocation will be released when the window is dropped.
         let ns_view: *mut Object = msg_send![view_class, alloc];
+
+        let marked_text: *mut Object = msg_send![class!(NSMutableAttributedString), alloc];
+        (*ns_view).set_ivar("markedText", marked_text);
+        
         let () = msg_send![ns_view, initWithFrame: rect.clone()];
 
         // Setup a tracking area to receive mouse events within

@@ -1,6 +1,7 @@
 use crate::keys::Key;
 use crate::WindowId;
 use std::time::Duration;
+
 /// Input and system events
 /// All user input events have timestamps.
 /// Timestamps on MacOS and Windows represent time since the computer was turned on.
@@ -25,8 +26,16 @@ pub enum Event {
     Draw {
         window_id: WindowId,
     },
+    /// A character input as reported by the OS.
+    /// This event should be used for text entry instead of `KeyDown`.
+    /// Combinations of key presses will produce characters not reported by
+    /// `KeyDown`
+    CharacterReceived {
+        character: char,
+    },
     // ------------------- Input Events ---------------------
     /// A key is pressed.
+    /// For text input use the `CharacterReceived` event instead.
     KeyDown {
         key: Key,
         timestamp: Duration,
@@ -150,7 +159,7 @@ pub enum Event {
         window_id: WindowId,
     },
     /// When a window moves between monitors the operating system may
-    /// report that the window's user interface should be scaled differently. 
+    /// report that the window's user interface should be scaled differently.
     /// Multiply this scale by the UI size to properly scale the UI.
     WindowScaleChanged {
         scale: f64,
