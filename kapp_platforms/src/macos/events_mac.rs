@@ -246,12 +246,12 @@ extern "C" fn draw_rect(this: &Object, _sel: Sel, _rect: CGRect) {
     kapp_platform_common::redraw_manager::draw(WindowId::new(window as *mut c_void));
 }
 
-extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
+extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
     unsafe {
         let key_code = msg(event, Sels::keyCode, ());
         let repeat: bool = msg(event, Sels::isARepeat, ());
         let key = super::keys_mac::virtual_keycode_to_key(key_code);
-        let event = if repeat {
+        let kapp_event = if repeat {
             Event::KeyRepeat {
                 key,
                 timestamp: get_timestamp(event),
@@ -262,7 +262,11 @@ extern "C" fn key_down(_this: &Object, _sel: Sel, event: *mut Object) {
                 timestamp: get_timestamp(event),
             }
         };
-        self::submit_event(event);
+        self::submit_event(kapp_event);
+
+        // Forward the key event so that the OS can produce other events with it.
+        let array: *mut Object = msg_send![class!(NSArray), arrayWithObject: event];
+        let () = msg_send![this, interpretKeyEvents: array];
     }
 }
 
@@ -551,7 +555,11 @@ extern "C" fn display_layer(this: &Object, _sel: Sel, _layer: *mut Object) {
 }
 
 extern "C" fn has_marked_text(this: &Object, _sel: Sel) -> BOOL {
-    unimplemented!()
+    unsafe {
+        let marked_text: *mut Object = *this.get_ivar("markedText");
+        let length: NSUInteger = msg_send![marked_text, length];
+        (length > 0) as BOOL
+    }
 }
 
 extern "C" fn marked_range(this: &Object, _sel: Sel) -> NSRange {
@@ -595,7 +603,27 @@ extern "C" fn insert_text(
     string: *mut Object,
     replacement_range: NSRange,
 ) {
-    unimplemented!()
+    unsafe {
+        // string can be either a NSAttributedString or a NSString
+        let has_attr = msg_send![string, isKindOfClass: class!(NSAttributedString)];
+        let characters = if has_attr {
+            msg_send![string, string]
+        } else {
+            string
+        };
+
+        let utf8_string: *const std::os::raw::c_uchar = msg_send![string, UTF8String];
+        let utf8_len: usize = msg_send![string, lengthOfBytesUsingEncoding: UTF8_ENCODING];
+        let slice = std::slice::from_raw_parts(utf8_string, utf8_len);
+        let string = std::str::from_utf8_unchecked(slice);
+
+        // Each character received is submitted as an individual event.
+        for c in string.chars() {
+            self::submit_event(Event::CharacterReceived { character: c });
+        }
+
+        println!("INSERT TEXT");
+    }
 }
 
 extern "C" fn character_index_for_point(this: &Object, _sel: Sel, point: NSPoint) -> NSUInteger {
@@ -610,12 +638,22 @@ extern "C" fn first_rect_for_character_range(
 ) -> NSRect {
     unimplemented!()
 }
+
 extern "C" fn do_command_by_selector(this: &Object, _sel: Sel, _selector: Sel) {
     unimplemented!()
 }
 
+extern "C" fn dealloc(this: &Object, _sel: Sel) {
+    unsafe {
+        let marked_text: *mut Object = *this.get_ivar("markedText");
+        let _: () = msg_send![marked_text, release];
+    }
+}
+
 pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
     unsafe {
+        decl.add_method(sel!(dealloc), dealloc as extern "C" fn(&Object, Sel));
+
         decl.add_method(
             sel!(displayLayer:),
             display_layer as extern "C" fn(&Object, Sel, *mut Object),
@@ -736,6 +774,7 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
             sel!(doCommandBySelector:),
             do_command_by_selector as extern "C" fn(&Object, Sel, Sel),
         );
+        decl.add_ivar::<*mut Object>("markedText");
         decl.add_protocol(Protocol::get("NSTextInputClient").unwrap());
     }
 }

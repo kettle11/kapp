@@ -452,6 +452,7 @@ impl Drop for NSString {
     }
 }
 
+#[repr(C)]
 pub struct NSRange {
     pub location: NSUInteger,
     pub length: NSUInteger,

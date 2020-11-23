@@ -26,8 +26,16 @@ pub enum Event {
     Draw {
         window_id: WindowId,
     },
+    /// A character input as reported by the OS.
+    /// This event should be used for text entry instead of `KeyDown`.
+    /// Combinations of key presses will produce characters not reported by
+    /// `KeyDown`
+    CharacterReceived {
+        character: char,
+    },
     // ------------------- Input Events ---------------------
     /// A key is pressed.
+    /// For text input use the `CharacterReceived` event instead.
     KeyDown {
         key: Key,
         timestamp: Duration,
