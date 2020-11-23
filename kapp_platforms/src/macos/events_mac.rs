@@ -563,50 +563,77 @@ extern "C" fn has_marked_text(this: &Object, _sel: Sel) -> BOOL {
 }
 
 extern "C" fn marked_range(this: &Object, _sel: Sel) -> NSRange {
-    unimplemented!()
+    unsafe {
+        let marked_text: *mut Object = *this.get_ivar("markedText");
+        let length: NSUInteger = msg_send![marked_text, length];
+        NSRange {
+            location: 0,
+            length: length - 1,
+        }
+    }
 }
 
-extern "C" fn selected_range(this: &Object, _sel: Sel) -> NSRange {
-    unimplemented!()
+extern "C" fn selected_range(_this: &Object, _sel: Sel) -> NSRange {
+    // Should this return NSNotFound for the location?
+    // Other implementations do that, but why?
+    NSRange {
+        location: 0,
+        length: 0,
+    }
 }
 
 extern "C" fn set_marked_text(
-    this: &Object,
+    this: &mut Object,
     _sel: Sel,
     string: *mut Object,
-    selected_range: NSRange,
-    replacement_range: NSRange,
+    _selected_range: NSRange,
+    _replacement_range: NSRange,
 ) {
-    unimplemented!()
+    unsafe {
+        let marked_text_ref: &mut *mut Object = this.get_mut_ivar("markedText");
+        let _: () = msg_send![(*marked_text_ref), release];
+        let marked_text: *mut Object = msg_send![class!(NSMutableAttributedString), alloc];
+        let has_attr = msg_send![string, isKindOfClass: class!(NSAttributedString)];
+        if has_attr {
+            let () = msg_send![marked_text, initWithAttributedString: string];
+        } else {
+            let () = msg_send![marked_text, initWithString: string];
+        };
+        *marked_text_ref = marked_text;
+    }
 }
 
 extern "C" fn unmark_text(this: &Object, _sel: Sel) {
-    unimplemented!()
+    unsafe {
+        let marked_text: *mut Object = *this.get_ivar("markedText");
+        let mutable_string: *mut Object = msg_send![marked_text, mutableString];
+        let () = msg_send![mutable_string, setString:""];
+    }
 }
 
-extern "C" fn valid_attributes_for_marked_text(this: &Object, _sel: Sel) -> *mut Object {
+extern "C" fn valid_attributes_for_marked_text(_this: &Object, _sel: Sel) -> *mut Object {
     unsafe { msg_send![class!(NSArray), array] }
 }
 
 extern "C" fn attributed_substring_for_proposed_range(
-    this: &Object,
+    _this: &Object,
     _sel: Sel,
-    range: NSRange,
-    actual_range: *mut c_void, // *mut NSRange
+    _range: NSRange,
+    _actual_range: *mut c_void, // *mut NSRange
 ) -> *mut Object {
-    unimplemented!()
+    nil
 }
 
 extern "C" fn insert_text(
-    this: &Object,
+    _this: &Object,
     _sel: Sel,
     string: *mut Object,
-    replacement_range: NSRange,
+    _replacement_range: NSRange,
 ) {
     unsafe {
         // string can be either a NSAttributedString or a NSString
         let has_attr = msg_send![string, isKindOfClass: class!(NSAttributedString)];
-        let characters = if has_attr {
+        let string = if has_attr {
             msg_send![string, string]
         } else {
             string
@@ -621,26 +648,29 @@ extern "C" fn insert_text(
         for c in string.chars() {
             self::submit_event(Event::CharacterReceived { character: c });
         }
-
-        println!("INSERT TEXT");
     }
 }
 
-extern "C" fn character_index_for_point(this: &Object, _sel: Sel, point: NSPoint) -> NSUInteger {
-    unimplemented!()
+// https://developer.apple.com/documentation/appkit/nstextinputclient/1438244-characterindexforpoint?language=objc
+// This is meant to return the character under the cursor at a point, but instead it just returns 0 which is obviously wrong.
+// What are the implications of this incorrect value?
+extern "C" fn character_index_for_point(_this: &Object, _sel: Sel, _point: NSPoint) -> NSUInteger {
+    0
 }
 
 extern "C" fn first_rect_for_character_range(
-    this: &Object,
+    _this: &Object,
     _sel: Sel,
-    range: NSRange,
-    actual_range: *mut c_void, // *mut NSRange
+    _range: NSRange,
+    _actual_range: *mut c_void, // *mut NSRange
 ) -> NSRect {
-    unimplemented!()
+    // This should return a rectangle for IME input. But for now it returns an arbitrary rectangle.
+    CGRect::new(CGPoint::new(0., 0.), CGSize::new(0., 0.))
 }
 
-extern "C" fn do_command_by_selector(this: &Object, _sel: Sel, _selector: Sel) {
-    unimplemented!()
+// This is received for input like return, left arrow, alt, etc.
+extern "C" fn do_command_by_selector(_this: &Object, _sel: Sel, _selector: Sel) {
+    // For now do nothing
 }
 
 extern "C" fn dealloc(this: &Object, _sel: Sel) {
@@ -745,7 +775,7 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
         );
         decl.add_method(
             sel!(setMarkedText: selectedRange: replacementRange:),
-            set_marked_text as extern "C" fn(&Object, Sel, *mut Object, NSRange, NSRange),
+            set_marked_text as extern "C" fn(&mut Object, Sel, *mut Object, NSRange, NSRange),
         );
         decl.add_method(sel!(unmarkText), unmark_text as extern "C" fn(&Object, Sel));
         decl.add_method(
