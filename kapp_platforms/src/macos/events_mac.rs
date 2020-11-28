@@ -264,9 +264,12 @@ extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
         };
         self::submit_event(kapp_event);
 
-        // Forward the key event so that the OS can produce other events with it.
-        let array: *mut Object = msg_send![class!(NSArray), arrayWithObject: event];
-        let () = msg_send![this, interpretKeyEvents: array];
+        // If text input is enabled forward the key event so that the OS can produce other events with it.
+        let text_input_enabled = APPLICATION_DATA.with(|d| d.borrow().text_input_enabled);
+        if text_input_enabled {
+            let array: *mut Object = msg_send![class!(NSArray), arrayWithObject: event];
+            let () = msg_send![this, interpretKeyEvents: array];
+        }
     }
 }
 

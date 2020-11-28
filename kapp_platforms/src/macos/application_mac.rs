@@ -10,6 +10,7 @@ pub(crate) struct ApplicationData {
     ns_application: *mut Object,
     pub modifier_flags: u64,      // Key modifier flags
     pub actually_terminate: bool, // Set when quit is called. Indicates the program should quit.
+    pub text_input_enabled: bool, // Should text input be sent in addition to KeyDown events?
 }
 
 impl ApplicationData {
@@ -18,6 +19,7 @@ impl ApplicationData {
             ns_application: std::ptr::null_mut(),
             modifier_flags: 0,
             actually_terminate: false,
+            text_input_enabled: false,
         }
     }
 }
@@ -372,6 +374,18 @@ impl PlatformApplicationTrait for PlatformApplication {
                 ..raw_window_handle::macos::MacOSHandle::empty()
             })
         }
+    }
+
+    fn start_text_input(&mut self) {
+        APPLICATION_DATA.with(|d| {
+            d.borrow_mut().text_input_enabled = true;
+        });
+    }
+
+    fn end_text_input(&mut self) {
+        APPLICATION_DATA.with(|d| {
+            d.borrow_mut().text_input_enabled = false;
+        });
     }
 }
 

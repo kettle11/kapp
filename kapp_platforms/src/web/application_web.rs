@@ -68,6 +68,14 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn raw_window_handle(&self, _window_id: WindowId) -> RawWindowHandle {
         RawWindowHandle::Web(raw_window_handle::web::WebHandle::empty())
     }
+
+    fn start_text_input(&mut self) {
+        unimplemented!()
+    }
+
+    fn end_text_input(&mut self) {
+        unimplemented!()
+    }
 }
 
 // When the application is dropped, quit the program.
