@@ -2,7 +2,13 @@ use super::apple::*;
 use kapp_platform_common::{WindowId, WindowParameters};
 use std::ffi::c_void;
 
-pub fn build(
+/// Per window state stored in an ivar on each window.
+pub(crate) struct WindowState {
+    // Relative to the window.
+    pub(crate) text_input_rectangle: (f64, f64, f64, f64),
+}
+
+pub(crate) fn build(
     window_parameters: &WindowParameters,
     window_class: *const objc::runtime::Class,
     view_class: *const objc::runtime::Class,
@@ -76,7 +82,14 @@ pub fn build(
 
         let marked_text: *mut Object = msg_send![class!(NSMutableAttributedString), alloc];
         (*ns_view).set_ivar("markedText", marked_text);
-        
+
+        (*ns_view).set_ivar(
+            "kappState",
+            Box::leak(Box::new(WindowState {
+                text_input_rectangle: (0., 0., 0., 0.),
+            })) as *mut WindowState as *mut c_void,
+        );
+
         let () = msg_send![ns_view, initWithFrame: rect.clone()];
 
         // Setup a tracking area to receive mouse events within

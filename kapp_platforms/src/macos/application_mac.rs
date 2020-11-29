@@ -1,5 +1,7 @@
 use super::apple::*;
+use super::window_mac::WindowState;
 use kapp_platform_common::*;
+
 use std::cell::RefCell;
 use std::ffi::c_void;
 
@@ -386,6 +388,22 @@ impl PlatformApplicationTrait for PlatformApplication {
         APPLICATION_DATA.with(|d| {
             d.borrow_mut().text_input_enabled = false;
         });
+    }
+
+    fn set_text_input_rectangle(
+        &mut self,
+        window_id: WindowId,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    ) {
+        unsafe {
+            let ns_view: &Object = msg(window_id.raw() as *mut Object, Sels::contentView, ());
+            let window_state: *mut c_void = *ns_view.get_ivar("kappState");
+            let window_state = window_state as *mut WindowState;
+            (*window_state).text_input_rectangle = (x, y, width, height);
+        }
     }
 }
 
