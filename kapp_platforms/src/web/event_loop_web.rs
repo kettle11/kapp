@@ -6,6 +6,14 @@ use std::time::Duration;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
+/*
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        web_sys::console::log_1(&format!( $( $t )* ).into());
+    }
+}
+*/
+
 fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
 }
@@ -144,8 +152,16 @@ where
             send_event(key_event);
 
             // Perhaps these character received events should only be sent if text input has been enabled.
-            for character in event.key().chars() {
-                send_event(Event::CharacterReceived { character })
+
+            // Ignore keys pressed while composing an IME character.
+            // Also ignore keys that are longer than 1 character.
+            // This is incorrect for some non-English key combos, but is an OK heuristic for now
+            // to reject non-textual character inputs.
+            // A more robust solution may watch a text field for changes instead.
+            if !event.is_composing() && event.key().chars().count() == 1 {
+                for character in event.key().chars() {
+                    send_event(Event::CharacterReceived { character })
+                }
             }
 
             event
