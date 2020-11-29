@@ -142,6 +142,12 @@ where
             };
 
             send_event(key_event);
+
+            // Perhaps these character received events should only be sent if text input has been enabled.
+            for character in event.key().chars() {
+                send_event(Event::CharacterReceived { character })
+            }
+
             event
                 .dyn_into::<web_sys::Event>()
                 .unwrap()
