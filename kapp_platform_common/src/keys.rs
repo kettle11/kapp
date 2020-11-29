@@ -15,6 +15,8 @@ pub enum Key {
     //------------------
     ContextMenu,
     Meta,
+    LeftMeta,
+    RightMeta,
     Print,
     Shift,
     Backspace,
