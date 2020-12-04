@@ -27,8 +27,11 @@ pub trait PlatformApplicationTrait {
     /// If multiple window redraws are requested no ordering should be assumed.
     fn redraw_window(&mut self, window_id: WindowId);
 
-    /// Sets the mouse position in physical coordinates in relation to the screen.
-    fn set_mouse_position(&mut self, x: u32, y: u32);
+    /// Lock the mouse position to wherever it is presently.
+    fn lock_mouse_position(&mut self);
+    /// Allow the mouse to move freely again
+    fn unlock_mouse_position(&mut self);
+
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId;
 
     /// Request that the application should quit immediately.

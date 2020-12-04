@@ -83,7 +83,11 @@ impl PlatformApplicationTrait for PlatformApplication {
         unimplemented!();
     }
 
-    fn set_mouse_position(&mut self, _x: u32, _y: u32) {
+    fn lock_mouse_position(&mut self) {
+        unimplemented!();
+    }
+
+    fn unlock_mouse_position(&mut self) {
         unimplemented!();
     }
 

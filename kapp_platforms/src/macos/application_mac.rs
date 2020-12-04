@@ -304,7 +304,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         get_backing_scale(window_id)
     }
 
-    fn set_mouse_position(&mut self, _x: u32, _y: u32) {
+    fn lock_mouse_position(&mut self) {
         // Need to account for backing scale here!
 
         /*
@@ -315,6 +315,10 @@ impl PlatformApplicationTrait for PlatformApplication {
         */
 
         unimplemented!()
+    }
+
+    fn unlock_mouse_position(&mut self) {
+        unimplemented!();
     }
 
     // https://developer.apple.com/documentation/appkit/nscursor?language=objc
