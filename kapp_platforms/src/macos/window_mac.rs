@@ -82,14 +82,12 @@ pub(crate) fn build(
 
         let marked_text: *mut Object = msg_send![class!(NSMutableAttributedString), alloc];
         (*ns_view).set_ivar("markedText", marked_text);
-
         (*ns_view).set_ivar(
             "kappState",
             Box::leak(Box::new(WindowState {
                 text_input_rectangle: (0., 0., 0., 0.),
             })) as *mut WindowState as *mut c_void,
         );
-
         let () = msg_send![ns_view, initWithFrame: rect.clone()];
 
         // Setup a tracking area to receive mouse events within

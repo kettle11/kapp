@@ -700,7 +700,6 @@ extern "C" fn dealloc(this: &Object, _sel: Sel) {
     unsafe {
         let marked_text: *mut Object = *this.get_ivar("markedText");
         let _: () = msg_send![marked_text, release];
-
         let state: *mut c_void = *this.get_ivar("kappState");
         Box::from_raw(state as *mut WindowState);
     }
@@ -832,7 +831,6 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
         );
         decl.add_ivar::<*mut c_void>("kappState");
         decl.add_ivar::<*mut Object>("markedText");
-
         decl.add_protocol(Protocol::get("NSTextInputClient").unwrap());
     }
 }
