@@ -677,7 +677,7 @@ extern "C" fn first_rect_for_character_range(
         // Get the frame for this view's window.
         let window: *const Object = msg(this, Sels::window, ());
         let frame: CGRect = msg(window, Sels::frame, ());
-
+        
         // The screen's origin is in the bottom left but kapp's API specifies
         // the text input rect position relative to the window's upper left.
         // The coordinates are adjusted here accordingly.

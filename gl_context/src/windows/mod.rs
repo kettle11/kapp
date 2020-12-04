@@ -36,6 +36,7 @@ impl GLContext {
                 depth_bits: 24,
                 stencil_bits: 8,
                 webgl_version: WebGLVersion::None,
+                high_dpi_framebuffer: false,
             },
         }
     }
