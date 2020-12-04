@@ -62,6 +62,20 @@ impl Application {
         }
     }
 
+    /// Enable text input.
+    /// `kapp` will send `CharacterReceived` events until `stop_text_input` is called.
+    /// Operating system UI related to text input may appear.
+    /// ONLY SUPPORTED ON MAC (for now)
+    pub fn start_text_input(&self) {
+        self.platform_application.borrow_mut().start_text_input()
+    }
+
+    /// Disable text input.
+    /// Used to end text input after a call to `start_text_input`.
+    pub fn end_text_input(&self) {
+        self.platform_application.borrow_mut().end_text_input()
+    }
+
     /// Returns if the key is currently pressed
     pub fn key(&self, key: Key) -> bool {
         self.state_tracker.borrow().key(key)

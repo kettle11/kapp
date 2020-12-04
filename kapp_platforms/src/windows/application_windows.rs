@@ -293,6 +293,25 @@ impl PlatformApplicationTrait for PlatformApplication {
             ..raw_window_handle::windows::WindowsHandle::empty()
         })
     }
+
+    fn start_text_input(&mut self) {
+        unimplemented!()
+    }
+
+    fn end_text_input(&mut self) {
+        unimplemented!()
+    }
+
+    fn set_text_input_rectangle(
+        &mut self,
+        window_id: WindowId,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    ) {
+        unimplemented!()
+    }
 }
 
 // When the application is dropped, quit the program.

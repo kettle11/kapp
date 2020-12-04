@@ -46,6 +46,21 @@ pub trait PlatformApplicationTrait {
     fn hide_cursor(&mut self);
     fn show_cursor(&mut self);
 
+    /// Enable whatever is needed for OS text events to be sent.
+    fn start_text_input(&mut self);
+    fn end_text_input(&mut self);
+
+    /// Set the rectangle used for text input.
+    /// This lets the OS know where it should position text input related popups.
+    fn set_text_input_rectangle(
+        &mut self,
+        window_id: WindowId,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    );
+
     /// Returns a RawWindowHandle as defined in the raw_window_handle crate
     /// https://github.com/rust-windowing/raw-window-handle
     fn raw_window_handle(&self, window: WindowId) -> RawWindowHandle;

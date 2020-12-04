@@ -9,6 +9,8 @@ pub struct GLContextAttributes {
     pub msaa_samples: u8,
     /// WebGL version is only relevant for web.
     pub webgl_version: WebGLVersion,
+    /// Mac specific, should the framebuffer be allocated with a higher resolution.
+    pub high_dpi_framebuffer: bool,
 }
 
 pub enum WebGLVersion {

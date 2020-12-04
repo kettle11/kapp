@@ -1,5 +1,6 @@
 use super::apple::*;
 use super::application_mac::APPLICATION_DATA;
+use super::window_mac::WindowState;
 use kapp_platform_common::{Event, Key, PointerButton, PointerSource, WindowId};
 use objc::runtime::Protocol;
 use std::ffi::c_void;
@@ -264,9 +265,12 @@ extern "C" fn key_down(this: &Object, _sel: Sel, event: *mut Object) {
         };
         self::submit_event(kapp_event);
 
-        // Forward the key event so that the OS can produce other events with it.
-        let array: *mut Object = msg_send![class!(NSArray), arrayWithObject: event];
-        let () = msg_send![this, interpretKeyEvents: array];
+        // If text input is enabled forward the key event so that the OS can produce other events with it.
+        let text_input_enabled = APPLICATION_DATA.with(|d| d.borrow().text_input_enabled);
+        if text_input_enabled {
+            let array: *mut Object = msg_send![class!(NSArray), arrayWithObject: event];
+            let () = msg_send![this, interpretKeyEvents: array];
+        }
     }
 }
 
@@ -659,13 +663,32 @@ extern "C" fn character_index_for_point(_this: &Object, _sel: Sel, _point: NSPoi
 }
 
 extern "C" fn first_rect_for_character_range(
-    _this: &Object,
+    this: &Object,
     _sel: Sel,
     _range: NSRange,
     _actual_range: *mut c_void, // *mut NSRange
 ) -> NSRect {
-    // This should return a rectangle for IME input. But for now it returns an arbitrary rectangle.
-    CGRect::new(CGPoint::new(0., 0.), CGSize::new(0., 0.))
+    unsafe {
+        // Get the text input rectangle stored on the view object.
+        let window_state: *const c_void = *this.get_ivar("kappState");
+        let window_state: *const WindowState = window_state as *mut WindowState;
+        let (x, y, width, height) = (*window_state).text_input_rectangle;
+
+        // Get the frame for this view's window.
+        let window: *const Object = msg(this, Sels::window, ());
+        let frame: CGRect = msg(window, Sels::frame, ());
+        
+        // The screen's origin is in the bottom left but kapp's API specifies
+        // the text input rect position relative to the window's upper left.
+        // The coordinates are adjusted here accordingly.
+        CGRect::new(
+            CGPoint::new(
+                frame.origin.x + x,
+                frame.origin.y + frame.size.height - (y + height),
+            ),
+            CGSize::new(width, height),
+        )
+    }
 }
 
 // This is received for input like return, left arrow, alt, etc.
@@ -677,6 +700,8 @@ extern "C" fn dealloc(this: &Object, _sel: Sel) {
     unsafe {
         let marked_text: *mut Object = *this.get_ivar("markedText");
         let _: () = msg_send![marked_text, release];
+        let state: *mut c_void = *this.get_ivar("kappState");
+        Box::from_raw(state as *mut WindowState);
     }
 }
 
@@ -804,6 +829,7 @@ pub fn add_view_events_to_decl(decl: &mut ClassDecl) {
             sel!(doCommandBySelector:),
             do_command_by_selector as extern "C" fn(&Object, Sel, Sel),
         );
+        decl.add_ivar::<*mut c_void>("kappState");
         decl.add_ivar::<*mut Object>("markedText");
         decl.add_protocol(Protocol::get("NSTextInputClient").unwrap());
     }

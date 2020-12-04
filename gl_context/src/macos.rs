@@ -8,6 +8,7 @@ pub struct GLContext {
     gl_context: *mut Object,
     pixel_format: *mut Object,
     vsync: VSync,
+    high_dpi_framebuffer: bool,
     // current_window: Option<*mut Object>,
 }
 
@@ -53,8 +54,9 @@ impl GLContextBuilder {
             Ok(GLContext {
                 gl_context,
                 pixel_format,
-                vsync: VSync::On // Enable VSync for the next window bound
+                vsync: VSync::On, // Enable VSync for the next window bound
                 // current_window: None,
+                high_dpi_framebuffer: self.gl_attributes.high_dpi_framebuffer,
             })
         }
     }
@@ -72,6 +74,7 @@ impl GLContext {
                 depth_bits: 24,
                 stencil_bits: 8,
                 webgl_version: WebGLVersion::None,
+                high_dpi_framebuffer: false,
             },
         }
     }
@@ -97,7 +100,7 @@ impl GLContextTrait for GLContext {
         if let Some((_window, window_view)) = window_and_view {
             let () = unsafe {
                 // Apparently this defaults to YES even without this call
-                let () = msg_send![window_view, setWantsBestResolutionOpenGLSurface: YES];
+                let () = msg_send![window_view, setWantsBestResolutionOpenGLSurface: self.high_dpi_framebuffer];
 
                 msg_send![self.gl_context, performSelectorOnMainThread:sel!(setView:) withObject:window_view waitUntilDone:YES]
             };

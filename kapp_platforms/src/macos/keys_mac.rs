@@ -80,7 +80,7 @@ pub fn virtual_keycode_to_key(key_in: u16) -> Key {
         0x73 => Home,
         0x72 => Insert,
         0x7B => Left,
-        0x3A => Unknown, // Left Alt
+        0x3A => LeftAlt, // Left Alt
         0x3B => LeftControl,
         0x38 => LeftShift,
         0x37 => Meta, // Left command key
@@ -89,7 +89,7 @@ pub fn virtual_keycode_to_key(key_in: u16) -> Key {
         0x79 => PageDown,
         0x74 => PageUp,
         0x7C => Right,
-        0x3D => Unknown, // Right alt
+        0x3D => RightAlt, // Right alt
         0x3E => RightControl,
         0x3C => RightShift,
         0x36 => Meta, // Right command key

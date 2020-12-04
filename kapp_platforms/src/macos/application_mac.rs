@@ -1,5 +1,7 @@
 use super::apple::*;
+use super::window_mac::WindowState;
 use kapp_platform_common::*;
+
 use std::cell::RefCell;
 use std::ffi::c_void;
 
@@ -10,6 +12,7 @@ pub(crate) struct ApplicationData {
     ns_application: *mut Object,
     pub modifier_flags: u64,      // Key modifier flags
     pub actually_terminate: bool, // Set when quit is called. Indicates the program should quit.
+    pub text_input_enabled: bool, // Should text input be sent in addition to KeyDown events?
 }
 
 impl ApplicationData {
@@ -18,6 +21,7 @@ impl ApplicationData {
             ns_application: std::ptr::null_mut(),
             modifier_flags: 0,
             actually_terminate: false,
+            text_input_enabled: false,
         }
     }
 }
@@ -371,6 +375,34 @@ impl PlatformApplicationTrait for PlatformApplication {
                 ns_view,
                 ..raw_window_handle::macos::MacOSHandle::empty()
             })
+        }
+    }
+
+    fn start_text_input(&mut self) {
+        APPLICATION_DATA.with(|d| {
+            d.borrow_mut().text_input_enabled = true;
+        });
+    }
+
+    fn end_text_input(&mut self) {
+        APPLICATION_DATA.with(|d| {
+            d.borrow_mut().text_input_enabled = false;
+        });
+    }
+
+    fn set_text_input_rectangle(
+        &mut self,
+        window_id: WindowId,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    ) {
+        unsafe {
+            let ns_view: &Object = msg(window_id.raw() as *mut Object, Sels::contentView, ());
+            let window_state: *mut c_void = *ns_view.get_ivar("kappState");
+            let window_state = window_state as *mut WindowState;
+            (*window_state).text_input_rectangle = (x, y, width, height);
         }
     }
 }

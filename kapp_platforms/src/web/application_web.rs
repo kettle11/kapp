@@ -8,13 +8,13 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn new() -> Self {
         // Set panic hook. Should this be possible to disable?
         console_error_panic_hook::set_once();
-
         Self {}
     }
 
     fn event_loop(&mut self) -> Self::EventLoop {
         PlatformEventLoop {}
     }
+
     fn set_window_position(&mut self, _window_id: WindowId, _x: u32, _y: u32) {}
     fn set_window_size(&mut self, _window_id: WindowId, _width: u32, _height: u32) {}
     fn set_window_title(&mut self, _window_id: WindowId, _title: &str) {}
@@ -55,6 +55,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn quit(&self) {}
+
     fn set_cursor(&mut self, _cursor: Cursor) {
         unimplemented!();
     }
@@ -67,6 +68,21 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn raw_window_handle(&self, _window_id: WindowId) -> RawWindowHandle {
         RawWindowHandle::Web(raw_window_handle::web::WebHandle::empty())
+    }
+
+    fn start_text_input(&mut self) {}
+
+    fn end_text_input(&mut self) {}
+
+    fn set_text_input_rectangle(
+        &mut self,
+        window_id: WindowId,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    ) {
+        // Perhaps a hidden text input field could be moved to make IME input appear in the right place.
     }
 }
 

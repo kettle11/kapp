@@ -68,6 +68,16 @@ impl Window {
             .set_window_size(self.id, width, height);
     }
 
+    /// Lets the OS know where it should place text input related popups like
+    /// accent character selection.
+    /// Position is specified relative to the window's upper left corner.
+    /// ONLY SUPPORTED ON MAC (for now)
+    pub fn set_text_input_rectangle(&self, x: f64, y: f64, width: f64, height: f64) {
+        self.platform_application
+            .borrow_mut()
+            .set_text_input_rectangle(self.id, x, y, width, height)
+    }
+
     /// Get the window's width and height excluding the titlebar.
     /// Unimplemented on Web.
     pub fn size(&self) -> (u32, u32) {
