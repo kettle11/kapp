@@ -300,7 +300,7 @@ extern "C" {
 }
 
 extern "C" {
-    pub fn CGWarpMouseCursorPosition(new_cursor_position: CGPoint) -> i32;
+    // pub fn CGWarpMouseCursorPosition(new_cursor_position: CGPoint) -> i32;
     pub fn CGAssociateMouseAndMouseCursorPosition(connected: bool) -> i32;
 }
 
