@@ -13,6 +13,7 @@ pub(crate) struct ApplicationData {
     pub modifier_flags: u64,      // Key modifier flags
     pub actually_terminate: bool, // Set when quit is called. Indicates the program should quit.
     pub text_input_enabled: bool, // Should text input be sent in addition to KeyDown events?
+    pub mouse_lock: bool,
 }
 
 impl ApplicationData {
@@ -22,6 +23,7 @@ impl ApplicationData {
             modifier_flags: 0,
             actually_terminate: false,
             text_input_enabled: false,
+            mouse_lock: false,
         }
     }
 }
@@ -305,20 +307,21 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn lock_mouse_position(&mut self) {
-        // Need to account for backing scale here!
-
-        /*
-        CGWarpMouseCursorPosition(CGPoint {
-            x: x as f64,
-            y: y as f64,
+        unsafe {
+            CGAssociateMouseAndMouseCursorPosition(false);
+        }
+        APPLICATION_DATA.with(|d| {
+            d.borrow_mut().mouse_lock = true;
         });
-        */
-
-        unimplemented!()
     }
 
     fn unlock_mouse_position(&mut self) {
-        unimplemented!();
+        unsafe {
+            CGAssociateMouseAndMouseCursorPosition(true);
+        }
+        APPLICATION_DATA.with(|d| {
+            d.borrow_mut().mouse_lock = false;
+        });
     }
 
     // https://developer.apple.com/documentation/appkit/nscursor?language=objc
