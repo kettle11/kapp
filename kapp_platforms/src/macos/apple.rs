@@ -296,7 +296,12 @@ extern "C" {
     pub fn CFRunLoopAddSource(rl: CFRunLoopRef, source: CFRunLoopSourceRef, mode: CFRunLoopMode);
     #[allow(dead_code)]
     pub fn CFRunLoopSourceInvalidate(source: CFRunLoopSourceRef);
-// pub fn CFRunLoopSourceSignal(source: CFRunLoopSourceRef);
+    // pub fn CFRunLoopSourceSignal(source: CFRunLoopSourceRef);
+}
+
+extern "C" {
+    pub fn CGWarpMouseCursorPosition(new_cursor_position: CGPoint) -> i32;
+    pub fn CGAssociateMouseAndMouseCursorPosition(connected: bool) -> i32;
 }
 
 #[allow(non_snake_case)]

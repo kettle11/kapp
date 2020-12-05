@@ -175,10 +175,16 @@ impl PlatformApplicationTrait for PlatformApplication {
         dpi as f64 / USER_DEFAULT_SCREEN_DPI as f64
     }
 
-    fn set_mouse_position(&mut self, x: u32, y: u32) {
+    fn lock_mouse_position(&mut self) {
+        unimplemented!()
+        /*
         unsafe {
             SetCursorPos(x as i32, y as i32);
-        }
+        }*/
+    }
+
+    fn unlock_mouse_position(&mut self) {
+        unimplemented!();
     }
 
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {

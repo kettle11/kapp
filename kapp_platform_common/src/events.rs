@@ -58,6 +58,13 @@ pub enum Event {
         source: PointerSource,
         timestamp: Duration,
     },
+    /// How much the mouse has moved regardless of the pointer position.
+    /// This event will be sent even if the mouse position is locked.
+    MouseDelta {
+        delta_x: f64,
+        delta_y: f64,
+        timestamp: Duration,
+    },
     /// A pointer, mouse, touch or, or stylus has been pressed down.
     /// Note that this is sent by multiple web events, not just web's "pointerdown" event.
     PointerDown {

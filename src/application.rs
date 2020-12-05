@@ -42,12 +42,17 @@ impl Application {
         self.platform_application.borrow().quit();
     }
 
+    /// Prevents the mouse from moving until a call to `unlock_mouse_position`
+    pub fn lock_mouse_position(&self) {
+        self.platform_application.borrow_mut().lock_mouse_position();
+    }
+
     /// Sets the mouse position relative to the screen.
     /// Coordinates are expressed in physical coordinates.
-    pub fn set_mouse_position(&self, x: u32, y: u32) {
+    pub fn unlock_mouse_position(&self) {
         self.platform_application
             .borrow_mut()
-            .set_mouse_position(x, y);
+            .unlock_mouse_position();
     }
 
     pub fn set_cursor(&self, cursor: Cursor) {

@@ -344,13 +344,31 @@ extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
 }
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
-    let (x, y) = get_mouse_position(this, event);
-    self::submit_event(Event::PointerMoved {
-        x,
-        y,
-        source: PointerSource::Mouse,
-        timestamp: get_timestamp(event),
+    let mouse_lock = APPLICATION_DATA.with(|d| d.borrow().mouse_lock);
+
+    // These deltas are probably smoothed, right?
+    // So they're less good for something like first-person controls?
+    // Investigation is required to see if there's a more "raw" input" that
+    // should be exposed.
+    let delta_x: CGFloat = unsafe { msg_send![event, deltaX] };
+    let delta_y: CGFloat = unsafe { msg_send![event, deltaY] };
+
+    let timestamp = get_timestamp(event);
+    submit_event(Event::MouseDelta {
+        delta_x,
+        delta_y,
+        timestamp,
     });
+
+    if !mouse_lock {
+        let (x, y) = get_mouse_position(this, event);
+        self::submit_event(Event::PointerMoved {
+            x,
+            y,
+            source: PointerSource::Mouse,
+            timestamp,
+        });
+    }
 }
 
 extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
@@ -677,7 +695,7 @@ extern "C" fn first_rect_for_character_range(
         // Get the frame for this view's window.
         let window: *const Object = msg(this, Sels::window, ());
         let frame: CGRect = msg(window, Sels::frame, ());
-        
+
         // The screen's origin is in the bottom left but kapp's API specifies
         // the text input rect position relative to the window's upper left.
         // The coordinates are adjusted here accordingly.
