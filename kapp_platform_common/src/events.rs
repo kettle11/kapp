@@ -60,7 +60,7 @@ pub enum Event {
     },
     /// How much the mouse has moved regardless of the pointer position.
     /// This event will be sent even if the mouse position is locked.
-    MouseDelta {
+    MouseMotion {
         delta_x: f64,
         delta_y: f64,
         timestamp: Duration,

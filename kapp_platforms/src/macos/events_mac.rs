@@ -344,31 +344,7 @@ extern "C" fn flags_changed(_this: &Object, _sel: Sel, event: *mut Object) {
 }
 
 extern "C" fn mouse_moved(this: &Object, _sel: Sel, event: *mut Object) {
-    let mouse_lock = APPLICATION_DATA.with(|d| d.borrow().mouse_lock);
-
-    // These deltas are probably smoothed, right?
-    // So they're less good for something like first-person controls?
-    // Investigation is required to see if there's a more "raw" input" that
-    // should be exposed.
-    let delta_x: CGFloat = unsafe { msg_send![event, deltaX] };
-    let delta_y: CGFloat = unsafe { msg_send![event, deltaY] };
-
-    let timestamp = get_timestamp(event);
-    submit_event(Event::MouseDelta {
-        delta_x,
-        delta_y,
-        timestamp,
-    });
-
-    if !mouse_lock {
-        let (x, y) = get_mouse_position(this, event);
-        self::submit_event(Event::PointerMoved {
-            x,
-            y,
-            source: PointerSource::Mouse,
-            timestamp,
-        });
-    }
+    send_mouse_move(this, event);
 }
 
 extern "C" fn mouse_down(this: &Object, _sel: Sel, event: *mut Object) {
@@ -512,33 +488,15 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
 }
 
 extern "C" fn mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
-    let (x, y) = get_mouse_position(this, event);
-    self::submit_event(Event::PointerMoved {
-        x,
-        y,
-        source: PointerSource::Mouse,
-        timestamp: get_timestamp(event),
-    });
+    send_mouse_move(this, event);
 }
 
 extern "C" fn right_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
-    let (x, y) = get_mouse_position(this, event);
-    self::submit_event(Event::PointerMoved {
-        x,
-        y,
-        source: PointerSource::Mouse,
-        timestamp: get_timestamp(event),
-    });
+    send_mouse_move(this, event);
 }
 
 extern "C" fn other_mouse_dragged(this: &Object, _sel: Sel, event: *mut Object) {
-    let (x, y) = get_mouse_position(this, event);
-    self::submit_event(Event::PointerMoved {
-        x,
-        y,
-        source: PointerSource::Mouse,
-        timestamp: get_timestamp(event),
-    });
+    send_mouse_move(this, event);
 }
 
 // https://developer.apple.com/documentation/appkit/nsresponder/1534192-scrollwheel?language=objc
@@ -883,5 +841,33 @@ fn get_mouse_position(_this: &Object, event: *mut Object) -> (f64, f64) {
         let x = window_point.x * backing_scale;
         let y = (frame.size.height - window_point.y) * backing_scale; // Flip y coordinate because y is 0,0 on Mac.
         (x, y)
+    }
+}
+
+fn send_mouse_move(this: &Object, event: *mut Object) {
+    let mouse_lock = APPLICATION_DATA.with(|d| d.borrow().mouse_lock);
+
+    // These deltas are probably smoothed, right?
+    // So they're less good for something like first-person controls?
+    // Investigation is required to see if there's a more "raw" input" that
+    // should be exposed.
+    let delta_x: CGFloat = unsafe { msg_send![event, deltaX] };
+    let delta_y: CGFloat = unsafe { msg_send![event, deltaY] };
+
+    let timestamp = get_timestamp(event);
+    submit_event(Event::MouseMotion {
+        delta_x,
+        delta_y,
+        timestamp,
+    });
+
+    if !mouse_lock {
+        let (x, y) = get_mouse_position(this, event);
+        self::submit_event(Event::PointerMoved {
+            x,
+            y,
+            source: PointerSource::Mouse,
+            timestamp,
+        });
     }
 }

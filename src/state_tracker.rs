@@ -14,7 +14,7 @@ pub struct StateTracker {
     pointer_buttons_down_since_last_frame: HashMap<PointerButton, Duration>, // pointer was pressed since the last clear for any window.
     pointer_buttons_pressed: HashMap<PointerButton, Duration>,
     pointer_position: (f64, f64),
-    mouse_delta: (f64, f64),
+    mouse_motion: (f64, f64),
 }
 
 impl StateTracker {
@@ -25,7 +25,7 @@ impl StateTracker {
             pointer_buttons_down_since_last_frame: HashMap::with_capacity(16),
             pointer_buttons_pressed: HashMap::with_capacity(16),
             pointer_position: (0., 0.),
-            mouse_delta: (0., 0.),
+            mouse_motion: (0., 0.),
         }
     }
 
@@ -49,9 +49,9 @@ impl StateTracker {
                 self.pointer_buttons_pressed.remove(&button);
             }
             Event::PointerMoved { x, y, .. } => self.pointer_position = (x, y),
-            Event::MouseDelta {
+            Event::MouseMotion {
                 delta_x, delta_y, ..
-            } => self.mouse_delta = (self.mouse_delta.0 + delta_x, self.mouse_delta.1 + delta_y),
+            } => self.mouse_motion = (self.mouse_motion.0 + delta_x, self.mouse_motion.1 + delta_y),
             _ => {}
         };
     }
@@ -60,7 +60,7 @@ impl StateTracker {
     pub fn clear(&mut self) {
         self.pointer_buttons_down_since_last_frame.clear();
         self.keys_down_since_last_frame.clear();
-        self.mouse_delta = (0., 0.);
+        self.mouse_motion = (0., 0.);
     }
 
     /// Returns true if the key has been pressed since the last call to clear.
@@ -99,7 +99,7 @@ impl StateTracker {
         self.pointer_position
     }
 
-    pub fn mouse_delta(&self) -> (f64, f64) {
-        self.mouse_delta
+    pub fn mouse_motion(&self) -> (f64, f64) {
+        self.mouse_motion
     }
 }
