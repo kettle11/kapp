@@ -56,7 +56,7 @@ impl GLContextBuilder {
                 pixel_format,
                 vsync: VSync::On, // Enable VSync for the next window bound
                 // current_window: None,
-                high_dpi_framebuffer: self.gl_attributes.high_dpi_framebuffer,
+                high_dpi_framebuffer: self.gl_attributes.high_resolution_framebuffer,
             })
         }
     }
@@ -74,7 +74,7 @@ impl GLContext {
                 depth_bits: 24,
                 stencil_bits: 8,
                 webgl_version: WebGLVersion::None,
-                high_dpi_framebuffer: false,
+                high_resolution_framebuffer: false,
             },
         }
     }

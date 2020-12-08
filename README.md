@@ -10,7 +10,6 @@ A clean build of kApp on macOS takes  about 3.5 seconds.
 
 I am improving kApp slowly and steadily as issues come up. It is usable as is, but some functionality is missing and everything is subject to change. If you try it out and run into a problem open an issue and please consider contributing!
 
-
 ## Example
 
 ```rust

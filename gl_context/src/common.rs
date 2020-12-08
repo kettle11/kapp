@@ -10,7 +10,7 @@ pub struct GLContextAttributes {
     /// WebGL version is only relevant for web.
     pub webgl_version: WebGLVersion,
     /// Mac specific, should the framebuffer be allocated with a higher resolution.
-    pub high_dpi_framebuffer: bool,
+    pub high_resolution_framebuffer: bool,
 }
 
 pub enum WebGLVersion {
@@ -72,6 +72,14 @@ pub struct GLContextBuilder {
 impl GLContextBuilder {
     pub fn samples(&mut self, samples: u8) -> &mut Self {
         self.gl_attributes.msaa_samples = samples;
+        self
+    }
+
+    /// Sets if a high resolution window framebuffer should be requested (if possible).
+    /// This is presently only relevant on retina Macs which can select a
+    /// high resolution framebuffer or a smaller one for performance reasons.
+    pub fn high_resolution_framebuffer(&mut self, value: bool) -> &mut Self {
+        self.gl_attributes.high_resolution_framebuffer = value;
         self
     }
 }
