@@ -168,6 +168,11 @@ impl PlatformApplicationTrait for PlatformApplication {
                 (NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular,),
             );
 
+            // This line is necessary to ensure the app becomes active.
+            // But does it improperly steal focus if app activation takes a while and the
+            // user launches another app while they wait? 
+            let () = msg_send![ns_application, activateIgnoringOtherApps:YES]; 
+
             // Setup the application delegate to handle application events.
             let ns_application_delegate_class = application_delegate_declaration();
             // Create an instance of the delegate. The delegate's functions receives events for the application.
