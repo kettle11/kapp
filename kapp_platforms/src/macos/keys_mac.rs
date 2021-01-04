@@ -42,7 +42,7 @@ pub fn virtual_keycode_to_key(key_in: u16) -> Key {
         0x2A => Backslash,
         0x2B => Comma,
         0x18 => Equal,
-        0x32 => Unknown, // What is this? Sokol calls it 'grave'
+        0x32 => Backquote, // Also known as backtick or grave
         0x21 => BracketLeft,
         0x1B => Minus,
         0x2F => Period,
