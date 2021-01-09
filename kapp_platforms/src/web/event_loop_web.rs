@@ -5,7 +5,6 @@ use std::ffi::c_void;
 use std::time::Duration;
 
 static mut CALLBACK: Option<Box<dyn FnMut(Event)>> = None;
-static mut CANVAS_HEIGHT: u32 = 0;
 
 static mut KAPP_MODULE: KWasmModule = KWasmModule::null();
 
@@ -15,6 +14,7 @@ fn send_event(event: Event) {
     }
 }
 
+/*
 fn request_canvas_size() -> (f32, f32) {
     unsafe {
         let mut float_data: [f32; 2] = [0., 0.];
@@ -27,6 +27,7 @@ fn request_canvas_size() -> (f32, f32) {
         (float_data[0], float_data[1])
     }
 }
+*/
 
 fn request_animation_frame_callback() {
     // Need to check for client resize here.
@@ -37,21 +38,21 @@ fn request_animation_frame_callback() {
 }
 
 fn pointer_source_from_f64(f: f64) -> PointerSource {
-    match f {
-        1. => PointerSource::Mouse,
-        2. => PointerSource::Pen,
-        3. => PointerSource::Touch,
+    match f as u32 {
+        1 => PointerSource::Mouse,
+        2 => PointerSource::Pen,
+        3 => PointerSource::Touch,
         _ => PointerSource::Unknown,
     }
 }
 
 fn button_from_f64(f: f64) -> PointerButton {
-    match f {
-        0. => PointerButton::Primary,
-        1. => PointerButton::Auxillary,
-        2. => PointerButton::Secondary,
-        3. => PointerButton::Extra1,
-        4. => PointerButton::Extra2,
+    match f as u32 {
+        0 => PointerButton::Primary,
+        1 => PointerButton::Auxillary,
+        2 => PointerButton::Secondary,
+        3 => PointerButton::Extra1,
+        4 => PointerButton::Extra2,
         _ => PointerButton::Unknown,
     }
 }
@@ -125,7 +126,7 @@ fn scroll(delta_x: f64, delta_y: f64, time_stamp: f64) {
     });
 }
 
-// Note that 'feel' adjustments are made on the JS side to make this match
+// Note that 'feel' adjustments are made on the Javascript side to make this match
 // Mac platform behavior. But that may be a bad idea.
 fn pinch(delta: f64, time_stamp: f64) {
     send_event(Event::PinchGesture {
@@ -137,8 +138,19 @@ fn pinch(delta: f64, time_stamp: f64) {
 #[repr(u32)]
 enum HostCommands {
     RequestAnimationFrame = 0,
-    GetCanvasSize = 1,
+    //GetCanvasSize = 1,
     SetCallbacks = 2,
+}
+
+pub(crate) fn request_animation_frame() {
+    unsafe {
+        // Register the request animation frame callback
+        kwasm::send_message_with_pointer_to_host(
+            KAPP_MODULE,
+            HostCommands::RequestAnimationFrame as kwasm::Command,
+            request_animation_frame_callback as *mut c_void,
+        );
+    }
 }
 
 pub fn run<T>(callback: T)
@@ -150,13 +162,6 @@ where
         CALLBACK = Some(Box::new(Box::new(callback)));
 
         KAPP_MODULE = register_module(include_str!("kapp_module.js"));
-
-        // Register the request animation frame callback
-        kwasm::send_message_with_pointer_to_host(
-            KAPP_MODULE,
-            HostCommands::RequestAnimationFrame as kwasm::Command,
-            request_animation_frame_callback as *mut c_void,
-        );
 
         kwasm::send_message_with_data_to_host(
             KAPP_MODULE,

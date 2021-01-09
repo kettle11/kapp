@@ -42,8 +42,9 @@ impl PlatformApplicationTrait for PlatformApplication {
         unimplemented!()
     }
     fn close_window(&mut self, _window_id: WindowId) {}
+
     fn redraw_window(&mut self, _window_id: WindowId) {
-        // super::event_loop_web::request_frame()
+        super::event_loop_web::request_animation_frame()
     }
 
     fn lock_mouse_position(&mut self) {
@@ -80,11 +81,11 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn set_text_input_rectangle(
         &mut self,
-        window_id: WindowId,
-        x: f64,
-        y: f64,
-        width: f64,
-        height: f64,
+        _window_id: WindowId,
+        _x: f64,
+        _y: f64,
+        _width: f64,
+        _height: f64,
     ) {
         // Perhaps a hidden text input field could be moved to make IME input appear in the right place.
     }
