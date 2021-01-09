@@ -1,8 +1,9 @@
 use crate::common::*;
-use wasm_bindgen::JsCast;
 
 impl GLContextBuilder {
     pub fn build(&self) -> Result<GLContext, ()> {
+        unimplemented!()
+        /*
         let canvas = web_sys::window()
             .unwrap()
             .document()
@@ -45,6 +46,7 @@ impl GLContextBuilder {
         };
 
         context
+        */
     }
 
     pub fn webgl1(&mut self) -> &mut Self {
@@ -61,8 +63,8 @@ impl GLContextBuilder {
 }
 
 pub struct GLContext {
-    webgl1_context: Option<web_sys::WebGlRenderingContext>,
-    webgl2_context: Option<web_sys::WebGl2RenderingContext>,
+    //webgl1_context: Option<web_sys::WebGlRenderingContext>,
+// webgl2_context: Option<web_sys::WebGl2RenderingContext>,
 }
 
 impl GLContext {
@@ -78,11 +80,12 @@ impl GLContext {
                 depth_bits: 24,
                 stencil_bits: 8,
                 webgl_version: WebGLVersion::One,
-                high_dpi_framebuffer: false,
+                high_resolution_framebuffer: false,
             },
         }
     }
 
+    /*
     pub fn webgl1_context(&self) -> Option<web_sys::WebGlRenderingContext> {
         self.webgl1_context.clone()
     }
@@ -90,6 +93,7 @@ impl GLContext {
     pub fn webgl2_context(&self) -> Option<web_sys::WebGl2RenderingContext> {
         self.webgl2_context.clone()
     }
+    */
 }
 
 impl GLContextTrait for GLContext {
