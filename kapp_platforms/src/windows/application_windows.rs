@@ -310,11 +310,11 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn set_text_input_rectangle(
         &mut self,
-        window_id: WindowId,
-        x: f64,
-        y: f64,
-        width: f64,
-        height: f64,
+        _window_id: WindowId,
+        _x: f64,
+        _y: f64,
+        _width: f64,
+        _height: f64,
     ) {
         unimplemented!()
     }
