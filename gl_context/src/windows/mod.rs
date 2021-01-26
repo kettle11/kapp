@@ -395,12 +395,11 @@ pub fn new_opengl_context(
         error_if_false(wingdi::wglMakeCurrent(dummy_window_dc2, opengl_context))?;
 
         let opengl_module =
-            libloaderapi::LoadLibraryA(std::ffi::CString::new("opengl32.dll").unwrap().as_ptr());
+            libloaderapi::LoadLibraryA("opengl32.dll\0".as_ptr() as *const i8);
 
         // Load swap interval for Vsync
         let function_pointer = wingdi::wglGetProcAddress(
-            std::ffi::CString::new("wglSwapIntervalEXT")
-                .unwrap()
+            "wglSwapIntervalEXT\0"
                 .as_ptr() as *const i8,
         );
 
@@ -412,8 +411,7 @@ pub fn new_opengl_context(
         }
 
         let function_pointer = wingdi::wglGetProcAddress(
-            std::ffi::CString::new("wglGetSwapIntervalEXT")
-                .unwrap()
+           "wglGetSwapIntervalEXT\0"
                 .as_ptr() as *const i8,
         );
 
