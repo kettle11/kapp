@@ -3,24 +3,19 @@ use std::mem::size_of;
 use std::os::raw::{c_float, c_int, c_uint, c_void};
 use std::ptr::null_mut;
 
-use winapi::shared::minwindef;
-use winapi::shared::minwindef::{FALSE, HINSTANCE, HMODULE, TRUE};
-use winapi::shared::windef;
-use winapi::um::libloaderapi;
-use winapi::um::wingdi;
-use winapi::um::winuser;
+use lawrencium::*;
 mod utils_windows;
 use utils_windows::*;
 
 use crate::common::*;
 
 pub struct GLContext {
-    context_ptr: windef::HGLRC,
+    context_ptr: HGLRC,
     pixel_format_id: i32,
-    _pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR,
+    _pixel_format_descriptor: PIXELFORMATDESCRIPTOR,
     opengl_module: HMODULE,
-    current_window: Option<windef::HWND>,
-    device_context: Option<windef::HDC>,
+    current_window: Option<HWND>,
+    device_context: Option<HDC>,
     vsync: VSync,
 }
 
@@ -57,27 +52,27 @@ impl GLContextTrait for GLContext {
         unsafe {
             let window_handle = window
                 .map(|w| match w.raw_window_handle() {
-                    RawWindowHandle::Windows(handle) => handle.hwnd as windef::HWND,
+                    RawWindowHandle::Windows(handle) => handle.hwnd as HWND,
                     _ => unreachable!(),
                 })
                 .unwrap();
             let window_device_context = if let Some(_window) = window {
                 if let Some(current_device_context) = self.device_context {
-                    winuser::ReleaseDC(window_handle, current_device_context);
+                    ReleaseDC(window_handle, current_device_context);
                 }
 
-                let device_context = winuser::GetDC(window_handle);
+                let device_context = GetDC(window_handle);
                 self.device_context = Some(device_context);
                 device_context
             } else {
-                std::ptr::null_mut() as windef::HDC
+                std::ptr::null_mut() as HDC
             };
 
-            let pixel_format_descriptor: wingdi::PIXELFORMATDESCRIPTOR = std::mem::zeroed();
+            let pixel_format_descriptor: PIXELFORMATDESCRIPTOR = std::mem::zeroed();
 
             // This will error if the window was previously set with an incompatible
             // pixel format.
-            if wingdi::SetPixelFormat(
+            if SetPixelFormat(
                 window_device_context,
                 self.pixel_format_id,
                 &pixel_format_descriptor,
@@ -86,7 +81,7 @@ impl GLContextTrait for GLContext {
                 return Err(SetWindowError::MismatchedPixelFormat);
             }
 
-            error_if_false(wingdi::wglMakeCurrent(
+            error_if_false(wglMakeCurrent(
                 window_device_context,
                 self.context_ptr,
             ))
@@ -110,7 +105,7 @@ impl GLContextTrait for GLContext {
         unsafe {
             let window_device_context = self.device_context.unwrap_or(std::ptr::null_mut());
 
-            error_if_false(wingdi::wglMakeCurrent(
+            error_if_false(wglMakeCurrent(
                 window_device_context,
                 self.context_ptr,
             ))
@@ -120,7 +115,7 @@ impl GLContextTrait for GLContext {
     fn swap_buffers(&mut self) {
         if let Some(device_context) = self.device_context {
             unsafe {
-                wingdi::SwapBuffers(device_context);
+                SwapBuffers(device_context);
             }
         }
     }
@@ -173,10 +168,10 @@ fn get_proc_address_inner(opengl_module: HMODULE, address: &str) -> *const core:
     unsafe {
         let name = std::ffi::CString::new(address).unwrap();
         let mut result =
-            wingdi::wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
+            wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
         if result.is_null() {
             // Functions that were part of OpenGL1 need to be loaded differently.
-            result = libloaderapi::GetProcAddress(opengl_module, name.as_ptr() as *const i8)
+            result = GetProcAddress(opengl_module, name.as_ptr() as *const i8)
                 as *const std::ffi::c_void;
         }
 
@@ -234,9 +229,9 @@ pub fn new_opengl_context(
     unsafe {
         // Register the window class.
         let window_class_name = win32_string("kapp_gl_window");
-        let h_instance = libloaderapi::GetModuleHandleW(null_mut());
+        let h_instance = GetModuleHandleW(null_mut());
 
-        let window_class = winuser::WNDCLASSW {
+        let window_class = WNDCLASSW {
             style: 0,
             lpfnWndProc: Some(kapp_gl_window_callback),
             cbClsExtra: 0,
@@ -248,45 +243,45 @@ pub fn new_opengl_context(
             lpszMenuName: null_mut(),
             lpszClassName: window_class_name.as_ptr(),
         };
-        winuser::RegisterClassW(&window_class);
+        RegisterClassW(&window_class);
 
         // Then create a dummy window
-        let h_instance = libloaderapi::GetModuleHandleA(null_mut());
+        let h_instance = GetModuleHandleW(null_mut());
         let dummy_window = create_dummy_window(h_instance, &window_class_name);
         error_if_null(dummy_window)?;
 
         // DC stands for 'device context'
         // Definition of a device context:
         // https://docs.microsoft.com/en-us/windows/win32/gdi/device-contexts
-        let dummy_window_dc = winuser::GetDC(dummy_window);
+        let dummy_window_dc = GetDC(dummy_window);
         error_if_null(dummy_window_dc)?;
         // Create a dummy PIXELFORMATDESCRIPTOR (PFD).
         // This PFD is based on the recommendations from here:
         // https://www.khronos.org/opengl/wiki/Creating_an_OpenGL_Context_(WGL)#Create_a_False_Context
-        let mut dummy_pfd: wingdi::PIXELFORMATDESCRIPTOR = std::mem::zeroed();
-        dummy_pfd.nSize = size_of::<wingdi::PIXELFORMATDESCRIPTOR>() as u16;
+        let mut dummy_pfd: PIXELFORMATDESCRIPTOR = std::mem::zeroed();
+        dummy_pfd.nSize = size_of::<PIXELFORMATDESCRIPTOR>() as u16;
         dummy_pfd.nVersion = 1;
         dummy_pfd.dwFlags =
-            wingdi::PFD_DRAW_TO_WINDOW | wingdi::PFD_SUPPORT_OPENGL | wingdi::PFD_DOUBLEBUFFER;
-        dummy_pfd.iPixelType = wingdi::PFD_TYPE_RGBA;
+            PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+        dummy_pfd.iPixelType = PFD_TYPE_RGBA;
         dummy_pfd.cColorBits = 32;
         dummy_pfd.cAlphaBits = 8;
         dummy_pfd.cDepthBits = 24;
 
-        let dummy_pixel_format_id = wingdi::ChoosePixelFormat(dummy_window_dc, &dummy_pfd);
+        let dummy_pixel_format_id = ChoosePixelFormat(dummy_window_dc, &dummy_pfd);
 
         error_if_false(dummy_pixel_format_id)?;
 
-        error_if_false(wingdi::SetPixelFormat(
+        error_if_false(SetPixelFormat(
             dummy_window_dc,
             dummy_pixel_format_id,
             &dummy_pfd,
         ))?;
 
         // Create the dummy OpenGL context.
-        let dummy_opengl_context = wingdi::wglCreateContext(dummy_window_dc);
+        let dummy_opengl_context = wglCreateContext(dummy_window_dc);
         error_if_null(dummy_opengl_context)?;
-        error_if_false(wingdi::wglMakeCurrent(
+        error_if_false(wglMakeCurrent(
             dummy_window_dc,
             dummy_opengl_context,
         ))?;
@@ -301,7 +296,7 @@ pub fn new_opengl_context(
         error_if_null(dummy_window2)?;
 
         // DC is 'device context'
-        let dummy_window_dc2 = winuser::GetDC(dummy_window2);
+        let dummy_window_dc2 = GetDC(dummy_window2);
         error_if_null(dummy_window_dc2)?;
 
         // Setup the actual pixel format we'll use.
@@ -353,14 +348,14 @@ pub fn new_opengl_context(
         // DescribePixelFormat fills the pfd with a description of the pixel format.
         // But why does this window need the same pixel format as the previous one?
         // Just it just need a valid pixel format?
-        let mut pfd: wingdi::PIXELFORMATDESCRIPTOR = std::mem::zeroed();
-        wingdi::DescribePixelFormat(
+        let mut pfd: PIXELFORMATDESCRIPTOR = std::mem::zeroed();
+        DescribePixelFormat(
             dummy_window_dc2,
             pixel_format_id,
-            size_of::<wingdi::PIXELFORMATDESCRIPTOR>() as u32,
+            size_of::<PIXELFORMATDESCRIPTOR>() as u32,
             &mut pfd,
         );
-        wingdi::SetPixelFormat(dummy_window_dc2, pixel_format_id, &pfd);
+        SetPixelFormat(dummy_window_dc2, pixel_format_id, &pfd);
 
         // Finally we can create the OpenGL context!
         // Need to allow for choosing major and minor version.
@@ -378,7 +373,7 @@ pub fn new_opengl_context(
 
         let opengl_context = wglCreateContextAttribsARB(
             dummy_window_dc2,
-            0 as windef::HGLRC, // An existing OpenGL context to share resources with. 0 means none.
+            0 as HGLRC, // An existing OpenGL context to share resources with. 0 means none.
             context_attributes.as_ptr(),
         );
 
@@ -387,18 +382,18 @@ pub fn new_opengl_context(
         // Clean up all of our resources
         // It's bad that these calls only occur if all the prior steps were succesful.
         // If a program were to recover from a failure to setup an OpenGL context these resources would be leaked.
-        wingdi::wglMakeCurrent(dummy_window_dc, null_mut());
-        wingdi::wglDeleteContext(dummy_opengl_context);
-        winuser::ReleaseDC(dummy_window, dummy_window_dc);
-        winuser::DestroyWindow(dummy_window);
+        wglMakeCurrent(dummy_window_dc, null_mut());
+        wglDeleteContext(dummy_opengl_context);
+        ReleaseDC(dummy_window, dummy_window_dc);
+        DestroyWindow(dummy_window);
 
-        error_if_false(wingdi::wglMakeCurrent(dummy_window_dc2, opengl_context))?;
+        error_if_false(wglMakeCurrent(dummy_window_dc2, opengl_context))?;
 
         let opengl_module =
-            libloaderapi::LoadLibraryA("opengl32.dll\0".as_ptr() as *const i8);
+            LoadLibraryA("opengl32.dll\0".as_ptr() as *const i8);
 
         // Load swap interval for Vsync
-        let function_pointer = wingdi::wglGetProcAddress(
+        let function_pointer = wglGetProcAddress(
             "wglSwapIntervalEXT\0"
                 .as_ptr() as *const i8,
         );
@@ -410,7 +405,7 @@ pub fn new_opengl_context(
             wglSwapIntervalEXT_ptr = function_pointer as *const std::ffi::c_void;
         }
 
-        let function_pointer = wingdi::wglGetProcAddress(
+        let function_pointer = wglGetProcAddress(
            "wglGetSwapIntervalEXT\0"
                 .as_ptr() as *const i8,
         );
@@ -428,15 +423,15 @@ pub fn new_opengl_context(
         }
 
         // Will the dummy window be rendererd to if no other window is made current?
-        winuser::ReleaseDC(dummy_window2, dummy_window_dc2);
-        winuser::DestroyWindow(dummy_window2);
+        ReleaseDC(dummy_window2, dummy_window_dc2);
+        DestroyWindow(dummy_window2);
 
         // Disconnects from current window
         // Uncommenting this line can cause intermittment crashes
         // It's unclear why, as this should just disconnect the dummy window context
         // However leaving this commented should be harmless.
         // Actually, it just improves the situation, but doesn't prevent it.
-        //wingdi::wglMakeCurrent(dummy_window_dc2, null_mut());
+        //wglMakeCurrent(dummy_window_dc2, null_mut());
 
         Ok(GLContext {
             context_ptr: opengl_context,
@@ -450,16 +445,16 @@ pub fn new_opengl_context(
     }
 }
 
-fn create_dummy_window(h_instance: HINSTANCE, class_name: &Vec<u16>) -> windef::HWND {
+fn create_dummy_window(h_instance: HINSTANCE, class_name: &Vec<u16>) -> HWND {
     let title = win32_string("kapp Placeholder");
 
     unsafe {
         // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexw
-        winuser::CreateWindowExW(
+        CreateWindowExW(
             0,                                                   // extended style Is this ok?
             class_name.as_ptr(),                                 // A class created by RegisterClass
             title.as_ptr(),                                      // window title
-            winuser::WS_CLIPSIBLINGS | winuser::WS_CLIPCHILDREN, // style
+            WS_CLIPSIBLINGS | WS_CLIPCHILDREN, // style
             0,                                                   // x position
             0,                                                   // y position
             1,                                                   // width
@@ -473,18 +468,18 @@ fn create_dummy_window(h_instance: HINSTANCE, class_name: &Vec<u16>) -> windef::
 }
 
 pub unsafe extern "system" fn kapp_gl_window_callback(
-    hwnd: windef::HWND,
-    u_msg: minwindef::UINT,
-    w_param: minwindef::WPARAM,
-    l_param: minwindef::LPARAM,
-) -> minwindef::LRESULT {
+    hwnd: HWND,
+    u_msg: UINT,
+    w_param: WPARAM,
+    l_param: LPARAM,
+) -> LRESULT {
     // DefWindowProcW is the default Window event handler.
-    winuser::DefWindowProcW(hwnd, u_msg, w_param, l_param)
+    DefWindowProcW(hwnd, u_msg, w_param, l_param)
 }
 
 fn wgl_get_proc_address(name: &str) -> Result<*const c_void, Error> {
     let name = std::ffi::CString::new(name).unwrap();
-    let result = unsafe { wingdi::wglGetProcAddress(name.as_ptr() as *const i8) as *const c_void };
+    let result = unsafe { wglGetProcAddress(name.as_ptr() as *const i8) as *const c_void };
     error_if_null(result)?;
     Ok(result)
 }
@@ -495,7 +490,7 @@ fn wgl_get_proc_address(name: &str) -> Result<*const c_void, Error> {
 static mut wglChoosePixelFormatARB_ptr: *const c_void = std::ptr::null();
 #[allow(non_snake_case, non_upper_case_globals)]
 fn wglChoosePixelFormatARB(
-    hdc: windef::HDC,
+    hdc: HDC,
     piAttribIList: *const c_int,
     pfAttribFList: *const c_float,
     nMaxFormats: c_uint,
@@ -506,7 +501,7 @@ fn wglChoosePixelFormatARB(
         std::mem::transmute::<
             _,
             extern "system" fn(
-                windef::HDC,
+                HDC,
                 *const c_int,
                 *const c_float,
                 c_uint,
@@ -528,14 +523,14 @@ fn wglChoosePixelFormatARB(
 static mut wglCreateContextAttribsARB_ptr: *const c_void = std::ptr::null();
 #[allow(non_snake_case, non_upper_case_globals)]
 fn wglCreateContextAttribsARB(
-    hdc: windef::HDC,
-    hShareContext: windef::HGLRC,
+    hdc: HDC,
+    hShareContext: HGLRC,
     attribList: *const c_int,
-) -> windef::HGLRC {
+) -> HGLRC {
     unsafe {
         std::mem::transmute::<
             _,
-            extern "system" fn(windef::HDC, windef::HGLRC, *const c_int) -> windef::HGLRC,
+            extern "system" fn(HDC, HGLRC, *const c_int) -> HGLRC,
         >(wglCreateContextAttribsARB_ptr)(hdc, hShareContext, attribList)
     }
 }
