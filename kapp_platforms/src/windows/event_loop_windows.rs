@@ -3,6 +3,8 @@ use super::{external_windows::*, keys_windows::virtual_keycode_to_key};
 use kapp_platform_common::*;
 
 use std::ptr::null_mut;
+use std::convert::TryInto;
+
 pub unsafe extern "system" fn window_callback(
     hwnd: HWND,
     u_msg: UINT,
@@ -16,7 +18,7 @@ pub unsafe extern "system" fn window_callback(
             // CreateWindowExW
             let data =
                 (*(l_param as *mut std::ffi::c_void as *mut CREATESTRUCTA)).lpCreateParams as isize;
-            SetWindowLongPtrW(hwnd, GWLP_USERDATA, data);
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, data.try_into().unwrap());
         }
         WM_CLOSE => {
             produce_event(Event::WindowCloseRequested {

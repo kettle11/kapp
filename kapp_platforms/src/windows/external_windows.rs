@@ -245,13 +245,34 @@ extern "system" {
     pub fn SetCursor(hCursor: HCURSOR) -> HCURSOR;
     pub fn SetCursorPos(X: c_int, Y: c_int) -> BOOL;
     pub fn ShowCursor(bShow: BOOL) -> c_int;
+    pub fn SetWindowLongW(
+        hWnd: HWND,
+        nIndex: c_int,
+        dwNewLong: LONG,
+    ) -> LONG;
+    pub fn GetWindowLongW(
+        hWnd: HWND,
+        nIndex: c_int,
+    ) -> LONG;
     #[cfg(target_pointer_width = "64")]
     pub fn SetWindowLongPtrW(hWnd: HWND, nIndex: c_int, dwNewLong: LONG_PTR) -> LONG_PTR;
-    pub fn GetWindowLongPtrW(hWnd: HWND, nIndex: c_int) -> LONG_PTR;
+   
+    #[cfg(target_pointer_width = "64")]
+    pub fn GetWindowLongPtrW(
+        hWnd: HWND,
+        nIndex: c_int,
+    ) -> LONG_PTR;
+  
     pub fn SetWindowTextW(hWnd: HWND, lpString: LPCWSTR) -> BOOL;
     pub fn TranslateMessage(lpmsg: *const MSG) -> BOOL;
     pub fn GetDpiForWindow(hwnd: HWND) -> UINT;
 }
+
+#[cfg(target_pointer_width = "32")]
+pub use self::SetWindowLongW as SetWindowLongPtrW;
+
+#[cfg(target_pointer_width = "32")]
+pub use self::GetWindowLongW as GetWindowLongPtrW;
 
 #[link(name = "Shcore")]
 extern "system" {

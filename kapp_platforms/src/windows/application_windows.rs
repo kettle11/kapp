@@ -1,6 +1,7 @@
 use super::external_windows::*;
 use super::utils_windows::*;
 use std::ptr::null_mut;
+use std::convert::TryInto;
 
 use kapp_platform_common::*;
 
@@ -118,7 +119,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             let hwnd = window_id.raw() as HWND;
             let screen_width = GetSystemMetrics(SM_CXSCREEN);
             let screen_height = GetSystemMetrics(SM_CYSCREEN);
-            SetWindowLongPtrW(hwnd, GWL_STYLE, (WS_VISIBLE | WS_POPUP) as isize);
+            SetWindowLongPtrW(hwnd, GWL_STYLE, (WS_VISIBLE | WS_POPUP).try_into().unwrap());
             let mut rect = RECT {
                 left: 0,
                 top: 0,
@@ -140,7 +141,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         unsafe {
             let hwnd = window_id.raw() as HWND;
             let window_style = WS_OVERLAPPEDWINDOW | WS_VISIBLE | CS_OWNDC;
-            SetWindowLongPtrW(hwnd, GWL_STYLE, window_style as isize);
+            SetWindowLongPtrW(hwnd, GWL_STYLE, window_style.try_into().unwrap());
             ShowWindow(window_id.raw() as HWND, SW_RESTORE);
         }
     }
