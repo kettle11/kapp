@@ -138,18 +138,26 @@ where
         // Double click (up) event
         let dblclick = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
             let (x, y) = (event.client_x().into(), event.client_y().into());
-            send_event(Event::MouseButtonDoubleClickUp {
+            let button = match event.button() {
+                0 => PointerButton::Primary,
+                1 => PointerButton::Auxillary,
+                2 => PointerButton::Secondary,
+                3 => PointerButton::Extra1,
+                4 => PointerButton::Extra2,
+                _ => PointerButton::Unknown,
+            };
+            let timestamp = Duration::from_secs_f64(event.time_stamp() * 1000.0);
+            send_event(Event::DoubleClickUp {
                 x,
                 y,
-                button: match event.button() {
-                    0 => PointerButton::Primary,
-                    1 => PointerButton::Auxillary,
-                    2 => PointerButton::Secondary,
-                    3 => PointerButton::Extra1,
-                    4 => PointerButton::Extra2,
-                    _ => PointerButton::Unknown,
-                },
-                timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
+                button,
+                timestamp,
+            });
+            send_event(Event::DoubleClick {
+                x,
+                y,
+                button,
+                timestamp,
             });
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         canvas.set_ondblclick(Some(dblclick.as_ref().unchecked_ref()));

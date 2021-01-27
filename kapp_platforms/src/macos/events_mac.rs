@@ -378,7 +378,13 @@ extern "C" fn mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(Event::MouseButtonDoubleClickUp {
+        self::submit_event(Event::DoubleClickUp {
+            x,
+            y,
+            button: PointerButton::Primary,
+            timestamp: get_timestamp(event),
+        });
+        self::submit_event(Event::DoubleClick {
             x,
             y,
             button: PointerButton::Primary,
@@ -420,7 +426,13 @@ extern "C" fn right_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(Event::MouseButtonDoubleClickUp {
+        self::submit_event(Event::DoubleClickUp {
+            x,
+            y,
+            button: PointerButton::Secondary,
+            timestamp: get_timestamp(event),
+        });
+        self::submit_event(Event::DoubleClick {
             x,
             y,
             button: PointerButton::Secondary,
@@ -478,7 +490,13 @@ extern "C" fn other_mouse_up(this: &Object, _sel: Sel, event: *mut Object) {
     });
     let click_count: c_int = unsafe { msg(event, Sels::clickCount, ()) };
     if click_count == 2 {
-        self::submit_event(Event::MouseButtonDoubleClickUp {
+        self::submit_event(Event::DoubleClickUp {
+            x,
+            y,
+            button,
+            timestamp: get_timestamp(event),
+        });
+        self::submit_event(Event::DoubleClick {
             x,
             y,
             button,
