@@ -1,5 +1,8 @@
 use kapp_platform_common::*;
 use wasm_bindgen::JsCast;
+use web_sys::HtmlElement;
+
+pub static mut CURRENT_CURSOR: Option<String> = None;
 
 pub struct PlatformApplication {}
 
@@ -49,7 +52,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn lock_mouse_position(&mut self) {
         unimplemented!()
     }
-    
+
     fn unlock_mouse_position(&mut self) {
         unimplemented!();
     }
@@ -60,14 +63,50 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn quit(&self) {}
 
-    fn set_cursor(&mut self, _cursor: Cursor) {
-        unimplemented!();
+    fn set_cursor(&mut self, cursor: Cursor) {
+        let style = web_sys::window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .document_element()
+            .unwrap()
+            .unchecked_into::<HtmlElement>()
+            .style();
+        let cursor_name = match cursor {
+            Cursor::Arrow => "default",
+            Cursor::IBeam => "text",
+            Cursor::PointingHand => "pointer",
+            Cursor::OpenHand => "grab",
+            Cursor::ClosedHand => "grabbing",
+        };
+        unsafe {
+            CURRENT_CURSOR = Some(cursor_name.into());
+        }
+        style.set_property("cursor", cursor_name);
     }
     fn hide_cursor(&mut self) {
-        unimplemented!()
+        let style = web_sys::window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .document_element()
+            .unwrap()
+            .unchecked_into::<HtmlElement>()
+            .style();
+        style.set_property("cursor", "none");
     }
     fn show_cursor(&mut self) {
-        unimplemented!()
+        let style = web_sys::window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .document_element()
+            .unwrap()
+            .unchecked_into::<HtmlElement>()
+            .style();
+        style.set_property("cursor", unsafe {
+            CURRENT_CURSOR.as_deref().unwrap_or("auto")
+        });
     }
 
     fn raw_window_handle(&self, _window_id: WindowId) -> RawWindowHandle {

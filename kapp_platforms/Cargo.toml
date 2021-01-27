@@ -37,6 +37,8 @@ features = [
     "WheelEvent",
     "Event",
     "WebGlContextAttributes",
-    "Window"
+    "Window",
+    "Element",
+    "CssStyleDeclaration"
 ]
 
