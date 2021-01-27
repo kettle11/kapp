@@ -20,7 +20,7 @@ objc = "0.2.7"
 objc = "0.2.7"
 
 [target.'cfg(target_os="windows")'.dependencies]
-lawrencium = "1"
+lawrencium = {git = "https://github.com/Lokathor/lawrencium"}
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 wasm-bindgen = "0.2.*"
