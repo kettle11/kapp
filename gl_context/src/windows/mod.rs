@@ -263,7 +263,7 @@ pub fn new_opengl_context(
         dummy_pfd.nVersion = 1;
         dummy_pfd.dwFlags =
             PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-        dummy_pfd.iPixelType = PFD_TYPE_RGBA;
+        dummy_pfd.iPixelType = PFD_TYPE_RGBA as u8;
         dummy_pfd.cColorBits = 32;
         dummy_pfd.cAlphaBits = 8;
         dummy_pfd.cDepthBits = 24;
@@ -305,11 +305,11 @@ pub fn new_opengl_context(
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/WGL_ARB_pixel_format.txt
         let pixel_attributes = vec![
             WGL_DRAW_TO_WINDOW_ARB,
-            TRUE,
+            TRUE as i32,
             WGL_SUPPORT_OPENGL_ARB,
-            TRUE,
+            TRUE as i32,
             WGL_DOUBLE_BUFFER_ARB,
-            TRUE,
+            TRUE as i32,
             WGL_PIXEL_TYPE_ARB,
             WGL_TYPE_RGBA_ARB,
             WGL_ACCELERATION_ARB,
@@ -327,7 +327,7 @@ pub fn new_opengl_context(
             WGL_SAMPLES_ARB,
             msaa_samples as i32,
             WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB,
-            if srgb { TRUE } else { FALSE },
+            if srgb { TRUE as i32 } else { FALSE as i32 },
             0,
         ];
 
