@@ -4,6 +4,13 @@ use kapp_platform_common::*;
 
 use std::ptr::null_mut;
 use std::convert::TryInto;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+pub static mut DBLCLICK_L: AtomicBool = AtomicBool::new(false);
+pub static mut DBLCLICK_M: AtomicBool = AtomicBool::new(false);
+pub static mut DBLCLICK_R: AtomicBool = AtomicBool::new(false);
+pub static mut DBLCLICK_X1: AtomicBool = AtomicBool::new(false);
+pub static mut DBLCLICK_X2: AtomicBool = AtomicBool::new(false);
 
 pub unsafe extern "system" fn window_callback(
     hwnd: HWND,
@@ -70,6 +77,7 @@ pub unsafe extern "system" fn window_callback(
                 button: PointerButton::Primary,
                 timestamp: get_message_time(),
             });
+            *DBLCLICK_L.get_mut() = false;
         }
         WM_MBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
@@ -81,6 +89,7 @@ pub unsafe extern "system" fn window_callback(
                 button: PointerButton::Auxillary,
                 timestamp: get_message_time(),
             });
+            *DBLCLICK_M.get_mut() = false;
         }
         WM_RBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
@@ -92,19 +101,27 @@ pub unsafe extern "system" fn window_callback(
                 button: PointerButton::Secondary,
                 timestamp: get_message_time(),
             });
+            *DBLCLICK_R.get_mut() = false;
         }
         WM_XBUTTONDOWN => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
+            let button = match HIWORD(w_param as u32) {
+                XBUTTON1 => {
+                    *DBLCLICK_X1.get_mut() = false;
+                    PointerButton::Extra1
+                }
+                XBUTTON2 => {
+                    *DBLCLICK_X2.get_mut() = false;
+                    PointerButton::Extra2
+                }
+                _ => unreachable!(),
+            };
             produce_event(Event::PointerDown {
                 x: x as f64,
                 y: y as f64,
                 source: PointerSource::Mouse,
-                button: match HIWORD(w_param as u32) {
-                    XBUTTON1 => PointerButton::Extra1,
-                    XBUTTON2 => PointerButton::Extra2,
-                    _ => unreachable!(),
-                },
+                button,
                 timestamp: get_message_time(),
             });
         }
@@ -119,6 +136,15 @@ pub unsafe extern "system" fn window_callback(
                 button: PointerButton::Primary,
                 timestamp: get_message_time(),
             });
+
+            if DBLCLICK_L.load(Ordering::Relaxed) {
+                produce_event(Event::DoubleClickUp {
+                    x: x as f64,
+                    y: y as f64,
+                    button: PointerButton::Primary,
+                    timestamp: get_message_time(),
+                });
+            }
         }
         WM_MBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
@@ -131,6 +157,15 @@ pub unsafe extern "system" fn window_callback(
                 button: PointerButton::Auxillary,
                 timestamp: get_message_time(),
             });
+
+            if DBLCLICK_M.load(Ordering::Relaxed) {
+                produce_event(Event::DoubleClickUp {
+                    x: x as f64,
+                    y: y as f64,
+                    button: PointerButton::Auxillary,
+                    timestamp: get_message_time(),
+                });
+            }
         }
         WM_RBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
@@ -143,21 +178,44 @@ pub unsafe extern "system" fn window_callback(
                 button: PointerButton::Secondary,
                 timestamp: get_message_time(),
             });
+
+            if DBLCLICK_R.load(Ordering::Relaxed) {
+                produce_event(Event::DoubleClickUp {
+                    x: x as f64,
+                    y: y as f64,
+                    button: PointerButton::Secondary,
+                    timestamp: get_message_time(),
+                });
+            }
         }
         WM_XBUTTONUP => {
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
+            let button = match HIWORD(w_param as u32) {
+                XBUTTON1 => PointerButton::Extra1,
+                XBUTTON2 => PointerButton::Extra2,
+                _ => unreachable!(),
+            };
             produce_event(Event::PointerUp {
                 x: x as f64,
                 y: y as f64,
                 source: PointerSource::Mouse,
-                button: match HIWORD(w_param as u32) {
-                    XBUTTON1 => PointerButton::Extra1,
-                    XBUTTON2 => PointerButton::Extra2,
-                    _ => unreachable!(),
-                },
+                button,
                 timestamp: get_message_time(),
             });
+
+            if match HIWORD(w_param as u32) {
+                XBUTTON1 => DBLCLICK_X1.load(Ordering::Relaxed),
+                XBUTTON2 => DBLCLICK_X2.load(Ordering::Relaxed),
+                _ => unreachable!(),
+            } {
+                produce_event(Event::DoubleClickUp {
+                    x: x as f64,
+                    y: y as f64,
+                    button,
+                    timestamp: get_message_time(),
+                });
+            }
         }
         WM_MOUSEMOVE => produce_event(process_mouse_move_event(hwnd, l_param)),
         WM_LBUTTONDBLCLK => {
@@ -178,6 +236,7 @@ pub unsafe extern "system" fn window_callback(
                 button: PointerButton::Primary,
                 timestamp: get_message_time(),
             });
+            *DBLCLICK_L.get_mut() = true;
         }
         WM_MBUTTONDBLCLK => {
             // When double click is enabled on a window Windows will consume the second down event
@@ -197,6 +256,7 @@ pub unsafe extern "system" fn window_callback(
                 button: PointerButton::Auxillary,
                 timestamp: get_message_time(),
             });
+            *DBLCLICK_M.get_mut() = true;
         }
         WM_RBUTTONDBLCLK => {
             // When double click is enabled on a window Windows will consume the second down event
@@ -216,6 +276,7 @@ pub unsafe extern "system" fn window_callback(
                 button: PointerButton::Secondary,
                 timestamp: get_message_time(),
             });
+            *DBLCLICK_R.get_mut() = true;
         }
         WM_XBUTTONDBLCLK => {
             // When double click is enabled on a window Windows will consume the second down event
@@ -223,8 +284,14 @@ pub unsafe extern "system" fn window_callback(
             let x = GET_X_LPARAM(l_param);
             let y = GET_Y_LPARAM(l_param);
             let button = match HIWORD(w_param as u32) {
-                XBUTTON1 => PointerButton::Extra1,
-                XBUTTON2 => PointerButton::Extra2,
+                XBUTTON1 => {
+                    *DBLCLICK_X1.get_mut() = true;
+                    PointerButton::Extra1
+                }
+                XBUTTON2 => {
+                    *DBLCLICK_X2.get_mut() = true;
+                    PointerButton::Extra2
+                }
                 _ => unreachable!(),
             };
 
