@@ -104,7 +104,6 @@ pub enum Event {
     /// Occurs when pressing a mouse button twice in quick succession.
     /// This event occurs after two click and release pairs in quick succession.
     /// For the standard behaviour per platform, use `DoubleClick` event instead.
-    /// Unimplemented on Windows
     DoubleClickUp {
         x: f64,
         y: f64,
