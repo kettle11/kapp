@@ -82,7 +82,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         unsafe {
             CURRENT_CURSOR = Some(cursor_name.into());
         }
-        style.set_property("cursor", cursor_name);
+        style.set_property("cursor", cursor_name).ok();
     }
     fn hide_cursor(&mut self) {
         let style = web_sys::window()
@@ -93,7 +93,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             .unwrap()
             .unchecked_into::<HtmlElement>()
             .style();
-        style.set_property("cursor", "none");
+        style.set_property("cursor", "none").ok();
     }
     fn show_cursor(&mut self) {
         let style = web_sys::window()
@@ -106,7 +106,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             .style();
         style.set_property("cursor", unsafe {
             CURRENT_CURSOR.as_deref().unwrap_or("auto")
-        });
+        }).ok();
     }
 
     fn raw_window_handle(&self, _window_id: WindowId) -> RawWindowHandle {
@@ -119,11 +119,11 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn set_text_input_rectangle(
         &mut self,
-        window_id: WindowId,
-        x: f64,
-        y: f64,
-        width: f64,
-        height: f64,
+        _window_id: WindowId,
+        _x: f64,
+        _y: f64,
+        _width: f64,
+        _height: f64,
     ) {
         // Perhaps a hidden text input field could be moved to make IME input appear in the right place.
     }

@@ -83,10 +83,18 @@ pub enum Event {
         timestamp: Duration,
     },
     /// Occurs when pressing a mouse button twice in quick succession.
+    /// On Windows, this event occurs after the second click but before its release.
+    /// On MacOS and Web, this event occurs after two click and release pairs in quick succession.
+    DoubleClick {
+        x: f64,
+        y: f64,
+        button: PointerButton,
+        timestamp: Duration,
+    },
+    /// Occurs when pressing a mouse button twice in quick succession.
     /// This event occurs after the second click but before its release.
-    /// This event should be used to make double clicks feel more responsive,
-    /// but `MouseButtonDoubleClickUp` more closely matches the behavior of browser double click.
-    /// Unimplemented on Web
+    /// This event should be used to make double clicks feel more responsive.
+    /// For the standard behaviour per platform, use `DoubleClick` event instead.
     DoubleClickDown {
         x: f64,
         y: f64,
@@ -95,8 +103,8 @@ pub enum Event {
     },
     /// Occurs when pressing a mouse button twice in quick succession.
     /// This event occurs after two click and release pairs in quick succession.
-    /// Unimplemented on Web and Windows
-    MouseButtonDoubleClickUp {
+    /// For the standard behaviour per platform, use `DoubleClick` event instead.
+    DoubleClickUp {
         x: f64,
         y: f64,
         button: PointerButton,
