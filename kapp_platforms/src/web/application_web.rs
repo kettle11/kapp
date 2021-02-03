@@ -36,7 +36,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         (canvas_client_width, canvas_client_height)
     }
     fn get_window_scale(&mut self, _window_id: WindowId) -> f64 {
-        unimplemented!()
+        web_sys::window().unwrap().device_pixel_ratio()
     }
     fn fullscreen_window(&mut self, _window_id: WindowId) {
         super::event_loop_web::request_fullscreen()
@@ -104,9 +104,11 @@ impl PlatformApplicationTrait for PlatformApplication {
             .unwrap()
             .unchecked_into::<HtmlElement>()
             .style();
-        style.set_property("cursor", unsafe {
-            CURRENT_CURSOR.as_deref().unwrap_or("auto")
-        }).ok();
+        style
+            .set_property("cursor", unsafe {
+                CURRENT_CURSOR.as_deref().unwrap_or("auto")
+            })
+            .ok();
     }
 
     fn raw_window_handle(&self, _window_id: WindowId) -> RawWindowHandle {
