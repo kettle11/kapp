@@ -10,6 +10,8 @@ A clean build of kApp on macOS takes  about 3.5 seconds.
 
 I am improving kApp slowly and steadily as issues come up. It is usable as is, but some functionality is missing and everything is subject to change. If you try it out and run into a problem open an issue and please consider contributing!
 
+Currently, to keep the scope manageable, I've only been working to support the latest versions of each OS. My goal has been to get kapp to a point of consistency and quality across the latest versions of Windows/macOS as well as modern browsers before evaluating other platforms. Adding Linux support is also a goal for the future, though currently I am unable to work on it. It's an area where I'd very much welcome contributors and collaboration.
+
 ## Example
 
 ```rust
