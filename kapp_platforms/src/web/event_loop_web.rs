@@ -135,6 +135,18 @@ where
         canvas.set_onmousedown(Some(mouse_down.as_ref().unchecked_ref()));
         mouse_down.forget();
 
+        // Mouse move event
+        let mouse_move = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+            let (delta_x, delta_y) = (event.movement_x() as f64, event.movement_y() as f64);
+            send_event(Event::MouseMotion {
+                delta_x,
+                delta_y,
+                timestamp: Duration::from_secs_f64(event.time_stamp() * 1000.0),
+            });
+        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+        canvas.set_onmousemove(Some(mouse_move.as_ref().unchecked_ref()));
+        mouse_move.forget();
+
         // Double click (up) event
         let dblclick = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
             let (x, y) = (event.client_x().into(), event.client_y().into());

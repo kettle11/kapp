@@ -50,11 +50,18 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn lock_mouse_position(&mut self) {
-        unimplemented!()
+        let document = web_sys::window().unwrap().document().unwrap();
+        let canvas = document
+            .get_element_by_id("canvas")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .unwrap();
+        canvas.request_pointer_lock();
     }
 
     fn unlock_mouse_position(&mut self) {
-        unimplemented!();
+        let document = web_sys::window().unwrap().document().unwrap();
+        document.exit_pointer_lock();
     }
 
     fn new_window(&mut self, _window_parameters: &WindowParameters) -> WindowId {
