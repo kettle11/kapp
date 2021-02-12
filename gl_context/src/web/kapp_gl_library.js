@@ -12,6 +12,8 @@ function create_webgl1_context() {
 }
 
 function create_webgl2_context() {
+    console.log("CREATING WEBGL2 CONTEXT");
+
     let canvas = document
         .getElementById("canvas");
 
@@ -22,20 +24,17 @@ function create_webgl2_context() {
         antialias: true,
         depth: true
     });
-
 }
 
-return {
-    send_message_to_host: function (command, memory_buffer, data, data_length) {
-        console.log("KWasm GL: Receiving a message from the client");
-        switch (command) {
-            case 0:
-                create_webgl1_context();
-                break;
-            case 1:
-                create_webgl2_context();
-                break;
-        }
-        return 0;
-    },
-};
+return function (command, memory_buffer, data, data_length) {
+    console.log("KWasm GL: Receiving a message from the client");
+    switch (command) {
+        case 0:
+            create_webgl1_context();
+            break;
+        case 1:
+            create_webgl2_context();
+            break;
+    }
+    return 0;
+}

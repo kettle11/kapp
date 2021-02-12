@@ -1,7 +1,7 @@
 use crate::common::*;
 use kwasm::*;
 
-static mut KAPP_GL_MODULE: KWasmModule = KWasmModule::null();
+static mut KAPP_GL_LIBRARY: KWasmLibrary = KWasmLibrary::null();
 
 #[repr(u32)]
 enum HostMessage {
@@ -12,26 +12,67 @@ enum HostMessage {
 impl GLContextBuilder {
     pub fn build(&self) -> Result<GLContext, ()> {
         unsafe {
-            if KAPP_GL_MODULE.is_null() {
-                KAPP_GL_MODULE = kwasm::register_module(include_str!("kapp_gl_module.js"));
+            if KAPP_GL_LIBRARY.is_null() {
+                KAPP_GL_LIBRARY = KWasmLibrary::new(include_str!("kapp_gl_library.js"));
             }
 
             match self.gl_attributes.webgl_version {
                 WebGLVersion::One => {
-                    kwasm::send_message_to_host(
-                        KAPP_GL_MODULE,
-                        HostMessage::CreateWebGL1Context as u32,
-                    );
+                    KAPP_GL_LIBRARY.send_message_to_host(HostMessage::CreateWebGL1Context as u32);
                 }
                 WebGLVersion::Two => {
-                    kwasm::send_message_to_host(
-                        KAPP_GL_MODULE,
-                        HostMessage::CreateWebGL2Context as u32,
-                    );
+                    KAPP_GL_LIBRARY.send_message_to_host(HostMessage::CreateWebGL2Context as u32);
                 }
                 WebGLVersion::None => Err(())?,
             }
+
+            #[cfg(feature = "wasm_bindgen_support")]
+            {
+                use wasm_bindgen::JsCast;
+                let canvas = web_sys::window()
+                    .unwrap()
+                    .document()
+                    .unwrap()
+                    .get_element_by_id("canvas")
+                    .unwrap()
+                    .dyn_into::<web_sys::HtmlCanvasElement>()
+                    .unwrap();
+
+                // These should be configurable
+                let mut context_attributes = web_sys::WebGlContextAttributes::new();
+                context_attributes.alpha(false); // Disable the canvas background transparency
+
+                return match self.gl_attributes.webgl_version {
+                    WebGLVersion::One => {
+                        let webgl1_context = canvas
+                            .get_context_with_context_options("webgl", context_attributes.as_ref())
+                            .unwrap()
+                            .unwrap()
+                            .dyn_into::<web_sys::WebGlRenderingContext>()
+                            .unwrap();
+                        Ok(GLContext {
+                            webgl1_context: Some(webgl1_context),
+                            webgl2_context: None,
+                        })
+                    }
+                    WebGLVersion::Two => {
+                        let webgl2_context = canvas
+                            .get_context_with_context_options("webgl2", context_attributes.as_ref())
+                            .unwrap()
+                            .unwrap()
+                            .dyn_into::<web_sys::WebGl2RenderingContext>()
+                            .unwrap();
+                        Ok(GLContext {
+                            webgl1_context: None,
+                            webgl2_context: Some(webgl2_context),
+                        })
+                    }
+                    WebGLVersion::None => Err(()),
+                };
+            }
         }
+
+        #[cfg(not(feature = "wasm_bindgen_support"))]
         Ok(GLContext {})
     }
 
@@ -48,7 +89,12 @@ impl GLContextBuilder {
     }
 }
 
-pub struct GLContext {}
+pub struct GLContext {
+    #[cfg(feature = "wasm_bindgen_support")]
+    webgl1_context: Option<web_sys::WebGlRenderingContext>,
+    #[cfg(feature = "wasm_bindgen_support")]
+    webgl2_context: Option<web_sys::WebGl2RenderingContext>,
+}
 
 impl GLContext {
     pub fn new() -> GLContextBuilder {
@@ -66,6 +112,16 @@ impl GLContext {
                 high_resolution_framebuffer: false,
             },
         }
+    }
+
+    #[cfg(feature = "wasm_bindgen_support")]
+    pub fn webgl1_context(&self) -> Option<web_sys::WebGlRenderingContext> {
+        self.webgl1_context.clone()
+    }
+
+    #[cfg(feature = "wasm_bindgen_support")]
+    pub fn webgl2_context(&self) -> Option<web_sys::WebGl2RenderingContext> {
+        self.webgl2_context.clone()
     }
 }
 

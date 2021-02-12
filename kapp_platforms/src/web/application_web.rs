@@ -1,10 +1,18 @@
+use super::event_loop_web::*;
 use kapp_platform_common::*;
+use std::convert::TryInto;
+
+use kwasm::*;
 
 pub struct PlatformApplication {}
 
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
     fn new() -> Self {
+        kwasm::setup_panic_hook();
+        unsafe {
+            KAPP_LIBRARY = KWasmLibrary::new(include_str!("kapp_library.js"));
+        }
         Self {}
     }
 
@@ -18,22 +26,26 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn minimize_window(&mut self, _window_id: WindowId) {}
     fn maximize_window(&mut self, _window_id: WindowId) {}
     fn get_window_size(&mut self, _window_id: WindowId) -> (u32, u32) {
-        /*
-        // This approach does not work for multiple canvases.
-        let document = web_sys::window().unwrap().document().unwrap();
-        let canvas = document
-            .get_element_by_id("canvas")
-            .unwrap()
-            .dyn_into::<web_sys::HtmlCanvasElement>()
-            .unwrap();
-        let canvas_client_width = canvas.client_width() as u32;
-        let canvas_client_height = canvas.client_height() as u32;
-        (canvas_client_width, canvas_client_height)
-        */
-        unimplemented!()
+        unsafe { KAPP_LIBRARY.send_message_to_host(HostCommands::GetWindowSize as kwasm::Command) };
+
+        kwasm::DATA_FROM_HOST.with(|d| {
+            let d = d.borrow();
+            (
+                f32::from_ne_bytes(d[0..4].try_into().unwrap()) as u32,
+                f32::from_ne_bytes(d[4..8].try_into().unwrap()) as u32,
+            )
+        })
     }
     fn get_window_scale(&mut self, _window_id: WindowId) -> f64 {
-        unimplemented!()
+        unsafe {
+            KAPP_LIBRARY.send_message_to_host(HostCommands::GetDevicePixelRatio as kwasm::Command)
+        };
+
+        kwasm::DATA_FROM_HOST.with(|d| {
+            let d = d.borrow();
+            let d: [u8; 4] = d[0..4].try_into().unwrap();
+            f32::from_ne_bytes(d) as f64
+        })
     }
     fn fullscreen_window(&mut self, _window_id: WindowId) {
         // super::event_loop_web::request_fullscreen()
@@ -48,11 +60,11 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn lock_mouse_position(&mut self) {
-        unimplemented!()
+        unsafe { KAPP_LIBRARY.send_message_to_host(HostCommands::LockCursor as kwasm::Command) };
     }
 
     fn unlock_mouse_position(&mut self) {
-        unimplemented!();
+        unsafe { KAPP_LIBRARY.send_message_to_host(HostCommands::UnlockCursor as kwasm::Command) };
     }
 
     fn new_window(&mut self, _window_parameters: &WindowParameters) -> WindowId {
@@ -62,13 +74,13 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn quit(&self) {}
 
     fn set_cursor(&mut self, _cursor: Cursor) {
-        unimplemented!();
+        //  unimplemented!();
     }
     fn hide_cursor(&mut self) {
-        unimplemented!()
+        // unimplemented!()
     }
     fn show_cursor(&mut self) {
-        unimplemented!()
+        //  unimplemented!()
     }
 
     fn raw_window_handle(&self, _window_id: WindowId) -> RawWindowHandle {

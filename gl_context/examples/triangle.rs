@@ -63,7 +63,6 @@ fn setup(gl: &glow::Context) {
     "#;
 
     let fragment_source = r#"
-    precision mediump float;
   
     out vec4 color;
     void main()
@@ -114,6 +113,7 @@ fn main() {
         Event::WindowCloseRequested { .. } => app.quit(),
         Event::WindowResized { width, height, .. } => unsafe {
             gl.viewport(0, 0, width as i32, height as i32);
+            gl_context.resize();
         },
         Event::Draw { .. } => {
             unsafe {

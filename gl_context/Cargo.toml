@@ -24,3 +24,21 @@ winapi = { version = "0.3.8", features = ["winuser", "libloaderapi", "windowsx"]
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 kwasm = {path = "../../kwasm"}
+wasm-bindgen = {version="*", optional=true}
+
+[target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
+optional = true
+version = "*"
+features = [
+    "Document",
+    "HtmlElement",
+    "HtmlCanvasElement",
+    "WebGlContextAttributes",
+    "WebGlRenderingContext",
+    "WebGl2RenderingContext",
+    "Window"
+]
+
+[features]
+default = ["wasm_bindgen_support"]
+wasm_bindgen_support = ["web-sys", "wasm-bindgen"]

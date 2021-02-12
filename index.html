@@ -2,91 +2,9 @@
 <canvas width="570" height="570" id="canvas"></canvas>
 
 <body>
-    <script>
-        // This is used to decode strings passed from Wasm to Javascript.
-        const decoder = new TextDecoder();
-        const encoder = new TextEncoder();
-
-        var wasm_memory;
-        var wasm_exports;
-
-        // Store Javascript objects so they can later be accessed by Rust code.
-        var js_objects = [null];
-        var last_string = "";
-        var modules = [undefined];
-
-        var output_module = undefined;
-
-        let env = {
-            log_string: function (pointer, length) {
-                const string_data = new Uint8Array(wasm_memory.buffer, pointer, length);
-                const string = decoder.decode(string_data);
-                console.log(string);
-            },
-            pass_string: function (pointer, length) {
-                const string_data = new Uint8Array(wasm_memory.buffer, pointer, length);
-                const string = decoder.decode(string_data);
-                last_string = string;
-            },
-            register_module: function () {
-                let module = new Function(last_string)();
-                return modules.push(module) - 1;
-            },
-            send_message_to_host: function (module, command, data, data_length) {
-                let result = modules[module].send_message_to_host(command, wasm_memory.buffer, data, data_length);
-                return result;
-            },
-        };
-
-        function call_client_function(function_pointer) {
-            wasm_exports.call_function(function_pointer);
-        }
-
-        function call_client_function_f64(function_pointer, a) {
-            wasm_exports.call_function_f64(function_pointer, a);
-        }
-
-        function call_client_function_f64_2(function_pointer, a, b) {
-            wasm_exports.call_function_f64_2(function_pointer, a, b);
-        }
-
-        function call_client_function_f64_3(function_pointer, a, b, c) {
-            wasm_exports.call_function_f64_3(function_pointer, a, b, c);
-        }
-
-        function call_client_function_f64_4(function_pointer, a, b, c, d) {
-            wasm_exports.call_function_f64_4(function_pointer, a, b, c, d);
-        }
-
-        function call_client_function_f64_5(function_pointer, a, b, c, d, e) {
-            wasm_exports.call_function_f64_5(function_pointer, a, b, c, d, e);
-        }
-
-        function pass_string_to_client(string) {
-            const string_data = encoder.encode(string);
-            let length = string_data.byteLength;
-            let pointer = wasm_exports.allocate_string_space(length);
-            const client_string = new Uint8Array(wasm_memory.buffer, pointer, length);
-            client_string.set(string_data);
-        }
-
-        // All of these are passed to the Wasm as an external function.
-        var importObject = {
-            env: env
-        };
-
-        // This is hardcoded to pull from the debug directory, which obviously won't work if you build release.
-        fetch('target/wasm32-unknown-unknown/release/examples/hello.wasm').then(response =>
-            response.arrayBuffer()
-        ).then(bytes =>
-            WebAssembly.instantiate(bytes, importObject)
-        ).then(results => {
-            wasm_memory = results.instance.exports.memory;
-            wasm_exports = results.instance.exports;
-            console.log(results);
-            // Call our start function.
-            results.instance.exports.main();
-        });
+    <script type="module">
+        import initialize from './kwasm.js';
+        initialize("target/wasm32-unknown-unknown/debug/examples/hello.wasm");
     </script>
 </body>
 
