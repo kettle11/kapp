@@ -346,6 +346,8 @@ pub const PM_REMOVE: UINT = 0x0001;
 
 pub const SM_CXSCREEN: c_int = 0;
 pub const SM_CYSCREEN: c_int = 1;
+pub const SM_CXMAXTRACK: c_int = 59;
+pub const SM_CYMAXTRACK: c_int = 60;
 
 pub const SIZE_RESTORED: WPARAM = 0;
 pub const SIZE_MINIMIZED: WPARAM = 1;

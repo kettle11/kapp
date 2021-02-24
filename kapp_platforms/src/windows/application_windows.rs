@@ -17,6 +17,8 @@ pub struct PlatformApplication {
 pub(crate) struct WindowData {
     pub minimum_width: u32,
     pub minimum_height: u32,
+    pub maximum_width: u32,
+    pub maximum_height: u32,
 }
 
 impl PlatformApplicationTrait for PlatformApplication {
@@ -219,9 +221,12 @@ impl PlatformApplicationTrait for PlatformApplication {
                     });
 
             let (minimum_width, minimum_height) = window_parameters.minimum_size.unwrap_or((0, 0));
+            let (maximum_width, maximum_height) = window_parameters.maximum_size.unwrap_or((GetSystemMetrics(SM_CXMAXTRACK) as u32, GetSystemMetrics(SM_CYMAXTRACK) as u32));
             let window_data = Box::new(WindowData {
                 minimum_width,
                 minimum_height,
+                maximum_width,
+                maximum_height,
             });
 
             let data = Box::leak(window_data) as *mut WindowData as *mut std::ffi::c_void;
