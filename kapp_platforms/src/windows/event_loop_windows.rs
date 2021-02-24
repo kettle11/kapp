@@ -329,6 +329,8 @@ pub unsafe extern "system" fn window_callback(
                 let min_max_info = l_param as *mut MINMAXINFO;
                 (*min_max_info).ptMinTrackSize.x = (*window_data).minimum_width as i32;
                 (*min_max_info).ptMinTrackSize.y = (*window_data).minimum_height as i32;
+                (*min_max_info).ptMaxTrackSize.x = (*window_data).maximum_width as i32;
+                (*min_max_info).ptMaxTrackSize.y = (*window_data).maximum_height as i32;
             }
         }
         WM_NCDESTROY => {

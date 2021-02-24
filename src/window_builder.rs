@@ -14,6 +14,7 @@ impl<'a> WindowBuilder<'a> {
                 position: None,
                 size: Some((500, 500)),
                 minimum_size: None,
+                maximum_size: None,
                 resizable: true,
                 without_titlebar: false,
                 title: "Untitled".to_string(),
@@ -48,6 +49,12 @@ impl<'a> WindowBuilder<'a> {
     /// Sets the minimum size of the window's content area (excluding the titlebar and borders)
     pub fn minimum_size(&mut self, width: u32, height: u32) -> &mut Self {
         self.window_parameters.minimum_size = Some((width, height));
+        self
+    }
+
+    /// Sets the maximum size of the window's content area (excluding the titlebar and borders)
+    pub fn maximum_size(&mut self, width: u32, height: u32) -> &mut Self {
+        self.window_parameters.maximum_size = Some((width, height));
         self
     }
 
