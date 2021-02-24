@@ -58,8 +58,15 @@ pub(crate) fn build(
         }
 
         // Set minimum size
+        // Includes the titlebar
         if let Some((width, height)) = window_parameters.minimum_size {
             let () = msg_send![ns_window, setMinSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
+        }
+
+        // Set maximum size
+        // Includes the titlebar
+        if let Some((width, height)) = window_parameters.maximum_size {
+            let () = msg_send![ns_window, setMaxSize: NSSize::new((width as f64) / backing_scale, (height as f64) / backing_scale)];
         }
 
         // Set the window size
