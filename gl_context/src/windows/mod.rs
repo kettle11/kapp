@@ -200,6 +200,8 @@ impl GLContextBuilder {
             self.gl_attributes.depth_bits,
             self.gl_attributes.stencil_bits,
             self.gl_attributes.msaa_samples,
+            self.gl_attributes.version_major,
+            self.gl_attributes.version_minor,
             self.gl_attributes.srgb,
         )
         .unwrap())
@@ -217,6 +219,8 @@ pub fn new_opengl_context(
     depth_bits: u8,
     stencil_bits: u8,
     msaa_samples: u8,
+    version_major: u8,
+    version_minor: u8,
     srgb: bool,
 ) -> Result<GLContext, Error> {
     // This function performs the following steps:
@@ -360,8 +364,8 @@ pub fn new_opengl_context(
 
         // Finally we can create the OpenGL context!
         // Need to allow for choosing major and minor version.
-        let major_version_minimum = 4;
-        let minor_version_minimum = 5;
+        let major_version_minimum = version_major as i32;
+        let minor_version_minimum = version_minor as i32;
         let context_attributes = [
             WGL_CONTEXT_MAJOR_VERSION_ARB,
             major_version_minimum,
