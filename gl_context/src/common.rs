@@ -5,6 +5,7 @@ pub struct GLContextAttributes {
     pub alpha_bits: u8,
     pub depth_bits: u8,
     pub stencil_bits: u8,
+    pub srgb: bool,
     /// msaa_samples hould be a multiple of 2
     pub msaa_samples: u8,
     /// WebGL version is only relevant for web.
@@ -72,6 +73,27 @@ pub struct GLContextBuilder {
 impl GLContextBuilder {
     pub fn samples(&mut self, samples: u8) -> &mut Self {
         self.gl_attributes.msaa_samples = samples;
+        self
+    }
+
+    /// Sets the major version.
+    /// This is presently only relevant on Windows.
+    pub fn version_major(&mut self, version: u8) -> &mut Self {
+        self.gl_attributes.version_major = version;
+        self
+    }
+
+    /// Sets the minor version.
+    /// This is presently only relevant on Windows.
+    pub fn version_minor(&mut self, version: u8) -> &mut Self {
+        self.gl_attributes.version_minor = version;
+        self
+    }
+
+    /// Sets if the window should use the sRGB color space.
+    /// This has no effect on Web.
+    pub fn srgb(&mut self, srgb: bool) -> &mut Self {
+        self.gl_attributes.srgb = srgb;
         self
     }
 
