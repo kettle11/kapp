@@ -18,8 +18,8 @@ impl GLContext {
     pub fn new() -> GLContextBuilder {
         GLContextBuilder {
             gl_attributes: GLContextAttributes {
-                version_major: 3,
-                version_minor: 3,
+                major_version: 3,
+                minor_version: 3,
                 msaa_samples: 1,
                 color_bits: 24,
                 alpha_bits: 8,

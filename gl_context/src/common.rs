@@ -1,6 +1,6 @@
 pub struct GLContextAttributes {
-    pub version_major: u8,
-    pub version_minor: u8,
+    pub major_version: u8,
+    pub minor_version: u8,
     pub color_bits: u8,
     pub alpha_bits: u8,
     pub depth_bits: u8,
@@ -77,16 +77,16 @@ impl GLContextBuilder {
     }
 
     /// Sets the major version.
-    /// This is presently only relevant on Windows.
-    pub fn version_major(&mut self, version: u8) -> &mut Self {
-        self.gl_attributes.version_major = version;
+    /// On MacOS only versions 4.1 and 3.2 are supported and the closest will be chosen.
+    pub fn major_version(&mut self, version: u8) -> &mut Self {
+        self.gl_attributes.major_version = version;
         self
     }
 
     /// Sets the minor version.
-    /// This is presently only relevant on Windows.
-    pub fn version_minor(&mut self, version: u8) -> &mut Self {
-        self.gl_attributes.version_minor = version;
+    /// This has no no effect on MacOS.
+    pub fn minor_version(&mut self, version: u8) -> &mut Self {
+        self.gl_attributes.minor_version = version;
         self
     }
 

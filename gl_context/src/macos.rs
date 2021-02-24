@@ -9,7 +9,7 @@ pub struct GLContext {
     pixel_format: *mut Object,
     vsync: VSync,
     high_dpi_framebuffer: bool,
-    // current_window: Option<*mut Object>,
+    srgb: bool,
 }
 
 // This isn't really true because make_current must be called after GLContext is passed to another thread.
@@ -19,10 +19,15 @@ unsafe impl Send for GLContext {}
 
 impl GLContextBuilder {
     pub fn build(&self) -> Result<GLContext, ()> {
+        let profile_version = if self.gl_attributes.major_version > 4 {
+            NSOpenGLProfileVersion4_1Core
+        } else {
+            NSOpenGLProfileVersion3_2Core
+        };
         unsafe {
             let attrs = [
                 NSOpenGLPFAOpenGLProfile as u32,
-                NSOpenGLProfileVersion4_1Core as u32,
+                profile_version as u32,
                 // NSOpenGLPFAClosestPolicy as u32,
                 NSOpenGLPFAAccelerated as u32,
                 NSOpenGLPFAColorSize as u32,
@@ -57,6 +62,7 @@ impl GLContextBuilder {
                 vsync: VSync::On, // Enable VSync for the next window bound
                 // current_window: None,
                 high_dpi_framebuffer: self.gl_attributes.high_resolution_framebuffer,
+                srgb: self.gl_attributes.srgb,
             })
         }
     }
@@ -66,8 +72,8 @@ impl GLContext {
     pub fn new() -> GLContextBuilder {
         GLContextBuilder {
             gl_attributes: GLContextAttributes {
-                version_major: 3,
-                version_minor: 3,
+                major_version: 3,
+                minor_version: 3,
                 msaa_samples: 1,
                 color_bits: 24,
                 alpha_bits: 8,
@@ -98,11 +104,21 @@ impl GLContextTrait for GLContext {
             _ => unreachable!(),
         });
 
-        if let Some((_window, window_view)) = window_and_view {
+        if let Some((ns_window, window_view)) = window_and_view {
             let () = unsafe {
+                if self.srgb {
+                    // There is a subtle bug here that will be left unaddressed for now.
+                    // If a window is bound to this GL Context the window's color space will be set to sRGB.
+                    // If the window is then bound to a non-sRGB context its color space will not reset.
+                    // To set the color space properly in that scenario requires more research,
+                    // and this code covers the vast majority of typical cases for now.
+                    let srgb_color_space: *mut Object =
+                        msg_send![class!(NSColorSpace), sRGBColorSpace];
+                    let () = msg_send![ns_window, setColorSpace: srgb_color_space];
+                }
+
                 // Apparently this defaults to YES even without this call
                 let () = msg_send![window_view, setWantsBestResolutionOpenGLSurface: self.high_dpi_framebuffer];
-
                 msg_send![self.gl_context, performSelectorOnMainThread:sel!(setView:) withObject:window_view waitUntilDone:YES]
             };
 
@@ -225,7 +241,7 @@ pub use NSOpenGLPixelFormatAttribute::*;
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSOpenGLPFAOpenGLProfiles {
-    //NSOpenGLProfileVersion3_2Core = 0x3200,
+    NSOpenGLProfileVersion3_2Core = 0x3200,
     NSOpenGLProfileVersion4_1Core = 0x4100,
 }
 pub use NSOpenGLPFAOpenGLProfiles::*;
