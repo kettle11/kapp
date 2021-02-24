@@ -19,10 +19,15 @@ unsafe impl Send for GLContext {}
 
 impl GLContextBuilder {
     pub fn build(&self) -> Result<GLContext, ()> {
+        let profile_version = if self.gl_attributes.major_version > 4 {
+            NSOpenGLProfileVersion4_1Core
+        } else {
+            NSOpenGLProfileVersion3_2Core
+        };
         unsafe {
             let attrs = [
                 NSOpenGLPFAOpenGLProfile as u32,
-                NSOpenGLProfileVersion4_1Core as u32,
+                profile_version as u32,
                 // NSOpenGLPFAClosestPolicy as u32,
                 NSOpenGLPFAAccelerated as u32,
                 NSOpenGLPFAColorSize as u32,
@@ -66,8 +71,8 @@ impl GLContext {
     pub fn new() -> GLContextBuilder {
         GLContextBuilder {
             gl_attributes: GLContextAttributes {
-                version_major: 3,
-                version_minor: 3,
+                major_version: 3,
+                minor_version: 3,
                 msaa_samples: 1,
                 color_bits: 24,
                 alpha_bits: 8,
@@ -225,7 +230,7 @@ pub use NSOpenGLPixelFormatAttribute::*;
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSOpenGLPFAOpenGLProfiles {
-    //NSOpenGLProfileVersion3_2Core = 0x3200,
+    NSOpenGLProfileVersion3_2Core = 0x3200,
     NSOpenGLProfileVersion4_1Core = 0x4100,
 }
 pub use NSOpenGLPFAOpenGLProfiles::*;

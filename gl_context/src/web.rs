@@ -70,8 +70,8 @@ impl GLContext {
         GLContextBuilder {
             gl_attributes: GLContextAttributes {
                 // None of these attributes other than webgl_version are used.
-                version_major: 3,
-                version_minor: 3,
+                major_version: 3,
+                minor_version: 3,
                 msaa_samples: 1,
                 color_bits: 24,
                 alpha_bits: 8,

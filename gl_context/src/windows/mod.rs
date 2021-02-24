@@ -23,8 +23,8 @@ impl GLContext {
     pub fn new() -> GLContextBuilder {
         GLContextBuilder {
             gl_attributes: GLContextAttributes {
-                version_major: 3,
-                version_minor: 3,
+                major_version: 3,
+                minor_version: 3,
                 msaa_samples: 1,
                 color_bits: 24,
                 alpha_bits: 8,
@@ -82,11 +82,7 @@ impl GLContextTrait for GLContext {
                 return Err(SetWindowError::MismatchedPixelFormat);
             }
 
-            error_if_false(wglMakeCurrent(
-                window_device_context,
-                self.context_ptr,
-            ))
-            .unwrap();
+            error_if_false(wglMakeCurrent(window_device_context, self.context_ptr)).unwrap();
 
             // self.set_vsync(self.vsync).unwrap(); // Everytime a device context is requested, vsync must be updated.
             self.current_window = if let Some(_window) = window {
@@ -106,10 +102,7 @@ impl GLContextTrait for GLContext {
         unsafe {
             let window_device_context = self.device_context.unwrap_or(std::ptr::null_mut());
 
-            error_if_false(wglMakeCurrent(
-                window_device_context,
-                self.context_ptr,
-            ))
+            error_if_false(wglMakeCurrent(window_device_context, self.context_ptr))
         }
     }
 
@@ -168,8 +161,7 @@ impl GLContextTrait for GLContext {
 fn get_proc_address_inner(opengl_module: HMODULE, address: &str) -> *const core::ffi::c_void {
     unsafe {
         let name = std::ffi::CString::new(address).unwrap();
-        let mut result =
-            wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
+        let mut result = wglGetProcAddress(name.as_ptr() as *const i8) as *const std::ffi::c_void;
         if result.is_null() {
             // Functions that were part of OpenGL1 need to be loaded differently.
             result = GetProcAddress(opengl_module, name.as_ptr() as *const i8)
@@ -200,8 +192,8 @@ impl GLContextBuilder {
             self.gl_attributes.depth_bits,
             self.gl_attributes.stencil_bits,
             self.gl_attributes.msaa_samples,
-            self.gl_attributes.version_major,
-            self.gl_attributes.version_minor,
+            self.gl_attributes.major_version,
+            self.gl_attributes.minor_version,
             self.gl_attributes.srgb,
         )
         .unwrap())
@@ -219,8 +211,8 @@ pub fn new_opengl_context(
     depth_bits: u8,
     stencil_bits: u8,
     msaa_samples: u8,
-    version_major: u8,
-    version_minor: u8,
+    major_version: u8,
+    minor_version: u8,
     srgb: bool,
 ) -> Result<GLContext, Error> {
     // This function performs the following steps:
@@ -266,8 +258,7 @@ pub fn new_opengl_context(
         let mut dummy_pfd: PIXELFORMATDESCRIPTOR = std::mem::zeroed();
         dummy_pfd.nSize = size_of::<PIXELFORMATDESCRIPTOR>() as u16;
         dummy_pfd.nVersion = 1;
-        dummy_pfd.dwFlags =
-            PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+        dummy_pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
         dummy_pfd.iPixelType = PFD_TYPE_RGBA as u8;
         dummy_pfd.cColorBits = 32;
         dummy_pfd.cAlphaBits = 8;
@@ -286,10 +277,7 @@ pub fn new_opengl_context(
         // Create the dummy OpenGL context.
         let dummy_opengl_context = wglCreateContext(dummy_window_dc);
         error_if_null(dummy_opengl_context)?;
-        error_if_false(wglMakeCurrent(
-            dummy_window_dc,
-            dummy_opengl_context,
-        ))?;
+        error_if_false(wglMakeCurrent(dummy_window_dc, dummy_opengl_context))?;
 
         // Load the function to choose a pixel format.
         wglChoosePixelFormatARB_ptr = wgl_get_proc_address("wglChoosePixelFormatARB")?;
@@ -364,8 +352,8 @@ pub fn new_opengl_context(
 
         // Finally we can create the OpenGL context!
         // Need to allow for choosing major and minor version.
-        let major_version_minimum = version_major as i32;
-        let minor_version_minimum = version_minor as i32;
+        let major_version_minimum = major_version as i32;
+        let minor_version_minimum = minor_version as i32;
         let context_attributes = [
             WGL_CONTEXT_MAJOR_VERSION_ARB,
             major_version_minimum,
@@ -394,14 +382,10 @@ pub fn new_opengl_context(
 
         error_if_false(wglMakeCurrent(dummy_window_dc2, opengl_context))?;
 
-        let opengl_module =
-            LoadLibraryA("opengl32.dll\0".as_ptr() as *const i8);
+        let opengl_module = LoadLibraryA("opengl32.dll\0".as_ptr() as *const i8);
 
         // Load swap interval for Vsync
-        let function_pointer = wglGetProcAddress(
-            "wglSwapIntervalEXT\0"
-                .as_ptr() as *const i8,
-        );
+        let function_pointer = wglGetProcAddress("wglSwapIntervalEXT\0".as_ptr() as *const i8);
 
         if function_pointer.is_null() {
             println!("Could not find wglSwapIntervalEXT");
@@ -410,10 +394,7 @@ pub fn new_opengl_context(
             wglSwapIntervalEXT_ptr = function_pointer as *const std::ffi::c_void;
         }
 
-        let function_pointer = wglGetProcAddress(
-           "wglGetSwapIntervalEXT\0"
-                .as_ptr() as *const i8,
-        );
+        let function_pointer = wglGetProcAddress("wglGetSwapIntervalEXT\0".as_ptr() as *const i8);
 
         if function_pointer.is_null() {
             println!("Could not find wglGetSwapIntervalEXT");
@@ -456,18 +437,18 @@ fn create_dummy_window(h_instance: HINSTANCE, class_name: &Vec<u16>) -> HWND {
     unsafe {
         // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexw
         CreateWindowExW(
-            0,                                                   // extended style Is this ok?
-            class_name.as_ptr(),                                 // A class created by RegisterClass
-            title.as_ptr(),                                      // window title
+            0,                                 // extended style Is this ok?
+            class_name.as_ptr(),               // A class created by RegisterClass
+            title.as_ptr(),                    // window title
             WS_CLIPSIBLINGS | WS_CLIPCHILDREN, // style
-            0,                                                   // x position
-            0,                                                   // y position
-            1,                                                   // width
-            1,                                                   // height
-            null_mut(),                                          // parent window
-            null_mut(),                                          // menu
-            h_instance,                                          // Module handle
-            null_mut(),                                          // Data sent to window
+            0,                                 // x position
+            0,                                 // y position
+            1,                                 // width
+            1,                                 // height
+            null_mut(),                        // parent window
+            null_mut(),                        // menu
+            h_instance,                        // Module handle
+            null_mut(),                        // Data sent to window
         )
     }
 }
@@ -527,16 +508,11 @@ fn wglChoosePixelFormatARB(
 #[allow(non_snake_case, non_upper_case_globals)]
 static mut wglCreateContextAttribsARB_ptr: *const c_void = std::ptr::null();
 #[allow(non_snake_case, non_upper_case_globals)]
-fn wglCreateContextAttribsARB(
-    hdc: HDC,
-    hShareContext: HGLRC,
-    attribList: *const c_int,
-) -> HGLRC {
+fn wglCreateContextAttribsARB(hdc: HDC, hShareContext: HGLRC, attribList: *const c_int) -> HGLRC {
     unsafe {
-        std::mem::transmute::<
-            _,
-            extern "system" fn(HDC, HGLRC, *const c_int) -> HGLRC,
-        >(wglCreateContextAttribsARB_ptr)(hdc, hShareContext, attribList)
+        std::mem::transmute::<_, extern "system" fn(HDC, HGLRC, *const c_int) -> HGLRC>(
+            wglCreateContextAttribsARB_ptr,
+        )(hdc, hShareContext, attribList)
     }
 }
 
