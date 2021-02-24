@@ -30,6 +30,7 @@ impl GLContext {
                 alpha_bits: 8,
                 depth_bits: 24,
                 stencil_bits: 8,
+                srgb: true,
                 webgl_version: WebGLVersion::None,
                 high_resolution_framebuffer: false,
             },
@@ -199,7 +200,7 @@ impl GLContextBuilder {
             self.gl_attributes.depth_bits,
             self.gl_attributes.stencil_bits,
             self.gl_attributes.msaa_samples,
-            false,
+            self.gl_attributes.srgb,
         )
         .unwrap())
     }
