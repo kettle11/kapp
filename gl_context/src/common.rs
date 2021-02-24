@@ -49,7 +49,7 @@ pub trait GLContextTrait {
     fn set_vsync(&mut self, vsync: VSync) -> Result<(), std::io::Error>;
     fn get_vsync(&self) -> VSync;
 
-    /// Asssigns a window to draw to
+    /// Assigns a window to draw to
     fn set_window(
         &mut self,
         window: Option<&impl raw_window_handle::HasRawWindowHandle>,
@@ -90,7 +90,7 @@ impl GLContextBuilder {
         self
     }
 
-    /// Sets if the window should use the sRGB color space.
+    /// Sets if the context should use the sRGB color space.
     /// This has no effect on Web.
     pub fn srgb(&mut self, srgb: bool) -> &mut Self {
         self.gl_attributes.srgb = srgb;
