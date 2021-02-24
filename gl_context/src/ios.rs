@@ -25,6 +25,7 @@ impl GLContext {
                 alpha_bits: 8,
                 depth_bits: 24,
                 stencil_bits: 8,
+                srgb: true,
                 webgl_version: WebGLVersion::None,
             },
         }
