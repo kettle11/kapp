@@ -1,18 +1,3 @@
-function get_canvas_size(memory_buffer, output) {
-    let canvas = document
-        .getElementById("canvas");
-
-    let context = canvas.getContext('2d');
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    let width = canvas.clientWidth;
-    let height = canvas.clientHeight;
-    let data = new Float32Array(memory_buffer, output, 2);
-    data[0] = width;
-    data[1] = height;
-    console.log(data);
-}
-
 function get_pointer_type(event) {
     switch (event.pointerType) {
         case "mouse": return 1
@@ -26,13 +11,16 @@ function get_pointer_type(event) {
 var canvas_last_width = 0;
 var canvas_last_height = 0;
 function request_animation_frame_callback(event) {
-    if (canvas.clientWidth != canvas_last_width || canvas_last_height != canvas.clientHeight) { }
+    let width = canvas.clientWidth * window.devicePixelRatio;
+    let height = canvas.clientHeight * window.devicePixelRatio;
+
+    if (width != canvas_last_width || height != canvas_last_height) { }
     {
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
-        canvas_last_width = canvas.clientWidth;
-        canvas_last_height = canvas.clientHeight;
-        kwasm_exports.kapp_on_window_resized(canvas.clientWidth, canvas.clientHeight);
+        canvas.width = width;
+        canvas.height = height;
+        canvas_last_width = width;
+        canvas_last_height = height;
+        kwasm_exports.kapp_on_window_resized(width, height);
 
     }
     kwasm_exports.kapp_on_animation_frame(kwasm_exports.kapp_on_animation_frame);
@@ -65,8 +53,7 @@ function receive_message(command, memory_buffer, data, data_length) {
             break;
         case 1:
             // GetCanvasSize
-            // Get the canvas size and write it to data.
-            get_canvas_size(memory_buffer, data);
+            // Unused presently.
             break;
         case 2:
             // SetCallbacks
@@ -74,21 +61,21 @@ function receive_message(command, memory_buffer, data, data_length) {
             // Hook up callbacks
             canvas.onpointermove = function (event) {
                 let pointer_type = get_pointer_type(event);
-                kwasm_exports.kapp_on_pointer_move(event.clientX, event.clientY, pointer_type, event.timeStamp);
+                kwasm_exports.kapp_on_pointer_move(event.clientX * window.devicePixelRatio, event.clientY * window.devicePixelRatio, pointer_type, event.timeStamp);
             }
 
             canvas.onmousemove = function (event) {
-                kwasm_exports.kapp_on_mouse_move(event.movementX, event.movementY, event.timeStamp);
+                kwasm_exports.kapp_on_mouse_move(event.movementX * window.devicePixelRatio, event.movementY * window.devicePixelRatio, event.timeStamp);
             }
 
             canvas.onpointerdown = function (event) {
                 let pointer_type = get_pointer_type(event);
-                kwasm_exports.kapp_on_pointer_down(event.clientX, event.clientY, pointer_type, event.button, event.timeStamp);
+                kwasm_exports.kapp_on_pointer_down(event.clientX * window.devicePixelRatio, event.clientY * window.devicePixelRatio, pointer_type, event.button, event.timeStamp);
             }
 
             canvas.onpointerup = function (event) {
                 let pointer_type = get_pointer_type(event);
-                kwasm_exports.kapp_on_pointer_up(event.clientX, event.clientY, pointer_type, event.button, event.timeStamp);
+                kwasm_exports.kapp_on_pointer_up(event.clientX * window.devicePixelRatio, event.clientY * window.devicePixelRatio, pointer_type, event.button, event.timeStamp);
             }
 
             document.onkeydown = function (event) {
@@ -144,11 +131,12 @@ function receive_message(command, memory_buffer, data, data_length) {
         case 4:
             // GetWindowSize
 
-            let canvas_client_width = canvas.clientWidth;
-            let canvas_client_height = canvas.clientHeight;
+            let width = canvas.clientWidth * window.devicePixelRatio;
+            let height = canvas.clientHeight * window.devicePixelRatio;
+
             // This will be sent to Rust as an integer.
             // So this will be incorrect if non-integer values are expected here.
-            pass_f32_f32_to_client(canvas_client_width, canvas_client_height);
+            pass_f32_f32_to_client(width, height);
             break;
         case 5:
             // LockCursor
