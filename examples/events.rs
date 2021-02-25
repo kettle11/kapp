@@ -6,8 +6,8 @@ fn main() {
     let _window = app.new_window().title("Log Events").build().unwrap();
 
     event_loop.run(move |event| match event {
-        // EventsCleared and MouseMoved log too much, so ignore them.
-        Event::EventsCleared | Event::PointerMoved { .. } => {}
+        // These events log too much, so ignore them.
+        Event::EventsCleared | Event::PointerMoved { .. } | Event::MouseMotion { .. } => {}
         Event::WindowCloseRequested { .. } => app.quit(),
         _ => {
             println!("{:?}", event);

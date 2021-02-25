@@ -839,7 +839,9 @@ fn get_mouse_position(_this: &Object, event: *mut Object) -> (f64, f64) {
         let frame: CGRect = msg(view, Sels::frame, ());
 
         let x = window_point.x * backing_scale;
-        let y = (frame.size.height - window_point.y) * backing_scale; // Flip y coordinate because y is 0,0 on Mac.
+
+        // Flip y coordinate because y is lower-left on Mac.
+        let y = (frame.size.height - window_point.y) * backing_scale;
         (x, y)
     }
 }
