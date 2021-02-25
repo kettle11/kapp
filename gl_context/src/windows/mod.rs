@@ -184,6 +184,11 @@ impl Drop for GLContext {
             if wglDeleteContext(self.context_ptr) == 0 {
                 panic!("Failed to delete OpenGL Context");
             }
+            if let Some(hdc) = self.device_context {
+                if DeleteDC(hdc) == 0 {
+                    panic!("Failed to delete device context");
+                }
+            }
         }
     }
 }
