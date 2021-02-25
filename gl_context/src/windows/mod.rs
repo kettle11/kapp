@@ -180,7 +180,16 @@ fn get_proc_address_inner(opengl_module: HMODULE, address: &str) -> *const core:
 }
 impl Drop for GLContext {
     fn drop(&mut self) {
-        // unimplemented!()
+        unsafe {
+            if wglDeleteContext(self.context_ptr) == 0 {
+                panic!("Failed to delete OpenGL Context");
+            }
+            if let Some(hdc) = self.device_context {
+                if ReleaseDC(self.current_window.unwrap(), hdc) == 0 {
+                    panic!("Failed to release device context");
+                }
+            }
+        }
     }
 }
 
