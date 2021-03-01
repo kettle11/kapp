@@ -8,6 +8,7 @@ license = "zlib"
 [features]
 gl_context = ["kapp_gl_context"]
 default = ["gl_context"]
+SDL = ["kapp_platforms/SDL"]
 
 [dependencies]
 kapp_gl_context = { path = "./gl_context", optional = true }
