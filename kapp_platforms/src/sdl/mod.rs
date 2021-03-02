@@ -3,10 +3,10 @@ pub mod prelude {
     pub use kapp_platform_common::*;
 }
 
-use fermium::{events::*, keyboard::*, mouse::*, rect::*, stdinc::*, video::*, *};
+use fermium::{events::*, keyboard::*, mouse::*, rect::*, stdinc::*, touch::*, video::*, *};
 use kapp_platform_common::*;
-use std::ffi::CString;
-
+use std::ffi::{CStr, CString};
+use std::time::Duration;
 pub struct PlatformApplication {
     // These cursors are deallocated with `SDL_FreeCursor` in PlatformApplication's Drop
     arrow_cursor: *mut SDL_Cursor,
@@ -23,7 +23,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             Self {
                 arrow_cursor: SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW),
                 ibeam_cursor: SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM),
-                open_hand_cursor: SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM),
+                open_hand_cursor: SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND),
             }
         }
     }
@@ -72,16 +72,16 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn get_window_scale(&mut self, window_id: WindowId) -> f64 {
-        let (logical_width, logical_height) = self.get_window_size(window_id);
+        let (logical_width, _logical_height) = self.get_window_size(window_id);
         let mut physical_width = 0;
-        let mut physical_height = 0;
+        let mut _physical_height = 0;
 
         // This call returns the actual pixel widths that would be in a framebuffer.
         unsafe {
             SDL_GL_GetDrawableSize(
                 window_id.raw() as *mut SDL_Window,
                 &mut physical_width,
-                &mut physical_height,
+                &mut _physical_height,
             );
         }
         logical_width as f64 / physical_width as f64
@@ -251,14 +251,14 @@ pub struct PlatformEventLoop {}
 impl PlatformEventLoopTrait for PlatformEventLoop {
     fn run(&self, mut callback: Box<dyn FnMut(Event)>) {
         unsafe {
-            let mut sdl_event = std::mem::zeroed();
+            let mut event = std::mem::zeroed();
             loop {
-                SDL_WaitEvent(&mut sdl_event);
+                SDL_WaitEvent(&mut event);
 
-                match sdl_event.type_ {
+                match event.type_ {
                     SDL_QUIT => callback(Event::QuitRequested),
                     SDL_WINDOWEVENT => {
-                        let window_event = sdl_event.window;
+                        let window_event = event.window;
                         // TODO: Fermium doesn't expose SDL_GetWindowFromID
                         // let window_id = WindowId::new(SDL_GetWindowFromID(window_event.windowID));
                         let window_id = WindowId::new(std::ptr::null_mut());
@@ -266,7 +266,141 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
                             SDL_WINDOWEVENT_CLOSE => {
                                 callback(Event::WindowCloseRequested { window_id })
                             }
-                            _ => continue,
+                            _ => {}
+                        }
+                    }
+                    SDL_KEYDOWN | SDL_KEYUP => {
+                        let keyboard_event = event.key;
+
+                        // Are milliseconds the correct units?
+                        let timestamp = Duration::from_millis(keyboard_event.timestamp as u64);
+
+                        // TODO: Implement actual keycodes.
+                        match keyboard_event.type_ {
+                            SDL_KEYDOWN => {
+                                if keyboard_event.repeat > 0 {
+                                    callback(Event::KeyRepeat {
+                                        key: Key::A,
+                                        timestamp,
+                                    })
+                                } else {
+                                    callback(Event::KeyDown {
+                                        key: Key::A,
+                                        timestamp,
+                                    })
+                                }
+                            }
+                            SDL_KEYUP => callback(Event::KeyUp {
+                                key: Key::A,
+                                timestamp,
+                            }),
+                            _ => {}
+                        }
+                    }
+                    SDL_MOUSEMOTION => {
+                        let mouse_motion_event = event.motion;
+
+                        // Are milliseconds the correct units?
+                        let timestamp = Duration::from_millis(mouse_motion_event.timestamp as u64);
+                        let source = match mouse_motion_event.which {
+                            SDL_TOUCH_MOUSEID => PointerSource::Touch,
+                            _ => PointerSource::Mouse,
+                        };
+
+                        // Do these need to be scaled by the window DPI?
+                        callback(Event::MouseMotion {
+                            delta_x: mouse_motion_event.xrel as f64,
+                            delta_y: mouse_motion_event.yrel as f64,
+                            timestamp,
+                        });
+                        callback(Event::PointerMoved {
+                            x: mouse_motion_event.x as f64,
+                            y: mouse_motion_event.y as f64,
+                            source,
+                            timestamp,
+                        });
+                    }
+                    SDL_MOUSEBUTTONDOWN => {
+                        let event = event.button;
+
+                        let source = match event.which {
+                            SDL_TOUCH_MOUSEID => PointerSource::Touch,
+                            _ => PointerSource::Mouse,
+                        };
+
+                        // Are milliseconds the correct units?
+                        let timestamp = Duration::from_millis(event.timestamp as u64);
+                        let button = match event.button as u32 {
+                            SDL_BUTTON_LEFT => PointerButton::Primary,
+                            SDL_BUTTON_MIDDLE => PointerButton::Auxillary,
+                            SDL_BUTTON_RIGHT => PointerButton::Secondary,
+                            SDL_BUTTON_X1 => PointerButton::Extra1,
+                            SDL_BUTTON_X2 => PointerButton::Extra2,
+                            _ => PointerButton::Unknown,
+                        };
+
+                        callback(Event::PointerDown {
+                            x: event.x as f64,
+                            y: event.y as f64,
+                            source,
+                            button,
+                            timestamp,
+                        });
+
+                        if event.clicks == 2 {
+                            callback(Event::DoubleClickDown {
+                                x: event.x as f64,
+                                y: event.y as f64,
+                                button,
+                                timestamp,
+                            });
+                            callback(Event::DoubleClick {
+                                x: event.x as f64,
+                                y: event.y as f64,
+                                button,
+                                timestamp,
+                            });
+                        }
+                    }
+                    SDL_MOUSEBUTTONUP => {
+                        let event = event.button;
+
+                        let source = match event.which {
+                            SDL_TOUCH_MOUSEID => PointerSource::Touch,
+                            _ => PointerSource::Mouse,
+                        };
+
+                        // Are milliseconds the correct units?
+                        let timestamp = Duration::from_millis(event.timestamp as u64);
+                        let button = match event.button as u32 {
+                            SDL_BUTTON_LEFT => PointerButton::Primary,
+                            SDL_BUTTON_MIDDLE => PointerButton::Auxillary,
+                            SDL_BUTTON_RIGHT => PointerButton::Secondary,
+                            SDL_BUTTON_X1 => PointerButton::Extra1,
+                            SDL_BUTTON_X2 => PointerButton::Extra2,
+                            _ => PointerButton::Unknown,
+                        };
+                        callback(Event::PointerUp {
+                            x: event.x as f64,
+                            y: event.y as f64,
+                            source,
+                            button,
+                            timestamp,
+                        });
+                        if event.clicks == 2 {
+                            callback(Event::DoubleClickUp {
+                                x: event.x as f64,
+                                y: event.y as f64,
+                                button,
+                                timestamp,
+                            });
+                        }
+                    }
+                    SDL_TEXTINPUT => {
+                        let c_str = CStr::from_ptr(event.text.text.as_ptr()).to_str().unwrap();
+                        for character in c_str.chars() {
+                            // Send a character received for each key.
+                            callback(Event::CharacterReceived { character });
                         }
                     }
                     _ => continue,
