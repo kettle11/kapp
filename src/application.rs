@@ -130,7 +130,7 @@ impl EventLoop {
     {
         let state_tracker = self.state_tracker.clone();
         let callback_wrapper = move |event: Event| {
-            state_tracker.borrow_mut().handle_event(event.clone());
+            state_tracker.borrow_mut().handle_event(&event);
             callback(event.clone());
 
             match event {
