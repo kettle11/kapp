@@ -52,11 +52,11 @@ pub unsafe extern "system" fn window_callback(
             return 0;
         }
         WM_IME_COMPOSITION => {
-            let himc = ImmGetContext(hwnd);
-            if himc == null_mut() {
-                return 0;
-            }
             if l_param as u32 & GCS_COMPSTR != 0 {
+                let himc = ImmGetContext(hwnd);
+                if himc == null_mut() {
+                    return 0;
+                }
                 let size_bytes = ImmGetCompositionStringW(himc, GCS_COMPSTR, null_mut(), 0);
                 if size_bytes != 0 {
                     let mut buffer = Vec::<u16>::with_capacity(size_bytes as usize / std::mem::size_of::<u16>());
