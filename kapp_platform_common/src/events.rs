@@ -33,7 +33,7 @@ pub enum Event {
     CharacterReceived {
         character: char,
     },
-    /// The composition status of the IME.
+    /// The composition status of the IME (Input Method Editor).
     /// This event is fired when a keystroke causes the composition status to change.
     /// For proper IME support, use this data as an "intermediate" visualization of
     /// user input, prepended to the caret position.

@@ -45,11 +45,11 @@ pub unsafe extern "system" fn window_callback(
             produce_event(Event::CharacterReceived { character });
         }
         WM_IME_STARTCOMPOSITION => {
-            return TRUE as isize;
+            return 0;
         }
         WM_IME_ENDCOMPOSITION => {
             produce_event(Event::IMEEndComposition);
-            return TRUE as isize;
+            return 0;
         }
         WM_IME_COMPOSITION => {
             let himc = ImmGetContext(hwnd);
@@ -68,7 +68,7 @@ pub unsafe extern "system" fn window_callback(
                 produce_event(Event::IMEComposition { composition });
 
                 ImmReleaseContext(hwnd, himc);
-                return TRUE as isize;
+                return 0;
             }
         }
         WM_SIZING => return TRUE as isize,
