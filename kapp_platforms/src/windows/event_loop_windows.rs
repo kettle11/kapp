@@ -57,18 +57,17 @@ pub unsafe extern "system" fn window_callback(
                 return 0;
             }
             if l_param as u32 & GCS_COMPSTR != 0 {
-                let len = ImmGetCompositionStringW(himc, GCS_COMPSTR, null_mut(), 0);
-                if len == 0 {
+                let size_bytes = ImmGetCompositionStringW(himc, GCS_COMPSTR, null_mut(), 0);
+                if size_bytes != 0 {
+                    let mut buffer = Vec::<u16>::with_capacity(size_bytes as usize / std::mem::size_of::<u16>());
+                    ImmGetCompositionStringW(himc, GCS_COMPSTR, buffer.as_mut_ptr().cast(), size_bytes as u32);
+                    buffer.set_len(size_bytes as usize / 2);
+                    let composition = String::from_utf16(&buffer).unwrap();
+                    produce_event(Event::IMEComposition { composition });
+
+                    ImmReleaseContext(hwnd, himc);
                     return 0;
                 }
-                let mut buffer = Vec::<u16>::with_capacity(len as usize / 2);
-                ImmGetCompositionStringW(himc, GCS_COMPSTR, buffer.as_mut_ptr().cast(), len as u32);
-                buffer.set_len(len as usize / 2);
-                let composition = String::from_utf16(&buffer).unwrap();
-                produce_event(Event::IMEComposition { composition });
-
-                ImmReleaseContext(hwnd, himc);
-                return 0;
             }
         }
         WM_SIZING => return TRUE as isize,
