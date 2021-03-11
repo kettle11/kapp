@@ -6,12 +6,6 @@ mod macos;
 #[cfg(target_os = "macos")]
 pub use macos::GLContext;
 
-#[cfg(target_os = "ios")]
-mod ios;
-
-#[cfg(target_os = "ios")]
-pub use ios::GLContext;
-
 #[cfg(target_os = "windows")]
 mod windows;
 
