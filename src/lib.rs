@@ -13,7 +13,7 @@
 //!
 //!     // Run forever receiving system events.
 //!     event_loop.run( move |event| match event {
-//!          WindowCloseRequested { .. } => app.quit(),
+//!          Event::WindowCloseRequested { .. } => app.quit(),
 //!          Event::Draw { .. } => {
 //!            // Render something here.
 //!          }
@@ -41,7 +41,7 @@
 //!     event_loop.run( move |event| match event {
 //!         Event::KeyDown { key, .. } => println!("Key pressed: {:?}", key),
 //!         Event::KeyUp { key, .. } => println!("Key up: {:?}", key),
-//!         Event::MouseMoved { x, y, .. } => println!("Mouse moved: {:?},{:?}", x, y),
+//!         Event::PointerMoved { x, y, .. } => println!("Pointer moved: {:?},{:?}", x, y),
 //!         _ => {},
 //!     });
 //! }
