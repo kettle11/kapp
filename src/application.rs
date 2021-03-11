@@ -77,8 +77,8 @@ impl Application {
 
     /// Disable text input.
     /// Used to end text input after a call to `start_text_input`.
-    pub fn end_text_input(&self) {
-        self.platform_application.borrow_mut().end_text_input()
+    pub fn stop_text_input(&self) {
+        self.platform_application.borrow_mut().stop_text_input()
     }
 
     /// Returns if the key is currently pressed

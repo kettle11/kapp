@@ -1,7 +1,7 @@
 use super::external_windows::*;
 use super::utils_windows::*;
-use std::ptr::null_mut;
 use std::convert::TryInto;
+use std::ptr::null_mut;
 
 use kapp_platform_common::*;
 
@@ -220,8 +220,14 @@ impl PlatformApplicationTrait for PlatformApplication {
                         (rect.right - rect.left, rect.bottom - rect.top)
                     });
 
-            let (minimum_width, minimum_height) = window_parameters.minimum_size.unwrap_or((GetSystemMetrics(SM_CXMINTRACK) as u32, GetSystemMetrics(SM_CYMINTRACK) as u32));
-            let (maximum_width, maximum_height) = window_parameters.maximum_size.unwrap_or((GetSystemMetrics(SM_CXMAXTRACK) as u32, GetSystemMetrics(SM_CYMAXTRACK) as u32));
+            let (minimum_width, minimum_height) = window_parameters.minimum_size.unwrap_or((
+                GetSystemMetrics(SM_CXMINTRACK) as u32,
+                GetSystemMetrics(SM_CYMINTRACK) as u32,
+            ));
+            let (maximum_width, maximum_height) = window_parameters.maximum_size.unwrap_or((
+                GetSystemMetrics(SM_CXMAXTRACK) as u32,
+                GetSystemMetrics(SM_CYMAXTRACK) as u32,
+            ));
             let window_data = Box::new(WindowData {
                 minimum_width,
                 minimum_height,
@@ -310,7 +316,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         unimplemented!()
     }
 
-    fn end_text_input(&mut self) {
+    fn stop_text_input(&mut self) {
         unimplemented!()
     }
 
