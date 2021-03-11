@@ -11,7 +11,7 @@ use std::time::Duration;
 // Event members are ordered by how important the information is.
 // f64 is used for all input events.
 // u32 is used for window positioning and movements.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum Event {
     /// A recommendation for when a window should draw.
@@ -33,6 +33,16 @@ pub enum Event {
     CharacterReceived {
         character: char,
     },
+    /// The composition status of the IME.
+    /// This event is fired when a keystroke causes the composition status to change.
+    /// For proper IME support, use this data as an "intermediate" visualization of
+    /// user input, prepended to the caret position.
+    IMEComposition {
+        composition: String,
+    },
+    /// IME composition has ended.
+    /// The "intermediate" visualization should be cleared.
+    IMEEndComposition,
     // ------------------- Input Events ---------------------
     /// A key is pressed.
     /// For text input use the `CharacterReceived` event instead.

@@ -36,6 +36,41 @@ pub unsafe extern "system" fn window_callback(
         }
         WM_KEYDOWN | WM_SYSKEYDOWN => produce_event(process_key_down(w_param, l_param)),
         WM_KEYUP | WM_SYSKEYUP => produce_event(process_key_up(w_param, l_param)),
+        WM_CHAR => {
+            let character = String::from_utf16(&[w_param as u16])
+                .unwrap()
+                .chars()
+                .next()
+                .unwrap();
+            produce_event(Event::CharacterReceived { character });
+        }
+        WM_IME_STARTCOMPOSITION => {
+            return TRUE as isize;
+        }
+        WM_IME_ENDCOMPOSITION => {
+            produce_event(Event::IMEEndComposition);
+            return TRUE as isize;
+        }
+        WM_IME_COMPOSITION => {
+            let himc = ImmGetContext(hwnd);
+            if himc == null_mut() {
+                return 0;
+            }
+            if l_param as u32 & GCS_COMPSTR != 0 {
+                let len = ImmGetCompositionStringW(himc, GCS_COMPSTR, null_mut(), 0);
+                if len == 0 {
+                    return 0;
+                }
+                let mut buffer = Vec::<u16>::with_capacity(len as usize / 2);
+                ImmGetCompositionStringW(himc, GCS_COMPSTR, buffer.as_mut_ptr().cast(), len as u32);
+                buffer.set_len(len as usize / 2);
+                let composition = String::from_utf16(&buffer).unwrap();
+                produce_event(Event::IMEComposition { composition });
+
+                ImmReleaseContext(hwnd, himc);
+                return TRUE as isize;
+            }
+        }
         WM_SIZING => return TRUE as isize,
         WM_SETCURSOR => {
             // Give the OS a chance to set the cursor first, and don't override it if it sets it.
