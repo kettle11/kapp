@@ -129,9 +129,9 @@ impl EventLoop {
         T: 'static + FnMut(Event),
     {
         let state_tracker = self.state_tracker.clone();
-        let callback_wrapper = move |event| {
-            state_tracker.borrow_mut().handle_event(event);
-            callback(event);
+        let callback_wrapper = move |event: Event| {
+            state_tracker.borrow_mut().handle_event(event.clone());
+            callback(event.clone());
 
             match event {
                 Event::Draw { .. } => {

@@ -134,6 +134,8 @@ DECLARE_HANDLE! {HICON, HICON__}
 DECLARE_HANDLE! {HMENU, HMENU__}
 DECLARE_HANDLE! {HBRUSH, HBRUSH__}
 
+DECLARE_HANDLE! {HIMC, HIMC__}
+
 pub type HCURSOR = HICON;
 type LPRECT = *mut RECT;
 pub type LPPOINT = *mut POINT;
@@ -266,6 +268,18 @@ extern "system" {
     pub fn SetWindowTextW(hWnd: HWND, lpString: LPCWSTR) -> BOOL;
     pub fn TranslateMessage(lpmsg: *const MSG) -> BOOL;
     pub fn GetDpiForWindow(hwnd: HWND) -> UINT;
+}
+
+#[link(name = "Imm32")]
+extern "system" {
+    pub fn ImmGetContext(Arg1: HWND) -> HIMC;
+    pub fn ImmReleaseContext(arg1: HWND, arg2: HIMC) -> BOOL;
+    pub fn ImmGetCompositionStringW(
+        arg1: HIMC,
+        arg2: DWORD,
+        lpBug: LPVOID,
+        dwBufLen: DWORD,
+    ) -> LONG;
 }
 
 #[cfg(target_pointer_width = "32")]
@@ -500,8 +514,12 @@ pub const WM_EXITSIZEMOVE: UINT = 0x0232;
 
 pub const WM_KEYDOWN: UINT = 0x0100;
 pub const WM_KEYUP: UINT = 0x0101;
+pub const WM_CHAR: UINT = 0x0102;
 pub const WM_SYSKEYDOWN: UINT = 0x0104;
 pub const WM_SYSKEYUP: UINT = 0x0105;
+pub const WM_IME_STARTCOMPOSITION: UINT = 0x010d;
+pub const WM_IME_ENDCOMPOSITION: UINT = 0x010e;
+pub const WM_IME_COMPOSITION: UINT = 0x010f;
 pub const WM_LBUTTONDOWN: UINT = 0x0201;
 pub const WM_LBUTTONUP: UINT = 0x0202;
 pub const WM_MBUTTONDOWN: UINT = 0x0207;
@@ -524,3 +542,5 @@ pub const WM_CREATE: UINT = 0x0001;
 
 pub const XBUTTON1: WORD = 0x0001;
 pub const XBUTTON2: WORD = 0x0002;
+
+pub const GCS_COMPSTR: UINT = 8;
