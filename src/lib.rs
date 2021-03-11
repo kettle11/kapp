@@ -25,8 +25,8 @@
 //! # User Input
 //! Events are provided for user input:
 //!
-//! [KeyDown][Event::KeyDown], [KeyUp][Event::KeyUp], [MouseMoved][Event::MouseMoved],
-//! [MouseButtonDown][Event::MouseButtonDown], [MouseButtonUp][Event::MouseButtonUp], [ScrollWheel][Event::ScrollWheel]
+//! [KeyDown][Event::KeyDown], [KeyUp][Event::KeyUp], [PointerMoved][Event::PointerMoved],
+//! [PointerDown][Event::PointerDown], [PointerUp][Event::PointerUp], [Scroll][Event::Scroll]
 //!
 //! If an event responds with coordinates the coordinates are in physical device space
 //! (the actual pixels of the device without a scale factor applied).
@@ -69,3 +69,4 @@ pub use async_application::*;
 
 pub use state_tracker::StateTracker;
 pub use window::Window;
+pub use window_builder::WindowBuilder;

@@ -2,7 +2,7 @@ use crate::keys::Key;
 use crate::WindowId;
 use std::time::Duration;
 
-/// Input and system events
+/// Input and system events.
 /// All user input events have timestamps.
 /// Timestamps on MacOS and Windows represent time since the computer was turned on.
 /// On Web timestamps represent time since the current document was created.
