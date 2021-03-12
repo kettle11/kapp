@@ -3,6 +3,9 @@ pub mod prelude {
     pub use kapp_platform_common::*;
 }
 
+mod keys_sdl;
+use keys_sdl::*;
+
 use fermium::{events::*, keyboard::*, mouse::*, rect::*, stdinc::*, touch::*, video::*, *};
 use kapp_platform_common::*;
 use std::ffi::{CStr, CString};
@@ -275,25 +278,16 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
                         // Are milliseconds the correct units?
                         let timestamp = Duration::from_millis(keyboard_event.timestamp as u64);
 
-                        // TODO: Implement actual keycodes.
+                        let key = scancode_to_key(keyboard_event.keysym.scancode);
                         match keyboard_event.type_ {
                             SDL_KEYDOWN => {
                                 if keyboard_event.repeat > 0 {
-                                    callback(Event::KeyRepeat {
-                                        key: Key::A,
-                                        timestamp,
-                                    })
+                                    callback(Event::KeyRepeat { key, timestamp })
                                 } else {
-                                    callback(Event::KeyDown {
-                                        key: Key::A,
-                                        timestamp,
-                                    })
+                                    callback(Event::KeyDown { key, timestamp })
                                 }
                             }
-                            SDL_KEYUP => callback(Event::KeyUp {
-                                key: Key::A,
-                                timestamp,
-                            }),
+                            SDL_KEYUP => callback(Event::KeyUp { key, timestamp }),
                             _ => {}
                         }
                     }
@@ -402,6 +396,13 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
                             // Send a character received for each key.
                             callback(Event::CharacterReceived { character });
                         }
+                    }
+                    SDL_TEXTEDITING => {
+                        let text_event = event.text;
+                        let c_str = CStr::from_ptr(event.text.text.as_ptr()).to_str().unwrap();
+                        callback(Event::IMEComposition {
+                            composition: c_str.to_string(),
+                        });
                     }
                     _ => continue,
                 }
