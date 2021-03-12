@@ -29,11 +29,11 @@ impl StateTracker {
         }
     }
 
-    pub fn handle_event(&mut self, event: Event) {
+    pub fn handle_event(&mut self, event: &Event) {
         match event {
             Event::KeyDown { key, timestamp } => {
-                self.keys_pressed.insert(key, timestamp);
-                self.keys_down_since_last_frame.insert(key, timestamp);
+                self.keys_pressed.insert(*key, *timestamp);
+                self.keys_down_since_last_frame.insert(*key, *timestamp);
             }
             Event::KeyUp { key, .. } => {
                 self.keys_pressed.remove(&key);
@@ -41,14 +41,14 @@ impl StateTracker {
             Event::PointerDown {
                 button, timestamp, ..
             } => {
-                self.pointer_buttons_pressed.insert(button, timestamp);
+                self.pointer_buttons_pressed.insert(*button, *timestamp);
                 self.pointer_buttons_down_since_last_frame
-                    .insert(button, timestamp);
+                    .insert(*button, *timestamp);
             }
             Event::PointerUp { button, .. } => {
                 self.pointer_buttons_pressed.remove(&button);
             }
-            Event::PointerMoved { x, y, .. } => self.pointer_position = (x, y),
+            Event::PointerMoved { x, y, .. } => self.pointer_position = (*x, *y),
             Event::MouseMotion {
                 delta_x, delta_y, ..
             } => self.mouse_motion = (self.mouse_motion.0 + delta_x, self.mouse_motion.1 + delta_y),

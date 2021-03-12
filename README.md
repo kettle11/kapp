@@ -40,6 +40,9 @@ fn main() {
 * Keyboard input
 * Event timestamps
 
+## License
+`kapp` is licensed under *MIT* or *Apache 2.0* or *zlib*.
+
 ## Similar Projects
 
 The following projects were valuable resources that inspired kApp.

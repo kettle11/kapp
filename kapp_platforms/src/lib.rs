@@ -1,32 +1,18 @@
-#[cfg(all(target_os = "macos", not(feature = "SDL")))]
+#[cfg(target_os = "macos")]
 mod macos;
-#[cfg(all(target_os = "macos", not(feature = "SDL")))]
+#[cfg(target_os = "macos")]
 pub use macos::*;
 
-#[cfg(all(target_os = "macos", not(feature = "SDL")))]
+#[cfg(target_os = "macos")]
 #[macro_use]
 extern crate objc;
 
-#[cfg(all(target_os = "ios", not(feature = "SDL")))]
-mod ios;
-#[cfg(all(target_os = "ios", not(feature = "SDL")))]
-pub use ios::*;
-
-#[cfg(all(target_os = "ios", not(feature = "SDL")))]
-#[macro_use]
-extern crate objc;
-
-#[cfg(all(target_arch = "wasm32", not(feature = "SDL")))]
+#[cfg(target_arch = "wasm32")]
 mod web;
-#[cfg(all(target_arch = "wasm32", not(feature = "SDL")))]
+#[cfg(target_arch = "wasm32")]
 pub use web::*;
 
-#[cfg(all(target_os = "windows", not(feature = "SDL")))]
+#[cfg(target_os = "windows")]
 mod windows;
-#[cfg(all(target_os = "windows", not(feature = "SDL")))]
+#[cfg(target_os = "windows")]
 pub use windows::*;
-
-#[cfg(feature = "SDL")]
-mod sdl;
-#[cfg(feature = "SDL")]
-pub use sdl::*;

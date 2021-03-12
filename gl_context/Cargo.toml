@@ -3,7 +3,7 @@ name = "kapp_gl_context"
 version = "0.1.0"
 authors = ["Ian Kettlewell <ian.kettlewell@gmail.com>"]
 edition = "2018"
-license = "zlib"
+license = "Zlib OR Apache-2.0 OR MIT"
 
 [dependencies]
 kapp_platform_common = { path = "../kapp_platform_common" }
@@ -14,9 +14,6 @@ glow = {version = "0.4.0"}
 kapp = {path = "../"}
 
 [target.'cfg(target_os="macos")'.dependencies]
-objc = "0.2.7"
-
-[target.'cfg(target_os="ios")'.dependencies]
 objc = "0.2.7"
 
 [target.'cfg(target_os="windows")'.dependencies]
