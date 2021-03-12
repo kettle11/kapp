@@ -564,9 +564,10 @@ extern "C" fn marked_range(this: &Object, _sel: Sel) -> NSRange {
     unsafe {
         let marked_text: *mut Object = *this.get_ivar("markedText");
         let length: NSUInteger = msg_send![marked_text, length];
+
         NSRange {
             location: 0,
-            length: length - 1,
+            length,
         }
     }
 }
@@ -645,6 +646,7 @@ extern "C" fn insert_text(
         for c in text.chars() {
             self::submit_event(Event::CharacterReceived { character: c });
         }
+        self::submit_event(Event::IMEEndComposition);
     }
 }
 
