@@ -124,7 +124,7 @@ impl PlatformApplicationTrait for PlatformApplication {
 
     fn start_text_input(&mut self) {}
 
-    fn end_text_input(&mut self) {}
+    fn stop_text_input(&mut self) {}
 
     fn set_text_input_rectangle(
         &mut self,

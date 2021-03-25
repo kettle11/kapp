@@ -51,7 +51,7 @@ pub trait PlatformApplicationTrait {
 
     /// Enable whatever is needed for OS text events to be sent.
     fn start_text_input(&mut self);
-    fn end_text_input(&mut self);
+    fn stop_text_input(&mut self);
 
     /// Set the rectangle used for text input.
     /// This lets the OS know where it should position text input related popups.

@@ -407,7 +407,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         });
     }
 
-    fn end_text_input(&mut self) {
+    fn stop_text_input(&mut self) {
         APPLICATION_DATA.with(|d| {
             d.borrow_mut().text_input_enabled = false;
         });
