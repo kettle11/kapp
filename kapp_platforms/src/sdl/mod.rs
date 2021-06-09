@@ -202,7 +202,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle {
         // TODO: This requires calling SDL_GetWindowWMInfo and placing the data
         // correctly into RawWindowHandle.
-        unimplemented!()
+        todo!()
     }
 
     fn start_text_input(&mut self) {

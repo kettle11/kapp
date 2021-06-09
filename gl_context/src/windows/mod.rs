@@ -40,7 +40,7 @@ impl GLContext {
 
 impl GLContextTrait for GLContext {
     fn get_attributes(&self) -> GLContextAttributes {
-        unimplemented!()
+        todo!()
     }
 
     // This does not correctly handle unsetting a window.

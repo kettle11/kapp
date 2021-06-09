@@ -170,8 +170,8 @@ impl PlatformApplicationTrait for PlatformApplication {
 
             // This line is necessary to ensure the app becomes active.
             // But does it improperly steal focus if app activation takes a while and the
-            // user launches another app while they wait? 
-            let () = msg_send![ns_application, activateIgnoringOtherApps:YES]; 
+            // user launches another app while they wait?
+            let () = msg_send![ns_application, activateIgnoringOtherApps: YES];
 
             // Setup the application delegate to handle application events.
             let ns_application_delegate_class = application_delegate_declaration();
@@ -278,7 +278,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn restore_window(&mut self, _window_id: WindowId) {
-        unimplemented!()
+        todo!()
     }
 
     fn close_window(&mut self, window_id: WindowId) {

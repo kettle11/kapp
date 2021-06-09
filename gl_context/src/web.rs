@@ -95,7 +95,7 @@ impl GLContext {
 
 impl GLContextTrait for GLContext {
     fn get_attributes(&self) -> GLContextAttributes {
-        unimplemented!()
+        todo!()
     }
 
     fn set_vsync(&mut self, _vsync: VSync) -> Result<(), std::io::Error> {
@@ -111,7 +111,7 @@ impl GLContextTrait for GLContext {
     }
 
     fn get_proc_address(&self, _address: &str) -> *const core::ffi::c_void {
-        unimplemented!() // Should not be called for web
+        todo!() // Should not be called for web
     }
 
     fn set_window(

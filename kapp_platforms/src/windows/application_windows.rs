@@ -1,7 +1,7 @@
 use super::external_windows::*;
 use super::utils_windows::*;
-use std::ptr::null_mut;
 use std::convert::TryInto;
+use std::ptr::null_mut;
 
 use kapp_platform_common::*;
 
@@ -179,7 +179,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn lock_mouse_position(&mut self) {
-        unimplemented!()
+        todo!()
         /*
         unsafe {
             SetCursorPos(x as i32, y as i32);
@@ -187,7 +187,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn unlock_mouse_position(&mut self) {
-        unimplemented!();
+        todo!();
     }
 
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
@@ -220,8 +220,14 @@ impl PlatformApplicationTrait for PlatformApplication {
                         (rect.right - rect.left, rect.bottom - rect.top)
                     });
 
-            let (minimum_width, minimum_height) = window_parameters.minimum_size.unwrap_or((GetSystemMetrics(SM_CXMINTRACK) as u32, GetSystemMetrics(SM_CYMINTRACK) as u32));
-            let (maximum_width, maximum_height) = window_parameters.maximum_size.unwrap_or((GetSystemMetrics(SM_CXMAXTRACK) as u32, GetSystemMetrics(SM_CYMAXTRACK) as u32));
+            let (minimum_width, minimum_height) = window_parameters.minimum_size.unwrap_or((
+                GetSystemMetrics(SM_CXMINTRACK) as u32,
+                GetSystemMetrics(SM_CYMINTRACK) as u32,
+            ));
+            let (maximum_width, maximum_height) = window_parameters.maximum_size.unwrap_or((
+                GetSystemMetrics(SM_CXMAXTRACK) as u32,
+                GetSystemMetrics(SM_CYMAXTRACK) as u32,
+            ));
             let window_data = Box::new(WindowData {
                 minimum_width,
                 minimum_height,
@@ -307,11 +313,11 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn start_text_input(&mut self) {
-        unimplemented!()
+        todo!()
     }
 
     fn end_text_input(&mut self) {
-        unimplemented!()
+        todo!()
     }
 
     fn set_text_input_rectangle(
@@ -322,7 +328,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         _width: f64,
         _height: f64,
     ) {
-        unimplemented!()
+        todo!()
     }
 }
 

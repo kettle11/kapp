@@ -131,7 +131,7 @@ impl GLContextTrait for GLContext {
     }
 
     fn get_attributes(&self) -> GLContextAttributes {
-        unimplemented!()
+        todo!()
     }
 
     fn set_vsync(&mut self, vsync: VSync) -> Result<(), std::io::Error> {

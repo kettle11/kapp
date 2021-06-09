@@ -42,7 +42,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         super::event_loop_web::request_fullscreen()
     }
     fn restore_window(&mut self, _window_id: WindowId) {
-        unimplemented!()
+        todo!()
     }
     fn close_window(&mut self, _window_id: WindowId) {}
     fn redraw_window(&mut self, _window_id: WindowId) {
