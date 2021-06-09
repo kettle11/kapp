@@ -41,7 +41,7 @@ fn main() {
 * Event timestamps
 
 ## License
-`kapp` is licensed under *MIT* or *Apache 2.0* or *zlib*.
+`kapp` is licensed under *MIT* or *Apache 2.0* or *Zlib*.
 
 ## Similar Projects
 
