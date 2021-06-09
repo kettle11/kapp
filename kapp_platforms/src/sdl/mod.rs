@@ -174,8 +174,6 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn quit(&self) {
         unsafe {
             SDL_Quit();
-            // TODO: Instead of panicking the closure should be made no-longer reentrant.
-            // Without this closure quitting infinitely loops
             ACTUALLY_QUIT.with(|b| b.set(true));
         }
     }
@@ -203,9 +201,83 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn raw_window_handle(&self, window_id: WindowId) -> RawWindowHandle {
-        // TODO: This requires calling SDL_GetWindowWMInfo and placing the data
-        // correctly into RawWindowHandle.
-        todo!()
+        unsafe {
+            use syswm::*;
+            let window = window_id.raw() as *mut SDL_Window;
+            let mut info = SDL_SysWMinfo::default();
+            version::SDL_VERSION(&mut info.version);
+            if SDL_TRUE == SDL_GetWindowWMInfo(window, &mut info) {
+                let subsystem = info.subsystem;
+                let info = info.info;
+
+                match subsystem {
+                    #[cfg(target_os = "macos")]
+                    SDL_SYSWM_COCOA => {
+                        use raw_window_handle::macos::MacOSHandle;
+                        RawWindowHandle::MacOS(MacOSHandle {
+                            ns_window: info.cocoa.window as *mut c_void,
+                            ns_view: 0 as *mut c_void, // SDL does not provide this.
+                            ..MacOSHandle::empty()
+                        })
+                    }
+                    #[cfg(target_os = "windows")]
+                    SDL_SYSWM_WINDOWS => RawWindowHandle::Windows(WindowsHandle {
+                        hwnd: info.cocoa.window as *mut c_void,
+                        ..WindowsHandle::empty()
+                    }),
+                    #[cfg(any(
+                        target_os = "linux",
+                        target_os = "dragonfly",
+                        target_os = "freebsd",
+                        target_os = "netbsd",
+                        target_os = "openbsd",
+                    ))]
+                    SDL_SYSWM_X11 => {
+                        use self::raw_window_handle::unix::XlibHandle;
+                        RawWindowHandle::Xlib(XlibHandle {
+                            window: info.x11.window,
+                            display: info.x11.display as *mut c_void,
+                            ..XlibHandle::empty()
+                        })
+                    }
+                    #[cfg(any(
+                        target_os = "linux",
+                        target_os = "dragonfly",
+                        target_os = "freebsd",
+                        target_os = "netbsd",
+                        target_os = "openbsd",
+                    ))]
+                    SDL_SYSWM_WAYLAND => {
+                        use self::raw_window_handle::unix::WaylandHandle;
+                        RawWindowHandle::Wayland(WaylandHandle {
+                            surface: info.wl.surface as *mut c_void,
+                            display: info.wl.display as *mut c_void,
+                            ..WaylandHandle::empty()
+                        })
+                    }
+                    #[cfg(any(target_os = "ios"))]
+                    SDL_SYSWM_UIKIT => {
+                        use self::raw_window_handle::ios::IOSHandle;
+                        RawWindowHandle::IOS(IOSHandle {
+                            ui_window: info.uikit.window as *mut c_void,
+                            ui_view: 0 as *mut c_void, // SDL does not provide this.
+                            ..IOSHandle::empty()
+                        })
+                    }
+                    #[cfg(any(target_os = "android"))]
+                    SDL_SYSWM_ANDROID => {
+                        use self::raw_window_handle::android::AndroidHandle;
+                        RawWindowHandle::Android(AndroidHandle {
+                            a_native_window: info.android.window as *mut c_void,
+                            ..AndroidHandle::empty()
+                        })
+                    }
+                    _ => unimplemented!(),
+                }
+            } else {
+                panic!()
+            }
+        }
     }
 
     fn start_text_input(&mut self) {
@@ -272,9 +344,9 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
                     SDL_QUIT => callback(Event::QuitRequested),
                     SDL_WINDOWEVENT => {
                         let window_event = event.window;
-                        // TODO: Fermium doesn't expose SDL_GetWindowFromID
-                        // let window_id = WindowId::new(SDL_GetWindowFromID(window_event.windowID));
-                        let window_id = WindowId::new(std::ptr::null_mut());
+                        let window_id = WindowId::new(
+                            SDL_GetWindowFromID(window_event.windowID) as *mut c_void
+                        );
                         match window_event.event {
                             SDL_WINDOWEVENT_CLOSE => {
                                 callback(Event::WindowCloseRequested { window_id })
@@ -408,7 +480,6 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
                         }
                     }
                     SDL_TEXTEDITING => {
-                        let text_event = event.text;
                         let c_str = CStr::from_ptr(event.text.text.as_ptr()).to_str().unwrap();
                         callback(Event::IMEComposition {
                             composition: c_str.to_string(),
