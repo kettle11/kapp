@@ -3,9 +3,11 @@ use kapp_platform_common::*;
 use kwasm::*;
 use std::time::Duration;
 
-static mut CALLBACK: Option<Box<dyn FnMut(Event)>> = None;
+thread_local! {
+    pub static KAPP_LIBRARY: KWasmLibrary = KWasmLibrary::new(include_str!("kapp_library.js"));
+}
 
-pub(crate) static mut KAPP_LIBRARY: KWasmLibrary = KWasmLibrary::null();
+static mut CALLBACK: Option<Box<dyn FnMut(Event)>> = None;
 
 fn send_event(event: Event) {
     unsafe {
@@ -196,10 +198,8 @@ pub(crate) enum HostCommands {
 }
 
 pub(crate) fn request_animation_frame() {
-    unsafe {
-        // Register the request animation frame callback
-        KAPP_LIBRARY.send_message_to_host(HostCommands::RequestAnimationFrame as kwasm::Command);
-    }
+    // Register the request animation frame callback
+    KAPP_LIBRARY.with(|l| l.message(HostCommands::RequestAnimationFrame as kwasm::Command));
 }
 
 pub fn run<T>(callback: T)
@@ -209,6 +209,6 @@ where
     // Register the extra Javascript code we need
     unsafe {
         CALLBACK = Some(Box::new(Box::new(callback)));
-        KAPP_LIBRARY.send_message_to_host(HostCommands::SetCallbacks as kwasm::Command);
     }
+    KAPP_LIBRARY.with(|l| l.message(HostCommands::SetCallbacks as kwasm::Command));
 }

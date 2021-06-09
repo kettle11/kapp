@@ -3,7 +3,7 @@ name = "kapp_gl_context"
 version = "0.1.0"
 authors = ["Ian Kettlewell <ian.kettlewell@gmail.com>"]
 edition = "2018"
-license = "zlib"
+license = "Zlib"
 
 [dependencies]
 kapp_platform_common = { path = "../kapp_platform_common" }
@@ -40,5 +40,5 @@ features = [
 ]
 
 [features]
-default = ["wasm_bindgen_support"]
+default = []
 wasm_bindgen_support = ["web-sys", "wasm-bindgen"]

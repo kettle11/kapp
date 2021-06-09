@@ -2,17 +2,12 @@ use super::event_loop_web::*;
 use kapp_platform_common::*;
 use std::convert::TryInto;
 
-use kwasm::*;
-
 pub struct PlatformApplication {}
 
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
     fn new() -> Self {
         kwasm::setup_panic_hook();
-        unsafe {
-            KAPP_LIBRARY = KWasmLibrary::new(include_str!("kapp_library.js"));
-        }
         Self {}
     }
 
@@ -26,7 +21,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn minimize_window(&mut self, _window_id: WindowId) {}
     fn maximize_window(&mut self, _window_id: WindowId) {}
     fn get_window_size(&mut self, _window_id: WindowId) -> (u32, u32) {
-        unsafe { KAPP_LIBRARY.send_message_to_host(HostCommands::GetWindowSize as kwasm::Command) };
+        KAPP_LIBRARY.with(|l| l.message(HostCommands::GetWindowSize as kwasm::Command));
 
         kwasm::DATA_FROM_HOST.with(|d| {
             let d = d.borrow();
@@ -37,9 +32,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         })
     }
     fn get_window_scale(&mut self, _window_id: WindowId) -> f64 {
-        unsafe {
-            KAPP_LIBRARY.send_message_to_host(HostCommands::GetDevicePixelRatio as kwasm::Command)
-        };
+        KAPP_LIBRARY.with(|l| l.message(HostCommands::GetDevicePixelRatio as kwasm::Command));
 
         kwasm::DATA_FROM_HOST.with(|d| {
             let d = d.borrow();
@@ -60,11 +53,11 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn lock_mouse_position(&mut self) {
-        unsafe { KAPP_LIBRARY.send_message_to_host(HostCommands::LockCursor as kwasm::Command) };
+        KAPP_LIBRARY.with(|l| l.message(HostCommands::LockCursor as kwasm::Command));
     }
 
     fn unlock_mouse_position(&mut self) {
-        unsafe { KAPP_LIBRARY.send_message_to_host(HostCommands::UnlockCursor as kwasm::Command) };
+        KAPP_LIBRARY.with(|l| l.message(HostCommands::UnlockCursor as kwasm::Command));
     }
 
     fn new_window(&mut self, _window_parameters: &WindowParameters) -> WindowId {

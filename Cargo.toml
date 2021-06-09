@@ -3,11 +3,12 @@ name = "kapp"
 version = "0.1.0"
 authors = ["Ian Kettlewell"]
 edition = "2018"
-license = "zlib"
+license = "Zlib"
 
 [features]
+default = ["gl_context", "wasm_bindgen_support"]
 gl_context = ["kapp_gl_context"]
-default = ["gl_context"]
+wasm_bindgen_support = ["kapp_gl_context/wasm_bindgen_support"]
 
 [dependencies]
 kapp_gl_context = { path = "./gl_context", optional = true }

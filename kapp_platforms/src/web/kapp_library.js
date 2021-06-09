@@ -24,7 +24,6 @@ function request_animation_frame_callback(event) {
 
     }
     kwasm_exports.kapp_on_animation_frame(kwasm_exports.kapp_on_animation_frame);
-
 }
 
 function pass_f32_to_client(x) {
