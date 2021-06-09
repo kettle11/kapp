@@ -108,10 +108,9 @@ impl PlatformApplicationTrait for PlatformApplication {
             SDL_DestroyWindow(window_id.raw() as *mut SDL_Window);
         }
     }
-    fn redraw_window(&mut self, _window_id: WindowId) {
-        // Does nothing on the SDL backend.
+    fn redraw_window(&mut self, window_id: WindowId) {
+        redraw_manager::add_draw_request(window_id);
     }
-
     fn lock_mouse_position(&mut self) {
         unsafe {
             SDL_SetRelativeMouseMode(SDL_TRUE);
@@ -167,7 +166,11 @@ impl PlatformApplicationTrait for PlatformApplication {
             let c_string = std::ffi::CString::new(window_parameters.title.clone()).unwrap();
             SDL_SetWindowTitle(window, c_string.as_ptr());
 
-            WindowId::new(window as *mut c_void)
+            let window_id = WindowId::new(window as *mut c_void);
+            // When a window is created immediately request that it should redraw
+            redraw_manager::add_draw_request(window_id);
+
+            window_id
         }
     }
 
@@ -328,6 +331,155 @@ thread_local! {
     static ACTUALLY_QUIT: Cell<bool> = Cell::new(false);
 }
 
+fn process_event(callback: &mut Box<dyn FnMut(Event)>, event: &SDL_Event) {
+    unsafe {
+        match event.type_ {
+            SDL_QUIT => callback(Event::QuitRequested),
+            SDL_WINDOWEVENT => {
+                let window_event = event.window;
+                let window_id =
+                    WindowId::new(SDL_GetWindowFromID(window_event.windowID) as *mut c_void);
+                match window_event.event {
+                    SDL_WINDOWEVENT_CLOSE => callback(Event::WindowCloseRequested { window_id }),
+                    _ => {}
+                }
+            }
+            SDL_KEYDOWN | SDL_KEYUP => {
+                let keyboard_event = event.key;
+
+                // Are milliseconds the correct units?
+                let timestamp = Duration::from_millis(keyboard_event.timestamp as u64);
+
+                let key = scancode_to_key(keyboard_event.keysym.scancode);
+                match keyboard_event.type_ {
+                    SDL_KEYDOWN => {
+                        if keyboard_event.repeat > 0 {
+                            callback(Event::KeyRepeat { key, timestamp })
+                        } else {
+                            callback(Event::KeyDown { key, timestamp })
+                        }
+                    }
+                    SDL_KEYUP => callback(Event::KeyUp { key, timestamp }),
+                    _ => {}
+                }
+            }
+            SDL_MOUSEMOTION => {
+                let mouse_motion_event = event.motion;
+
+                // Are milliseconds the correct units?
+                let timestamp = Duration::from_millis(mouse_motion_event.timestamp as u64);
+                let source = match mouse_motion_event.which {
+                    SDL_TOUCH_MOUSEID => PointerSource::Touch,
+                    _ => PointerSource::Mouse,
+                };
+
+                // Do these need to be scaled by the window DPI?
+                callback(Event::MouseMotion {
+                    delta_x: mouse_motion_event.xrel as f64,
+                    delta_y: mouse_motion_event.yrel as f64,
+                    timestamp,
+                });
+                callback(Event::PointerMoved {
+                    x: mouse_motion_event.x as f64,
+                    y: mouse_motion_event.y as f64,
+                    source,
+                    timestamp,
+                });
+            }
+            SDL_MOUSEBUTTONDOWN => {
+                let event = event.button;
+
+                let source = match event.which {
+                    SDL_TOUCH_MOUSEID => PointerSource::Touch,
+                    _ => PointerSource::Mouse,
+                };
+
+                // Are milliseconds the correct units?
+                let timestamp = Duration::from_millis(event.timestamp as u64);
+                let button = match event.button as u32 {
+                    SDL_BUTTON_LEFT => PointerButton::Primary,
+                    SDL_BUTTON_MIDDLE => PointerButton::Auxillary,
+                    SDL_BUTTON_RIGHT => PointerButton::Secondary,
+                    SDL_BUTTON_X1 => PointerButton::Extra1,
+                    SDL_BUTTON_X2 => PointerButton::Extra2,
+                    _ => PointerButton::Unknown,
+                };
+
+                callback(Event::PointerDown {
+                    x: event.x as f64,
+                    y: event.y as f64,
+                    source,
+                    button,
+                    timestamp,
+                });
+
+                if event.clicks == 2 {
+                    callback(Event::DoubleClickDown {
+                        x: event.x as f64,
+                        y: event.y as f64,
+                        button,
+                        timestamp,
+                    });
+                    callback(Event::DoubleClick {
+                        x: event.x as f64,
+                        y: event.y as f64,
+                        button,
+                        timestamp,
+                    });
+                }
+            }
+            SDL_MOUSEBUTTONUP => {
+                let event = event.button;
+
+                let source = match event.which {
+                    SDL_TOUCH_MOUSEID => PointerSource::Touch,
+                    _ => PointerSource::Mouse,
+                };
+
+                // Are milliseconds the correct units?
+                let timestamp = Duration::from_millis(event.timestamp as u64);
+                let button = match event.button as u32 {
+                    SDL_BUTTON_LEFT => PointerButton::Primary,
+                    SDL_BUTTON_MIDDLE => PointerButton::Auxillary,
+                    SDL_BUTTON_RIGHT => PointerButton::Secondary,
+                    SDL_BUTTON_X1 => PointerButton::Extra1,
+                    SDL_BUTTON_X2 => PointerButton::Extra2,
+                    _ => PointerButton::Unknown,
+                };
+                callback(Event::PointerUp {
+                    x: event.x as f64,
+                    y: event.y as f64,
+                    source,
+                    button,
+                    timestamp,
+                });
+                if event.clicks == 2 {
+                    callback(Event::DoubleClickUp {
+                        x: event.x as f64,
+                        y: event.y as f64,
+                        button,
+                        timestamp,
+                    });
+                }
+            }
+            SDL_TEXTINPUT => {
+                let c_str = CStr::from_ptr(event.text.text.as_ptr()).to_str().unwrap();
+                for character in c_str.chars() {
+                    // Send a character received for each key.
+                    callback(Event::CharacterReceived { character });
+                }
+            }
+            SDL_TEXTEDITING => {
+                let c_str = CStr::from_ptr(event.text.text.as_ptr()).to_str().unwrap();
+                callback(Event::IMEComposition {
+                    composition: c_str.to_string(),
+                });
+            }
+            _ => {}
+        }
+    }
+}
+
 pub struct PlatformEventLoop {}
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
@@ -338,162 +490,23 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
                 if ACTUALLY_QUIT.with(|b| b.get()) {
                     break;
                 }
-                SDL_WaitEvent(&mut event);
-
-                match event.type_ {
-                    SDL_QUIT => callback(Event::QuitRequested),
-                    SDL_WINDOWEVENT => {
-                        let window_event = event.window;
-                        let window_id = WindowId::new(
-                            SDL_GetWindowFromID(window_event.windowID) as *mut c_void
-                        );
-                        match window_event.event {
-                            SDL_WINDOWEVENT_CLOSE => {
-                                callback(Event::WindowCloseRequested { window_id })
-                            }
-                            _ => {}
-                        }
-                    }
-                    SDL_KEYDOWN | SDL_KEYUP => {
-                        let keyboard_event = event.key;
-
-                        // Are milliseconds the correct units?
-                        let timestamp = Duration::from_millis(keyboard_event.timestamp as u64);
-
-                        let key = scancode_to_key(keyboard_event.keysym.scancode);
-                        match keyboard_event.type_ {
-                            SDL_KEYDOWN => {
-                                if keyboard_event.repeat > 0 {
-                                    callback(Event::KeyRepeat { key, timestamp })
-                                } else {
-                                    callback(Event::KeyDown { key, timestamp })
-                                }
-                            }
-                            SDL_KEYUP => callback(Event::KeyUp { key, timestamp }),
-                            _ => {}
-                        }
-                    }
-                    SDL_MOUSEMOTION => {
-                        let mouse_motion_event = event.motion;
-
-                        // Are milliseconds the correct units?
-                        let timestamp = Duration::from_millis(mouse_motion_event.timestamp as u64);
-                        let source = match mouse_motion_event.which {
-                            SDL_TOUCH_MOUSEID => PointerSource::Touch,
-                            _ => PointerSource::Mouse,
-                        };
-
-                        // Do these need to be scaled by the window DPI?
-                        callback(Event::MouseMotion {
-                            delta_x: mouse_motion_event.xrel as f64,
-                            delta_y: mouse_motion_event.yrel as f64,
-                            timestamp,
-                        });
-                        callback(Event::PointerMoved {
-                            x: mouse_motion_event.x as f64,
-                            y: mouse_motion_event.y as f64,
-                            source,
-                            timestamp,
-                        });
-                    }
-                    SDL_MOUSEBUTTONDOWN => {
-                        let event = event.button;
-
-                        let source = match event.which {
-                            SDL_TOUCH_MOUSEID => PointerSource::Touch,
-                            _ => PointerSource::Mouse,
-                        };
-
-                        // Are milliseconds the correct units?
-                        let timestamp = Duration::from_millis(event.timestamp as u64);
-                        let button = match event.button as u32 {
-                            SDL_BUTTON_LEFT => PointerButton::Primary,
-                            SDL_BUTTON_MIDDLE => PointerButton::Auxillary,
-                            SDL_BUTTON_RIGHT => PointerButton::Secondary,
-                            SDL_BUTTON_X1 => PointerButton::Extra1,
-                            SDL_BUTTON_X2 => PointerButton::Extra2,
-                            _ => PointerButton::Unknown,
-                        };
-
-                        callback(Event::PointerDown {
-                            x: event.x as f64,
-                            y: event.y as f64,
-                            source,
-                            button,
-                            timestamp,
-                        });
-
-                        if event.clicks == 2 {
-                            callback(Event::DoubleClickDown {
-                                x: event.x as f64,
-                                y: event.y as f64,
-                                button,
-                                timestamp,
-                            });
-                            callback(Event::DoubleClick {
-                                x: event.x as f64,
-                                y: event.y as f64,
-                                button,
-                                timestamp,
-                            });
-                        }
-                    }
-                    SDL_MOUSEBUTTONUP => {
-                        let event = event.button;
-
-                        let source = match event.which {
-                            SDL_TOUCH_MOUSEID => PointerSource::Touch,
-                            _ => PointerSource::Mouse,
-                        };
-
-                        // Are milliseconds the correct units?
-                        let timestamp = Duration::from_millis(event.timestamp as u64);
-                        let button = match event.button as u32 {
-                            SDL_BUTTON_LEFT => PointerButton::Primary,
-                            SDL_BUTTON_MIDDLE => PointerButton::Auxillary,
-                            SDL_BUTTON_RIGHT => PointerButton::Secondary,
-                            SDL_BUTTON_X1 => PointerButton::Extra1,
-                            SDL_BUTTON_X2 => PointerButton::Extra2,
-                            _ => PointerButton::Unknown,
-                        };
-                        callback(Event::PointerUp {
-                            x: event.x as f64,
-                            y: event.y as f64,
-                            source,
-                            button,
-                            timestamp,
-                        });
-                        if event.clicks == 2 {
-                            callback(Event::DoubleClickUp {
-                                x: event.x as f64,
-                                y: event.y as f64,
-                                button,
-                                timestamp,
-                            });
-                        }
-                    }
-                    SDL_TEXTINPUT => {
-                        let c_str = CStr::from_ptr(event.text.text.as_ptr()).to_str().unwrap();
-                        for character in c_str.chars() {
-                            // Send a character received for each key.
-                            callback(Event::CharacterReceived { character });
-                        }
-                    }
-                    SDL_TEXTEDITING => {
-                        let c_str = CStr::from_ptr(event.text.text.as_ptr()).to_str().unwrap();
-                        callback(Event::IMEComposition {
-                            composition: c_str.to_string(),
-                        });
-                    }
-                    _ => continue,
+                // Wait for a new event if we don't have any redraw requests
+                if redraw_manager::draw_requests_count() == 0 {
+                    SDL_WaitEvent(&mut event);
+                    process_event(&mut callback, &event);
                 }
 
-                // If there are no events remaining, we're at the end of the event loop
-                if SDL_HasEvents(SDL_FIRSTEVENT, SDL_LASTEVENT) == SDL_FALSE {
-                    callback(Event::EventsCleared);
+                // Process all events.
+                while SDL_PollEvent(&mut event) != 0 {
+                    process_event(&mut callback, &event);
+                }
 
-                    // TODO: Keep track of all windows and send a draw call to each here.
-                    let window_id = WindowId::new(std::ptr::null_mut());
+                // When there are no events remaining, we're at the end of the event loop
+                callback(Event::EventsCleared);
+
+                // Send a draw event for each window that needs to be drawn.
+                redraw_manager::begin_draw_flush();
+                while let Some(window_id) = redraw_manager::get_draw_request() {
                     callback(Event::Draw { window_id });
                 }
             }
