@@ -1,15 +1,18 @@
+mod keys_sdl;
+use kapp_platform_common::*;
+use keys_sdl::*;
+
+use fermium::{events::*, keyboard::*, mouse::*, rect::*, stdinc::*, touch::*, video::*, *};
+
+use core::cell::Cell;
+use std::ffi::{CStr, CString};
+use std::time::Duration;
+
 pub mod prelude {
     pub use super::*;
     pub use kapp_platform_common::*;
 }
 
-mod keys_sdl;
-use keys_sdl::*;
-
-use fermium::{events::*, keyboard::*, mouse::*, rect::*, stdinc::*, touch::*, video::*, *};
-use kapp_platform_common::*;
-use std::ffi::{CStr, CString};
-use std::time::Duration;
 pub struct PlatformApplication {
     // These cursors are deallocated with `SDL_FreeCursor` in PlatformApplication's Drop
     arrow_cursor: *mut SDL_Cursor,
@@ -173,7 +176,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             SDL_Quit();
             // TODO: Instead of panicking the closure should be made no-longer reentrant.
             // Without this closure quitting infinitely loops
-            panic!();
+            ACTUALLY_QUIT.with(|b| b.set(true));
         }
     }
 
@@ -249,6 +252,10 @@ impl Drop for PlatformApplication {
     }
 }
 
+thread_local! {
+    static ACTUALLY_QUIT: Cell<bool> = Cell::new(false);
+}
+
 pub struct PlatformEventLoop {}
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
@@ -256,6 +263,9 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
         unsafe {
             let mut event = std::mem::zeroed();
             loop {
+                if ACTUALLY_QUIT.with(|b| b.get()) {
+                    break;
+                }
                 SDL_WaitEvent(&mut event);
 
                 match event.type_ {
