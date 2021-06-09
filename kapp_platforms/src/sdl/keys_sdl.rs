@@ -1,6 +1,6 @@
 use fermium::scancode::*;
 
-use kapp_platform_common::{Key, Key::*};
+use kapp_platform_common::Key;
 pub fn scancode_to_key(key_in: SDL_Scancode) -> Key {
     match key_in {
         SDL_SCANCODE_A => Key::A,

@@ -104,7 +104,11 @@ impl GLContextTrait for GLContext {
             _ => unreachable!(),
         });
 
-        if let Some((ns_window, window_view)) = window_and_view {
+        if let Some((ns_window, _)) = window_and_view {
+            // Lookup the window's view ourself in case it's not provided,
+            // as is the case with SDL backend.
+            let window_view: *mut Object = unsafe { msg_send![ns_window, contentView] };
+
             let () = unsafe {
                 if self.srgb {
                     // There is a subtle bug here that will be left unaddressed for now.
