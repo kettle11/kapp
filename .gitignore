@@ -13,4 +13,6 @@
 /examples/ogl33/target/
 /examples/no_gl/target/
 
+gl_context/Cargo.lock
+
 Cargo.lock

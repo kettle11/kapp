@@ -10,6 +10,11 @@ license = "Zlib OR Apache-2.0 OR MIT"
 [dependencies]
 raw-window-handle = "0.3.3"
 kapp_platform_common = { path = "../kapp_platform_common" }
+fermium = {version = "20014.2.0", optional = true}
+
+[features]
+default = []
+SDL = ["fermium"]
 
 [target.'cfg(target_os="macos")'.dependencies]
 objc = "0.2.7"
@@ -37,4 +42,5 @@ features = [
     "Element",
     "CssStyleDeclaration"
 ]
+
 

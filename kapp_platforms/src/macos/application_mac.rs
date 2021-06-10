@@ -289,7 +289,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn restore_window(&mut self, _window_id: WindowId) {
-        unimplemented!()
+        todo!()
     }
 
     fn close_window(&mut self, window_id: WindowId) {
