@@ -116,7 +116,6 @@ impl PlatformApplicationTrait for PlatformApplication {
             SDL_SetRelativeMouseMode(SDL_TRUE);
         }
     }
-
     fn unlock_mouse_position(&mut self) {
         unsafe {
             SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -340,7 +339,29 @@ fn process_event(callback: &mut Box<dyn FnMut(Event)>, event: &SDL_Event) {
                 let window_id =
                     WindowId::new(SDL_GetWindowFromID(window_event.windowID) as *mut c_void);
                 match window_event.event {
+                    SDL_WINDOWEVENT_MINIMIZED => callback(Event::WindowMinimized { window_id }),
+                    SDL_WINDOWEVENT_MAXIMIZED => callback(Event::WindowMaximized { window_id }),
+                    // There is no SDL_WINDOWEVENT_FULLSCREENED
+                    // There is no equivalent to WindowStartResize
+                    // There is no equivalent to WindowEndResize
+                    SDL_WINDOWEVENT_RESTORED => callback(Event::WindowRestored { window_id }),
+                    SDL_WINDOWEVENT_MOVED => callback(Event::WindowMoved {
+                        window_id,
+                        x: window_event.data1 as u32,
+                        y: window_event.data2 as u32,
+                    }),
+                    SDL_WINDOWEVENT_FOCUS_GAINED => {
+                        callback(Event::WindowGainedFocus { window_id })
+                    }
+                    SDL_WINDOWEVENT_FOCUS_LOST => callback(Event::WindowLostFocus { window_id }),
                     SDL_WINDOWEVENT_CLOSE => callback(Event::WindowCloseRequested { window_id }),
+                    // Presently SDL will block during resizing, which isn't ideal and doesn't match the other
+                    // `kapp` platforms. There are ways to alleviate it, but investigation is required.
+                    SDL_WINDOWEVENT_SIZE_CHANGED => callback(Event::WindowResized {
+                        window_id,
+                        width: window_event.data1 as u32,
+                        height: window_event.data2 as u32,
+                    }),
                     _ => {}
                 }
             }
