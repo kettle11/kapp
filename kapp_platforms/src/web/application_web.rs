@@ -1,16 +1,10 @@
 use kapp_platform_common::*;
-use wasm_bindgen::JsCast;
-use web_sys::HtmlElement;
-
-pub static mut CURRENT_CURSOR: Option<String> = None;
 
 pub struct PlatformApplication {}
 
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
     fn new() -> Self {
-        // Set panic hook. Should this be possible to disable?
-        console_error_panic_hook::set_once();
         Self {}
     }
 
@@ -24,102 +18,48 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn minimize_window(&mut self, _window_id: WindowId) {}
     fn maximize_window(&mut self, _window_id: WindowId) {}
     fn get_window_size(&mut self, _window_id: WindowId) -> (u32, u32) {
-        // This approach does not work for multiple canvases.
-        let document = web_sys::window().unwrap().document().unwrap();
-        let canvas = document
-            .get_element_by_id("canvas")
-            .unwrap()
-            .dyn_into::<web_sys::HtmlCanvasElement>()
-            .unwrap();
-        let canvas_client_width = canvas.client_width() as u32;
-        let canvas_client_height = canvas.client_height() as u32;
-        (canvas_client_width, canvas_client_height)
+        todo!()
     }
     fn get_window_scale(&mut self, _window_id: WindowId) -> f64 {
-        web_sys::window().unwrap().device_pixel_ratio()
+        todo!()
     }
     fn fullscreen_window(&mut self, _window_id: WindowId) {
-        super::event_loop_web::request_fullscreen()
+        todo!()
     }
     fn restore_window(&mut self, _window_id: WindowId) {
         todo!()
     }
     fn close_window(&mut self, _window_id: WindowId) {}
     fn redraw_window(&mut self, _window_id: WindowId) {
-        super::event_loop_web::request_frame()
+        todo!()
     }
 
     fn lock_mouse_position(&mut self) {
-        let document = web_sys::window().unwrap().document().unwrap();
-        let canvas = document
-            .get_element_by_id("canvas")
-            .unwrap()
-            .dyn_into::<web_sys::HtmlCanvasElement>()
-            .unwrap();
-        canvas.request_pointer_lock();
+        todo!()
     }
 
     fn unlock_mouse_position(&mut self) {
-        let document = web_sys::window().unwrap().document().unwrap();
-        document.exit_pointer_lock();
+        todo!()
     }
 
     fn new_window(&mut self, _window_parameters: &WindowParameters) -> WindowId {
-        WindowId::new(0 as *mut std::ffi::c_void)
+        todo!()
     }
 
     fn quit(&self) {}
 
     fn set_cursor(&mut self, cursor: Cursor) {
-        let style = web_sys::window()
-            .unwrap()
-            .document()
-            .unwrap()
-            .document_element()
-            .unwrap()
-            .unchecked_into::<HtmlElement>()
-            .style();
-        let cursor_name = match cursor {
-            Cursor::Arrow => "default",
-            Cursor::IBeam => "text",
-            Cursor::PointingHand => "pointer",
-            Cursor::OpenHand => "grab",
-            Cursor::ClosedHand => "grabbing",
-        };
-        unsafe {
-            CURRENT_CURSOR = Some(cursor_name.into());
-        }
-        style.set_property("cursor", cursor_name).ok();
+        todo!()
     }
     fn hide_cursor(&mut self) {
-        let style = web_sys::window()
-            .unwrap()
-            .document()
-            .unwrap()
-            .document_element()
-            .unwrap()
-            .unchecked_into::<HtmlElement>()
-            .style();
-        style.set_property("cursor", "none").ok();
+        todo!()
     }
     fn show_cursor(&mut self) {
-        let style = web_sys::window()
-            .unwrap()
-            .document()
-            .unwrap()
-            .document_element()
-            .unwrap()
-            .unchecked_into::<HtmlElement>()
-            .style();
-        style
-            .set_property("cursor", unsafe {
-                CURRENT_CURSOR.as_deref().unwrap_or("auto")
-            })
-            .ok();
+        todo!()
     }
 
     fn raw_window_handle(&self, _window_id: WindowId) -> RawWindowHandle {
-        RawWindowHandle::Web(raw_window_handle::web::WebHandle::empty())
+        todo!()
     }
 
     fn start_text_input(&mut self) {}
@@ -149,6 +89,6 @@ pub struct PlatformEventLoop {}
 
 impl PlatformEventLoopTrait for PlatformEventLoop {
     fn run(&self, callback: Box<dyn FnMut(Event)>) {
-        super::event_loop_web::run(callback);
+        todo!()
     }
 }

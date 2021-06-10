@@ -22,25 +22,4 @@ objc = "0.2.7"
 [target.'cfg(target_os="windows")'.dependencies]
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-wasm-bindgen = "0.2.*"
-console_error_panic_hook = "0.1.6"
-
-[target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
-version = "0.3.*"
-features = [
-    "console",
-    "Document",
-    "HtmlElement",
-    "HtmlCanvasElement",
-    "MouseEvent",
-    "PointerEvent",
-    "KeyboardEvent",
-    "WheelEvent",
-    "Event",
-    "WebGlContextAttributes",
-    "Window",
-    "Element",
-    "CssStyleDeclaration"
-]
-
 
