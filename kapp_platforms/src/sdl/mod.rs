@@ -344,6 +344,7 @@ fn process_event(callback: &mut Box<dyn FnMut(Event)>, event: &SDL_Event) {
                     // There is no SDL_WINDOWEVENT_FULLSCREENED
                     // There is no equivalent to WindowStartResize
                     // There is no equivalent to WindowEndResize
+                    // There is no equivalent to WindowScaleChanged
                     SDL_WINDOWEVENT_RESTORED => callback(Event::WindowRestored { window_id }),
                     SDL_WINDOWEVENT_MOVED => callback(Event::WindowMoved {
                         window_id,
@@ -482,6 +483,26 @@ fn process_event(callback: &mut Box<dyn FnMut(Event)>, event: &SDL_Event) {
                         timestamp,
                     });
                 }
+            }
+            SDL_MOUSEWHEEL => {
+                let event = event.wheel;
+                let mut delta_x = event.x as f64;
+                let mut delta_y = event.y as f64;
+
+                if event.direction == SDL_MOUSEWHEEL_FLIPPED {
+                    delta_x *= -1.0;
+                    delta_y *= -1.0;
+                }
+
+                let window_id = WindowId::new(SDL_GetWindowFromID(event.windowID) as *mut c_void);
+                let timestamp = Duration::from_millis(event.timestamp as u64);
+
+                callback(Event::Scroll {
+                    delta_x,
+                    delta_y,
+                    window_id,
+                    timestamp,
+                });
             }
             SDL_TEXTINPUT => {
                 let c_str = CStr::from_ptr(event.text.text.as_ptr()).to_str().unwrap();
