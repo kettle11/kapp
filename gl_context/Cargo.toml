@@ -20,9 +20,11 @@ objc = "0.2.7"
 lawrencium = {git = "https://github.com/Lokathor/lawrencium", rev = "4079f8a"}
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-wasm-bindgen = "0.2.*"
+kwasm = {path = "../../kwasm"}
+wasm-bindgen = {version = "0.2.*", optional = true}
 
 [target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
+optional = true
 version = "0.3.*"
 features = [
     "Document",
@@ -33,3 +35,7 @@ features = [
     "WebGl2RenderingContext",
     "Window"
 ]
+
+[features]
+default = []
+wasm_bindgen_support = ["web-sys", "wasm-bindgen"]
