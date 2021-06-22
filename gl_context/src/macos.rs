@@ -203,12 +203,10 @@ impl GLContextTrait for GLContext {
             match self.vsync {
                 VSync::On | VSync::Adaptive => {
                     if let Some(ns_window) = self.ns_window {
-                        let occlusion_state: NSWindowOcclusionState =
-                            msg_send![ns_window, occlusionState];
-
-                        if occlusion_state as u64
+                        let occlusion_state: u64 = msg_send![ns_window, occlusionState];
+                        if occlusion_state
                             & NSWindowOcclusionState::NSWindowOcclusionStateVisible as u64
-                            != 0
+                            == 0
                         {
                             std::thread::sleep(std::time::Duration::from_millis(16));
                         }
