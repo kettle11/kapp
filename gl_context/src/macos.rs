@@ -10,6 +10,7 @@ pub struct GLContext {
     vsync: VSync,
     high_dpi_framebuffer: bool,
     srgb: bool,
+    ns_window: Option<*mut Object>,
 }
 
 // This isn't really true because make_current must be called after GLContext is passed to another thread.
@@ -63,6 +64,7 @@ impl GLContextBuilder {
                 // current_window: None,
                 high_dpi_framebuffer: self.gl_attributes.high_resolution_framebuffer,
                 srgb: self.gl_attributes.srgb,
+                ns_window: None,
             })
         }
     }
@@ -127,8 +129,10 @@ impl GLContextTrait for GLContext {
             };
 
             self.set_vsync(self.vsync).unwrap();
+            self.ns_window = Some(ns_window);
         } else {
             let () = unsafe { msg_send![self.gl_context, clearDrawable] };
+            self.ns_window = None;
         }
 
         Ok(())
@@ -195,6 +199,23 @@ impl GLContextTrait for GLContext {
     // https://developer.apple.com/documentation/appkit/nsopenglcontext/1436211-flushbuffer?language=objc
     fn swap_buffers(&mut self) {
         unsafe {
+            // Simulate VSync by sleeping for 16ms (60 fps) if a window is occluded and VSync is enabled.
+            match self.vsync {
+                VSync::On | VSync::Adaptive => {
+                    if let Some(ns_window) = self.ns_window {
+                        let occlusion_state: NSWindowOcclusionState =
+                            msg_send![ns_window, occlusionState];
+
+                        if occlusion_state as u64
+                            & NSWindowOcclusionState::NSWindowOcclusionStateVisible as u64
+                            != 0
+                        {
+                            std::thread::sleep(std::time::Duration::from_millis(16));
+                        }
+                    }
+                }
+                _ => {}
+            }
             let () = msg_send![self.gl_context, flushBuffer];
         }
     }
@@ -221,6 +242,11 @@ impl Drop for GLContext {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NSOpenGLContextParameter {
     NSOpenGLCPSwapInterval = 222,
+}
+
+#[repr(u64)]
+pub enum NSWindowOcclusionState {
+    NSWindowOcclusionStateVisible = 1 << 1,
 }
 
 use NSOpenGLContextParameter::*;
