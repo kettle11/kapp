@@ -12,6 +12,7 @@ pub struct StateTracker {
     keys_down_since_last_frame: HashMap<Key, Duration>, // Key was pressed since the last clear for any window.
     keys_pressed: HashMap<Key, Duration>,
     pointer_buttons_down_since_last_frame: HashMap<PointerButton, Duration>, // pointer was pressed since the last clear for any window.
+    pointer_buttons_released_since_last_frame: HashMap<PointerButton, Duration>, // pointer was pressed since the last clear for any window.
     pointer_buttons_pressed: HashMap<PointerButton, Duration>,
     pointer_position: (f64, f64),
     mouse_motion: (f64, f64),
@@ -23,6 +24,7 @@ impl StateTracker {
             keys_down_since_last_frame: HashMap::with_capacity(256), // Arbitrary numbers to avoid resize
             keys_pressed: HashMap::with_capacity(256),
             pointer_buttons_down_since_last_frame: HashMap::with_capacity(16),
+            pointer_buttons_released_since_last_frame: HashMap::with_capacity(16),
             pointer_buttons_pressed: HashMap::with_capacity(16),
             pointer_position: (0., 0.),
             mouse_motion: (0., 0.),
@@ -45,7 +47,11 @@ impl StateTracker {
                 self.pointer_buttons_down_since_last_frame
                     .insert(*button, *timestamp);
             }
-            Event::PointerUp { button, .. } => {
+            Event::PointerUp {
+                button, timestamp, ..
+            } => {
+                self.pointer_buttons_released_since_last_frame
+                    .insert(*button, *timestamp);
                 self.pointer_buttons_pressed.remove(&button);
             }
             Event::PointerMoved { x, y, .. } => self.pointer_position = (*x, *y),
@@ -59,6 +65,7 @@ impl StateTracker {
     /// Reset any "button down" states
     pub fn clear(&mut self) {
         self.pointer_buttons_down_since_last_frame.clear();
+        self.pointer_buttons_released_since_last_frame.clear();
         self.keys_down_since_last_frame.clear();
         self.mouse_motion = (0., 0.);
     }
@@ -87,6 +94,12 @@ impl StateTracker {
     /// Returns true if the pointer button has been pressed since the last call to clear.
     pub fn pointer_button_down(&self, button: PointerButton) -> bool {
         self.pointer_buttons_down_since_last_frame
+            .contains_key(&button)
+    }
+
+    /// Returns true if the pointer button has been pressed since the last call to clear.
+    pub fn pointer_button_released(&self, button: PointerButton) -> bool {
+        self.pointer_buttons_released_since_last_frame
             .contains_key(&button)
     }
 
