@@ -86,27 +86,29 @@ extern "C" fn control_flow_end_handler(
                 let () = msg(content_view, Sels::setNeedsDisplay, (YES,));
             }
         } else {
+            // July 22 2021: I've enabled setNeedsDisplay call *again* because frame-rates were stuttering
+            // when issuing a `Draw` event directly here. This means VSync is broken on Macs again.
+            // Previous comment:
             // We previously used this call to request a redraw.
             // Getting redraw requests via `setNeedsDisplay` prevents window moving lag when using VSync with the Magnet extension installed.
             // I (@kettle11) misattributed the cause to something the MacOS compositor was doing, but eventually discovered
             // the `Magnet` utility app was the source of the bug.
-            // Issuing a Draw event immediately here allows other libraries more control over how they render 
+            // Issuing a Draw event immediately here allows other libraries more control over how they render
             // and when they VSync, so we'll use that approach instead of the old one,
-            // even if it causes bugs for those with Magnet installed. 
+            // even if it causes bugs for those with Magnet installed.
             // We will still rely on the system for VSync during resizing
             // as this ensures smooth synchronization with the OS compositor.
-            /*
+
             unsafe {
                 let content_view: *mut Object =
                     msg_send![window_id.raw() as *mut Object, contentView];
                 let () = msg_send![content_view, setNeedsDisplay: YES];
             }
-            */
 
-            // If the event were directly sent here that would effectively disable VSync for this window.
+            // If the `setNeedsDisplay` were directly sent here that would effectively disable VSync for this window.
             // However this seems to introduce lag moving the window when used with VSync.
             // By using the above code instead this prevents VSync from being disabled on MacOS.
-            event_receiver::send_event(Event::Draw { window_id });
+            // event_receiver::send_event(Event::Draw { window_id });
         }
     }
 
