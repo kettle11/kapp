@@ -18,6 +18,7 @@ pub trait PlatformApplicationTrait {
     fn restore_window(&mut self, window_id: WindowId);
     fn close_window(&mut self, window_id: WindowId);
 
+    // Gets the size of the window in physical coordinates.
     fn get_window_size(&mut self, _window_id: WindowId) -> (u32, u32);
     fn get_window_scale(&mut self, _window_id: WindowId) -> f64;
 

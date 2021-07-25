@@ -43,6 +43,7 @@ impl PlatformApplicationTrait for PlatformApplication {
             SDL_SetWindowPosition(window_id.raw() as *mut SDL_Window, x as i32, y as i32);
         }
     }
+
     fn set_window_size(&mut self, window_id: WindowId, width: u32, height: u32) {
         unsafe {
             SDL_SetWindowPosition(
@@ -72,7 +73,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         let mut width = 0;
         let mut height = 0;
         unsafe {
-            SDL_GetWindowSize(window_id.raw() as *mut SDL_Window, &mut width, &mut height);
+            SDL_GL_GetDrawableSize(window_id.raw() as *mut SDL_Window, &mut width, &mut height);
         }
         (width as u32, height as u32)
     }
