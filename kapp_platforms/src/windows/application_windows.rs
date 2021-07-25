@@ -1,7 +1,7 @@
 use super::external_windows::*;
 use super::utils_windows::*;
 use std::convert::TryInto;
-use std::ptr::null_mut;
+use std::ptr::{null, null_mut};
 
 use kapp_platform_common::*;
 
@@ -179,15 +179,23 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn lock_mouse_position(&mut self) {
-        todo!()
-        /*
         unsafe {
-            SetCursorPos(x as i32, y as i32);
-        }*/
+            let mut position = POINT { x: 0, y: 0 };
+            GetCursorPos(&mut position);
+            let rect = RECT {
+                left: position.x,
+                top: position.y,
+                right: position.x,
+                bottom: position.y,
+            };
+            ClipCursor(&rect);
+        }
     }
 
     fn unlock_mouse_position(&mut self) {
-        todo!();
+        unsafe {
+            ClipCursor(null());
+        }
     }
 
     fn new_window(&mut self, window_parameters: &WindowParameters) -> WindowId {
