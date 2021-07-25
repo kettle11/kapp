@@ -9,6 +9,7 @@ use std::time::Duration;
 
 /// Tracks key and pointer input state based on events.
 pub struct StateTracker {
+    all_events_since_last_frame: Vec<Event>,
     keys_down_since_last_frame: HashMap<Key, Duration>, // Key was pressed since the last clear for any window.
     keys_pressed: HashMap<Key, Duration>,
     pointer_buttons_down_since_last_frame: HashMap<PointerButton, Duration>, // pointer was pressed since the last clear for any window.
@@ -21,6 +22,7 @@ pub struct StateTracker {
 impl StateTracker {
     pub fn new() -> Self {
         Self {
+            all_events_since_last_frame: Vec::new(),
             keys_down_since_last_frame: HashMap::with_capacity(256), // Arbitrary numbers to avoid resize
             keys_pressed: HashMap::with_capacity(256),
             pointer_buttons_down_since_last_frame: HashMap::with_capacity(16),
@@ -60,10 +62,12 @@ impl StateTracker {
             } => self.mouse_motion = (self.mouse_motion.0 + delta_x, self.mouse_motion.1 + delta_y),
             _ => {}
         };
+        self.all_events_since_last_frame.push(event.clone());
     }
 
     /// Reset any "button down" states
     pub fn clear(&mut self) {
+        self.all_events_since_last_frame.clear();
         self.pointer_buttons_down_since_last_frame.clear();
         self.pointer_buttons_released_since_last_frame.clear();
         self.keys_down_since_last_frame.clear();
@@ -114,5 +118,9 @@ impl StateTracker {
 
     pub fn mouse_motion(&self) -> (f64, f64) {
         self.mouse_motion
+    }
+
+    pub fn all_events_since_last_frame(&self) -> &[Event] {
+        &self.all_events_since_last_frame
     }
 }
