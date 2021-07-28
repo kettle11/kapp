@@ -2,7 +2,7 @@ use crate::common::*;
 use kwasm::*;
 
 thread_local! {
-    pub static KAPP_GL_FUNCTION: JSFunction = JSFunction::new(String::from(include_str!("gl_context.js")));
+    pub static KAPP_GL_FUNCTION: JSObjectFromString = JSObjectFromString::new(include_str!("gl_context.js"));
 }
 
 #[repr(u32)]

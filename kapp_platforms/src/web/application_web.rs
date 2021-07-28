@@ -1,12 +1,9 @@
-///! In this file a file with helper Javascript is declared.
-///! `kapp` calls into the helper Javascript functions and then will sometimes
-///! copy data from the Javascript where appropriate.
 use kapp_platform_common::*;
 use kwasm::*;
 use std::convert::TryInto;
 
 thread_local! {
-    static KAPP_JS_FUNCTION: JSFunction = JSFunction::new(include_str!("kapp.js").into());
+    static KAPP_JS_FUNCTION: JSObjectFromString = JSObjectFromString::new(include_str!("kapp.js").into());
 }
 
 fn call_js_function(command: HostCommands) {
@@ -34,7 +31,6 @@ impl PlatformApplicationTrait for PlatformApplication {
     fn maximize_window(&mut self, _window_id: WindowId) {}
     fn get_window_size(&mut self, _window_id: WindowId) -> (u32, u32) {
         call_js_function(HostCommands::GetWindowSize);
-
         kwasm::DATA_FROM_HOST.with(|d| {
             let d = d.borrow();
             (
