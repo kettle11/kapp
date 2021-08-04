@@ -7,7 +7,7 @@ thread_local! {
 }
 
 fn call_js_function(command: HostCommands) {
-    KAPP_JS_FUNCTION.with(|f| f.call_raw(&JSObject::null(), &[command as u32]));
+    KAPP_JS_FUNCTION.with(|f| f.call_raw(&JSObject::NULL, &[command as u32]));
 }
 
 pub struct PlatformApplication {}
@@ -16,6 +16,7 @@ impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
     fn new() -> Self {
         kwasm::setup_panic_hook();
+        call_js_function(HostCommands::SetCallbacks);
         call_js_function(HostCommands::RequestAnimationFrame);
         Self {}
     }
@@ -75,7 +76,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         // Does nothing on web
     }
 
-    fn set_cursor(&mut self, cursor: Cursor) {
+    fn set_cursor(&mut self, _cursor: Cursor) {
         todo!()
     }
     fn hide_cursor(&mut self) {
@@ -123,7 +124,7 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
 #[repr(u32)]
 pub(crate) enum HostCommands {
     RequestAnimationFrame = 0,
-    //GetCanvasSize = 1,
+    // GetCanvasSize = 1,
     SetCallbacks = 2,
     GetDevicePixelRatio = 3,
     GetWindowSize = 4,

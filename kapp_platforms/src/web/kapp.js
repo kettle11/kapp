@@ -11,11 +11,10 @@ function get_pointer_type(event) {
 var canvas_last_width = 0;
 var canvas_last_height = 0;
 function request_animation_frame_callback(event) {
-    let width = canvas.clientWidth * window.devicePixelRatio;
-    let height = canvas.clientHeight * window.devicePixelRatio;
+    let width = canvas.clientWidth;
+    let height = canvas.clientHeight;
 
-    if (width != canvas_last_width || height != canvas_last_height) { }
-    {
+    if (width != canvas_last_width || height != canvas_last_height) {
         canvas.width = width;
         canvas.height = height;
         canvas_last_width = width;
@@ -79,7 +78,7 @@ function receive_message(command, data) {
             }
 
             document.onkeydown = function (event) {
-                kwasm_helpers.pass_string_to_client(event.code);
+                self.kwasm_pass_string_to_client(event.code);
                 if (event.repeat) {
                     self.kwasm_exports.kapp_on_key_repeat(event.timeStamp);
                 } else {
@@ -94,13 +93,13 @@ function receive_message(command, data) {
                 // to reject non-textual character inputs.
                 // A more robust solution may watch a text field for changes instead.
                 if (!event.is_composing && event.key.length == 1) {
-                    kwasm_helpers.pass_string_to_client(event.key);
+                    self.kwasm_pass_string_to_client(event.key);
                     self.kwasm_exports.kapp_character_received(event.timeStamp);
                 }
             }
 
             document.onkeyup = function (event) {
-                kwasm_helpers.pass_string_to_client(event.code);
+                self.kwasm_pass_string_to_client(event.code);
                 self.kwasm_exports.kapp_on_key_up(event.timeStamp);
             }
 
