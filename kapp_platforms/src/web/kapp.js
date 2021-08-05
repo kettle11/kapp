@@ -8,9 +8,14 @@ function get_pointer_type(event) {
     }
 }
 
+
 var canvas_last_width = 0;
 var canvas_last_height = 0;
-function request_animation_frame_callback(event) {
+
+var animation_frame_requested = false;
+function request_animation_frame_callback(time) {
+    animation_frame_requested = false;
+
     let width = canvas.clientWidth;
     let height = canvas.clientHeight;
 
@@ -41,14 +46,18 @@ function pass_f32_f32_to_client(x, y) {
 var canvas = document
     .getElementById("canvas");
 
+
 function receive_message(command, data) {
 
     switch (command) {
         case 0:
             // RequestAnimationFrame
             // Request an animation frame
-            request_animation_frame_client_callback = data;
-            window.requestAnimationFrame(request_animation_frame_callback)
+            if (!animation_frame_requested) {
+                animation_frame_requested = true;
+                request_animation_frame_client_callback = data;
+                window.requestAnimationFrame(request_animation_frame_callback)
+            }
             break;
         case 1:
             // GetCanvasSize

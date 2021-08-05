@@ -77,13 +77,16 @@ impl PlatformApplicationTrait for PlatformApplication {
     }
 
     fn set_cursor(&mut self, _cursor: Cursor) {
-        todo!()
+        klog::log!("kapp: SET CURSOR NOT IMPLEMENTED YET");
+        //  todo!()
     }
     fn hide_cursor(&mut self) {
-        todo!()
+        klog::log!("kapp: SET CURSOR NOT IMPLEMENTED YET");
+        //  todo!()
     }
     fn show_cursor(&mut self) {
-        todo!()
+        klog::log!("kapp: SET CURSOR NOT IMPLEMENTED YET");
+        //  todo!()
     }
 
     fn raw_window_handle(&self, _window_id: WindowId) -> RawWindowHandle {
