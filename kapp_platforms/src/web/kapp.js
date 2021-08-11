@@ -20,11 +20,12 @@ function request_animation_frame_callback(time) {
     let height = canvas.clientHeight;
 
     if (width != canvas_last_width || height != canvas_last_height) {
-        canvas.width = width;
-        canvas.height = height;
+        var devicePixelRatio = window.devicePixelRatio || 1;
+        canvas.width = width * devicePixelRatio;
+        canvas.height = height * devicePixelRatio;
         canvas_last_width = width;
         canvas_last_height = height;
-        self.kwasm_exports.kapp_on_window_resized(width, height);
+        self.kwasm_exports.kapp_on_window_resized(width * devicePixelRatio, height * devicePixelRatio);
 
     }
     self.kwasm_exports.kapp_on_animation_frame(self.kwasm_exports.kapp_on_animation_frame);
