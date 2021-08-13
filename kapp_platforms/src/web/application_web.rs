@@ -109,7 +109,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         // Perhaps a hidden text input field could be moved to make IME input appear in the right place.
     }
 
-    fn get_custom_event_sender(&self) -> Self::UserEventSender {
+    fn get_user_event_sender(&self) -> Self::UserEventSender {
         PlatformUserEventSender
     }
 }

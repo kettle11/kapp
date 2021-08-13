@@ -5,7 +5,7 @@ fn main() {
     let (app, event_loop) = initialize();
     let _window = app.new_window().minimum_size(1000, 1000).build().unwrap();
 
-    let custom_event_sender = app.get_custom_event_sender();
+    let user_event_sender = app.get_user_event_sender();
     event_loop.run(move |event| match event {
         Event::WindowCloseRequested { .. } => app.quit(),
         Event::Draw { .. } => {
@@ -15,7 +15,7 @@ fn main() {
             println!("Received custom event: {:?}", event);
         }
         Event::KeyDown { key: Key::A, .. } => {
-            custom_event_sender.send(2, 120);
+            user_event_sender.send(2, 120);
         }
         _ => {}
     });

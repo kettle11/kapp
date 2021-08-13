@@ -316,7 +316,7 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn get_custom_event_sender(&self) -> Self::UserEventSender {
+    fn get_user_event_sender(&self) -> Self::UserEventSender {
         PlatformUserEventSender
     }
 }

@@ -14,20 +14,20 @@ pub(crate) struct ApplicationData {
     pub actually_terminate: bool, // Set when quit is called. Indicates the program should quit.
     pub text_input_enabled: bool, // Should text input be sent in addition to KeyDown events?
     pub mouse_lock: bool,
-    pub custom_event_sender: std::sync::mpsc::Sender<(usize, usize)>,
+    pub user_event_sender: std::sync::mpsc::Sender<(usize, usize)>,
     pub custom_event_receiver: std::sync::mpsc::Receiver<(usize, usize)>,
 }
 
 impl ApplicationData {
     pub fn new() -> Self {
-        let (custom_event_sender, custom_event_receiver) = std::sync::mpsc::channel();
+        let (user_event_sender, custom_event_receiver) = std::sync::mpsc::channel();
         Self {
             ns_application: std::ptr::null_mut(),
             modifier_flags: 0,
             actually_terminate: false,
             text_input_enabled: false,
             mouse_lock: false,
-            custom_event_sender,
+            user_event_sender,
             custom_event_receiver,
         }
     }
@@ -446,9 +446,9 @@ impl PlatformApplicationTrait for PlatformApplication {
         }
     }
 
-    fn get_custom_event_sender(&self) -> Self::UserEventSender {
+    fn get_user_event_sender(&self) -> Self::UserEventSender {
         Self::UserEventSender {
-            sender: APPLICATION_DATA.with(|d| d.borrow().custom_event_sender.clone()),
+            sender: APPLICATION_DATA.with(|d| d.borrow().user_event_sender.clone()),
         }
     }
 }

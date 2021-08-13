@@ -115,9 +115,9 @@ impl Application {
         self.state_tracker.borrow().pointer_position()
     }
 
-    pub fn get_custom_event_sender(&self) -> UserEventSender {
+    pub fn get_user_event_sender(&self) -> UserEventSender {
         UserEventSender {
-            sender: self.platform_application.borrow().get_custom_event_sender(),
+            sender: self.platform_application.borrow().get_user_event_sender(),
             prevent_send: std::marker::PhantomData
         }
     }

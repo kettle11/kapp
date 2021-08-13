@@ -70,7 +70,7 @@ pub trait PlatformApplicationTrait {
     /// https://github.com/rust-windowing/raw-window-handle
     fn raw_window_handle(&self, window: WindowId) -> RawWindowHandle;
 
-    fn get_custom_event_sender(&self) -> Self::UserEventSender;
+    fn get_user_event_sender(&self) -> Self::UserEventSender;
 }
 
 pub trait PlatformEventLoopTrait {
