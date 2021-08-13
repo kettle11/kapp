@@ -198,6 +198,11 @@ pub enum Event {
     QuitRequested,
     /// When the event loop sends its last event
     EventsCleared,
+    /// An event that can be issued by libraries that aren't `kapp`.
+    UserEvent {
+        id: usize,
+        data: usize,
+    },
 }
 
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]

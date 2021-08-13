@@ -18,7 +18,7 @@ mod window_parameters;
 pub use cursors::Cursor;
 pub use events::{Event, PointerButton, PointerSource};
 pub use keys::Key;
-pub use platform_traits::{PlatformApplicationTrait, PlatformEventLoopTrait};
+pub use platform_traits::{PlatformApplicationTrait, PlatformEventLoopTrait, PlatformUserEventSenderTrait};
 pub use raw_window_handle;
 pub use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 pub use screen_id::ScreenId;

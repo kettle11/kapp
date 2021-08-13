@@ -1,6 +1,5 @@
 use super::keys_web;
 
-use core::cell::RefCell;
 use std::time::Duration;
 
 use kapp_platform_common::*;
@@ -9,15 +8,18 @@ pub fn run<T>(callback: T)
 where
     T: 'static + FnMut(Event),
 {
-    CALLBACK.with(|c| c.replace(Some(Box::new(callback))));
+    event_receiver::set_callback(Box::new(callback));
 }
 
+/*
 thread_local! {
     static CALLBACK: RefCell<Option<Box<dyn FnMut(Event)>>> = RefCell::new(None);
 }
+*/
 
 fn send_event(event: Event) {
-    CALLBACK.with(|c| (c.borrow_mut().as_mut().unwrap())(event))
+    event_receiver::send_event(event);
+   // CALLBACK.with(|c| (c.borrow_mut().as_mut().unwrap())(event))
 }
 
 #[no_mangle]

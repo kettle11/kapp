@@ -114,6 +114,13 @@ impl Application {
     pub fn pointer_position(&self) -> (f64, f64) {
         self.state_tracker.borrow().pointer_position()
     }
+
+    pub fn get_custom_event_sender(&self) -> UserEventSender {
+        UserEventSender {
+            sender: self.platform_application.borrow().get_custom_event_sender(),
+            prevent_send: std::marker::PhantomData
+        }
+    }
 }
 
 /// Call the 'run' or 'run_async' function on an EventLoop instance to start your program.
@@ -141,5 +148,22 @@ impl EventLoop {
             };
         };
         self.platform_event_loop.run(Box::new(callback_wrapper));
+    }
+}
+
+/// [UserEventSender] can be used to send [Event::UserEvent]s.
+/// Presently [UserEventSender] cannot be send between threads
+/// due to how the web backend is implemented.
+pub struct UserEventSender {
+    sender: PlatformUserEventSender,
+    // This field is added to prevent this from being send.
+    // Presently the web backend is not Send due to its use 
+    // of thread locals but when that's correct this can be removed.
+    prevent_send: std::marker::PhantomData<std::cell::Cell<*const ()>>
+}
+
+impl UserEventSender {
+    pub fn send(&self, id: usize, data: usize) {
+        self.sender.send(id, data)
     }
 }

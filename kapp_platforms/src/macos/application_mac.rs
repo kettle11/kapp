@@ -14,16 +14,21 @@ pub(crate) struct ApplicationData {
     pub actually_terminate: bool, // Set when quit is called. Indicates the program should quit.
     pub text_input_enabled: bool, // Should text input be sent in addition to KeyDown events?
     pub mouse_lock: bool,
+    pub custom_event_sender: std::sync::mpsc::Sender<(usize, usize)>,
+    pub custom_event_receiver: std::sync::mpsc::Receiver<(usize, usize)>,
 }
 
 impl ApplicationData {
     pub fn new() -> Self {
+        let (custom_event_sender, custom_event_receiver) = std::sync::mpsc::channel();
         Self {
             ns_application: std::ptr::null_mut(),
             modifier_flags: 0,
             actually_terminate: false,
             text_input_enabled: false,
             mouse_lock: false,
+            custom_event_sender,
+            custom_event_receiver,
         }
     }
 }
@@ -69,6 +74,15 @@ extern "C" fn control_flow_end_handler(
     _: CFRunLoopActivity,
     _: *mut std::ffi::c_void,
 ) {
+    // This loop is constructed weird to avoid borrow APPLICATION_DATA while sending the custom event.
+    loop {
+        let custom_event = APPLICATION_DATA.with(|d| d.borrow().custom_event_receiver.try_recv());
+        if let Ok((id, data)) = custom_event {
+            event_receiver::send_event(Event::UserEvent { id, data });
+        } else {
+            break;
+        }
+    }
     event_receiver::send_event(Event::EventsCleared);
 
     redraw_manager::begin_draw_flush();
@@ -162,6 +176,7 @@ pub struct PlatformApplication {
 
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
+    type UserEventSender = PlatformUserEventSender;
 
     fn new() -> Self {
         unsafe {
@@ -430,6 +445,12 @@ impl PlatformApplicationTrait for PlatformApplication {
             (*window_state).text_input_rectangle = (x, y, width, height);
         }
     }
+
+    fn get_custom_event_sender(&self) -> Self::UserEventSender {
+        Self::UserEventSender {
+            sender: APPLICATION_DATA.with(|d| d.borrow().custom_event_sender.clone()),
+        }
+    }
 }
 
 pub fn get_backing_scale(window_id: WindowId) -> CGFloat {
@@ -440,5 +461,21 @@ pub fn get_backing_scale(window_id: WindowId) -> CGFloat {
 impl Drop for PlatformApplication {
     fn drop(&mut self) {
         self.quit();
+    }
+}
+
+#[derive(Clone)]
+pub struct PlatformUserEventSender {
+    sender: std::sync::mpsc::Sender<(usize, usize)>,
+}
+
+impl PlatformUserEventSenderTrait for PlatformUserEventSender {
+    fn send(&self, id: usize, data: usize) {
+        // Wake up the main thread
+        unsafe {
+            let rl = CFRunLoopGetMain();
+            CFRunLoopWakeUp(rl);
+        }
+        let _ = self.sender.send((id, data));
     }
 }

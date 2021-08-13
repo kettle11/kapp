@@ -8,7 +8,9 @@ use std::cell::RefCell;
 
 thread_local!(
     static PROGRAM_CALLBACK: RefCell<Box<dyn 'static + FnMut(Event)>> =
-        RefCell::new(Box::new(|_| {}));
+        RefCell::new(Box::new(|_| {
+            panic!("KAPP INTERNAL ERROR: Sent event to unitialized user-callback")
+        }));
     static OVERFLOW_EVENTS: RefCell<Vec<Event>> = RefCell::new(Vec::new());
 );
 
@@ -19,6 +21,7 @@ pub fn set_callback(callback: Box<dyn FnMut(Event)>) {
 }
 
 /// Sends an event to the user callback
+/// This should only be called from the main thread.
 pub fn send_event(event: Event) {
     // try_with because events may be sent during destruction, which should be ignored.
     let _ = PROGRAM_CALLBACK.try_with(|p| {

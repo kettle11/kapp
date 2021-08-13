@@ -22,6 +22,8 @@ pub struct PlatformApplication {
 
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
+    type UserEventSender = PlatformUserEventSender;
+
     fn new() -> Self {
         unsafe {
             assert!(SDL_Init(SDL_INIT_EVERYTHING) == 0);
@@ -313,6 +315,10 @@ impl PlatformApplicationTrait for PlatformApplication {
             SDL_SetTextInputRect(&mut rectangle);
         }
     }
+
+    fn get_custom_event_sender(&self) -> Self::UserEventSender {
+        PlatformUserEventSender
+    }
 }
 
 // When the application is dropped, quit the program.
@@ -518,6 +524,13 @@ fn process_event(callback: &mut Box<dyn FnMut(Event)>, event: &SDL_Event) {
                     composition: c_str.to_string(),
                 });
             }
+            SDL_USEREVENT => {
+                callback(Event::UserEvent {
+                    // This cast is incorrect but probably won't cause issues for now
+                    id: event.user.code as usize,
+                    data: event.user.data1 as usize
+                }); 
+            }
             _ => {}
         }
     }
@@ -553,6 +566,26 @@ impl PlatformEventLoopTrait for PlatformEventLoop {
                     callback(Event::Draw { window_id });
                 }
             }
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct PlatformUserEventSender;
+
+impl PlatformUserEventSenderTrait for PlatformUserEventSender {
+    fn send(&self, id: usize, data: usize) {
+        let mut user_event = SDL_Event {
+            user: SDL_UserEvent {
+                type_: SDL_USEREVENT,
+                // This cast isn't correct, but it probably won't cause any issues right now
+                code: id as i32,
+                data1: data as *mut c_void,
+                ..Default::default()
+            },
+        };
+        unsafe {
+            let result = SDL_PushEvent(&mut user_event as *mut _);
         }
     }
 }

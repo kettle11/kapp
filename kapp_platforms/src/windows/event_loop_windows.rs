@@ -2,8 +2,8 @@ use super::application_windows::WindowData;
 use super::{external_windows::*, keys_windows::virtual_keycode_to_key};
 use kapp_platform_common::*;
 
-use std::ptr::null_mut;
 use std::convert::TryInto;
+use std::ptr::null_mut;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub static mut DBLCLICK_L: AtomicBool = AtomicBool::new(false);
@@ -59,8 +59,14 @@ pub unsafe extern "system" fn window_callback(
                 }
                 let size_bytes = ImmGetCompositionStringW(himc, GCS_COMPSTR, null_mut(), 0);
                 if size_bytes != 0 {
-                    let mut buffer = Vec::<u16>::with_capacity(size_bytes as usize / std::mem::size_of::<u16>());
-                    ImmGetCompositionStringW(himc, GCS_COMPSTR, buffer.as_mut_ptr().cast(), size_bytes as u32);
+                    let mut buffer =
+                        Vec::<u16>::with_capacity(size_bytes as usize / std::mem::size_of::<u16>());
+                    ImmGetCompositionStringW(
+                        himc,
+                        GCS_COMPSTR,
+                        buffer.as_mut_ptr().cast(),
+                        size_bytes as u32,
+                    );
                     buffer.set_len(size_bytes as usize / std::mem::size_of::<u16>());
                     let composition = String::from_utf16(&buffer).unwrap();
                     produce_event(Event::IMEComposition { composition });

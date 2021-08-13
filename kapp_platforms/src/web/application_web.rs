@@ -14,6 +14,7 @@ pub struct PlatformApplication {}
 
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
+    type UserEventSender = PlatformUserEventSender;
     fn new() -> Self {
         kwasm::setup_panic_hook();
         call_js_function(HostCommands::SetCallbacks);
@@ -107,6 +108,10 @@ impl PlatformApplicationTrait for PlatformApplication {
     ) {
         // Perhaps a hidden text input field could be moved to make IME input appear in the right place.
     }
+
+    fn get_custom_event_sender(&self) -> Self::UserEventSender {
+        PlatformUserEventSender
+    }
 }
 
 // When the application is dropped, quit the program.
@@ -133,4 +138,15 @@ pub(crate) enum HostCommands {
     GetWindowSize = 4,
     LockCursor = 5,
     UnlockCursor = 6,
+}
+
+#[derive(Clone)]
+pub struct PlatformUserEventSender;
+
+impl PlatformUserEventSenderTrait for PlatformUserEventSender {
+    fn send(&self, id: usize, data: usize) {
+        event_receiver::send_event(Event::UserEvent {
+            id, data
+        });
+    }
 }

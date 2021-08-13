@@ -2,6 +2,7 @@
 use crate::{raw_window_handle::RawWindowHandle, Cursor, WindowId, WindowParameters};
 pub trait PlatformApplicationTrait {
     type EventLoop: PlatformEventLoopTrait;
+    type UserEventSender: PlatformUserEventSenderTrait;
 
     fn new() -> Self;
     fn event_loop(&mut self) -> Self::EventLoop;
@@ -68,9 +69,15 @@ pub trait PlatformApplicationTrait {
     /// Returns a RawWindowHandle as defined in the raw_window_handle crate
     /// https://github.com/rust-windowing/raw-window-handle
     fn raw_window_handle(&self, window: WindowId) -> RawWindowHandle;
+
+    fn get_custom_event_sender(&self) -> Self::UserEventSender;
 }
 
 pub trait PlatformEventLoopTrait {
     /// Runs until the application quits.
     fn run(&self, callback: Box<dyn FnMut(crate::Event)>);
+}
+
+pub trait PlatformUserEventSenderTrait: Clone + Send {
+    fn send(&self, id: usize, data: usize);
 }

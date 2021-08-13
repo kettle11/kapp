@@ -23,6 +23,8 @@ pub(crate) struct WindowData {
 
 impl PlatformApplicationTrait for PlatformApplication {
     type EventLoop = PlatformEventLoop;
+    type UserEventSender = PlatformUserEventSender;
+
     fn new() -> Self {
         unsafe {
             SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -338,6 +340,10 @@ impl PlatformApplicationTrait for PlatformApplication {
     ) {
         todo!()
     }
+
+    fn get_custom_event_sender(&self) -> Self::UserEventSender {
+        PlatformUserEventSender
+    }
 }
 
 // When the application is dropped, quit the program.
@@ -352,5 +358,14 @@ pub struct PlatformEventLoop {}
 impl PlatformEventLoopTrait for PlatformEventLoop {
     fn run(&self, callback: Box<dyn FnMut(kapp_platform_common::Event)>) {
         super::event_loop_windows::run(callback);
+    }
+}
+
+// TODO
+pub struct PlatformUserEventSender;
+
+impl PlatformUserEventSenderTrait for PlatformUserEventSender {
+    fn send(&self, id: usize, data: usize) {
+        todo!()
     }
 }

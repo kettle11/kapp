@@ -63,7 +63,7 @@ pub use kapp_gl_context::prelude::*;
 
 pub use platform::{Cursor, Event, Key, PointerButton, PointerSource, WindowId};
 
-pub use application::{initialize, Application, EventLoop};
+pub use application::{initialize, Application, EventLoop, UserEventSender};
 
 pub use async_application::*;
 
