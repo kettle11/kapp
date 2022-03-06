@@ -1,3 +1,5 @@
+# This repository is no longer maintaned. kApp is now developed within the `koi` repository: https://github.com/kettle11/koi
+
 # kApp
 
 kApp is a pure Rust window and input library for macOS, Web, and Windows.
